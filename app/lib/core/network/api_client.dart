@@ -19,34 +19,28 @@ class ApiClient {
       ),
     );
 
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      logPrint: (obj) => debugPrint('[API] $obj'),
-    ));
+    _dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (obj) => debugPrint('[API] $obj'),
+      ),
+    );
   }
 
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) =>
-      _dio.get<T>(path, queryParameters: queryParameters);
+  }) => _dio.get<T>(path, queryParameters: queryParameters);
 
-  Future<Response<T>> post<T>(
-    String path, {
-    Object? data,
-  }) =>
+  Future<Response<T>> post<T>(String path, {Object? data}) =>
       _dio.post<T>(path, data: data);
 
-  Future<Response<T>> put<T>(
-    String path, {
-    Object? data,
-  }) =>
+  Future<Response<T>> put<T>(String path, {Object? data}) =>
       _dio.put<T>(path, data: data);
 
   Future<Response<T>> delete<T>(String path) => _dio.delete<T>(path);
 
-  void updateBaseUrl(String baseUrl) {
-    _dio.options.baseUrl = baseUrl;
-  }
+  /// Effective HTTP base URL (from constructor or [BaseOptions]).
+  String get baseUrl => _dio.options.baseUrl;
 }
