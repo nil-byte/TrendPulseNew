@@ -9,15 +9,17 @@ class SentimentGauge extends StatelessWidget {
 
   const SentimentGauge({super.key, required this.score});
 
-  Color get _gaugeColor {
-    if (score > 60) return AppColors.positive;
-    if (score < 40) return AppColors.negative;
-    return AppColors.neutral;
+  Color _gaugeColor(TrendPulseColors colors) {
+    if (score > 60) return colors.positive;
+    if (score < 40) return colors.negative;
+    return colors.neutral;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.trendPulseColors;
+    final color = _gaugeColor(colors);
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -30,7 +32,7 @@ class SentimentGauge extends StatelessWidget {
               child: CustomPaint(
                 painter: _GaugeRingPainter(
                   progress: score / 100,
-                  color: _gaugeColor,
+                  color: color,
                   trackColor:
                       theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
                 ),
@@ -39,7 +41,7 @@ class SentimentGauge extends StatelessWidget {
                     score.round().toString(),
                     style: theme.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: _gaugeColor,
+                      color: color,
                     ),
                   ),
                 ),

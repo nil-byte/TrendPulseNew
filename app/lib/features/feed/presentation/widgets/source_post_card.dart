@@ -9,11 +9,12 @@ class SourcePostCard extends StatelessWidget {
 
   const SourcePostCard({super.key, required this.post});
 
-  static Color _platformColor(String source) => switch (source) {
-        'reddit' => AppColors.reddit,
-        'youtube' => AppColors.youtube,
-        'x' => AppColors.x,
-        _ => AppColors.neutral,
+  static Color _platformColor(String source, TrendPulseColors colors) =>
+      switch (source) {
+        'reddit' => colors.reddit,
+        'youtube' => colors.youtube,
+        'x' => colors.xPlatform,
+        _ => colors.neutral,
       };
 
   static IconData _platformIcon(String source) => switch (source) {
@@ -53,7 +54,7 @@ class SourcePostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = _platformColor(post.source);
+    final color = _platformColor(post.source, theme.trendPulseColors);
 
     return Card(
       child: InkWell(

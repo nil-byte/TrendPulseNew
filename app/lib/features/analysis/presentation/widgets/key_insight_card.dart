@@ -8,20 +8,21 @@ class KeyInsightCard extends StatelessWidget {
 
   const KeyInsightCard({super.key, required this.insight});
 
-  Color get _sentimentColor {
+  Color _sentimentColor(TrendPulseColors colors) {
     switch (insight.sentiment) {
       case 'positive':
-        return AppColors.positive;
+        return colors.positive;
       case 'negative':
-        return AppColors.negative;
+        return colors.negative;
       default:
-        return AppColors.neutral;
+        return colors.neutral;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sentimentColor = _sentimentColor(theme.trendPulseColors);
     return Card(
       child: IntrinsicHeight(
         child: Row(
@@ -29,7 +30,7 @@ class KeyInsightCard extends StatelessWidget {
             Container(
               width: 4,
               decoration: BoxDecoration(
-                color: _sentimentColor,
+                color: sentimentColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   bottomLeft: Radius.circular(12),

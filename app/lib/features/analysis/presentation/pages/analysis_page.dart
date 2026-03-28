@@ -333,7 +333,7 @@ class _DataVolumeCard extends StatelessWidget {
               count.toString(),
               style: theme.textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: AppColors.seed,
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 4),
@@ -358,6 +358,7 @@ class _SentimentDistributionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.trendPulseColors;
     final positive = report.positiveRatio;
     final negative = report.negativeRatio;
     final neutral = report.neutralRatio;
@@ -376,17 +377,17 @@ class _SentimentDistributionBar extends StatelessWidget {
                     if (positive > 0)
                       Expanded(
                         flex: (positive * 100).round(),
-                        child: Container(color: AppColors.positive),
+                        child: Container(color: colors.positive),
                       ),
                     if (neutral > 0)
                       Expanded(
                         flex: (neutral * 100).round(),
-                        child: Container(color: AppColors.neutral),
+                        child: Container(color: colors.neutral),
                       ),
                     if (negative > 0)
                       Expanded(
                         flex: (negative * 100).round(),
-                        child: Container(color: AppColors.negative),
+                        child: Container(color: colors.negative),
                       ),
                   ],
                 ),
@@ -397,19 +398,19 @@ class _SentimentDistributionBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _LegendItem(
-                  color: AppColors.positive,
+                  color: colors.positive,
                   label: 'Positive',
                   value: '${(positive * 100).round()}%',
                   theme: theme,
                 ),
                 _LegendItem(
-                  color: AppColors.neutral,
+                  color: colors.neutral,
                   label: 'Neutral',
                   value: '${(neutral * 100).round()}%',
                   theme: theme,
                 ),
                 _LegendItem(
-                  color: AppColors.negative,
+                  color: colors.negative,
                   label: 'Negative',
                   value: '${(negative * 100).round()}%',
                   theme: theme,

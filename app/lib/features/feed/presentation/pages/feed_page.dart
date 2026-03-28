@@ -8,30 +8,44 @@ import 'package:trendpulse/core/widgets/loading_widget.dart';
 import 'package:trendpulse/features/feed/presentation/providers/feed_provider.dart';
 import 'package:trendpulse/features/feed/presentation/widgets/source_post_card.dart';
 
+class _TabItem {
+  final String label;
+  final String? filter;
+  final IconData icon;
+  final Color Function(TrendPulseColors)? colorFn;
+
+  const _TabItem({
+    required this.label,
+    required this.filter,
+    required this.icon,
+    this.colorFn,
+  });
+}
+
+final _tabs = [
+  const _TabItem(label: 'All', filter: null, icon: Icons.grid_view_rounded),
+  _TabItem(
+    label: 'Reddit',
+    filter: 'reddit',
+    icon: Icons.forum_rounded,
+    colorFn: (c) => c.reddit,
+  ),
+  _TabItem(
+    label: 'YouTube',
+    filter: 'youtube',
+    icon: Icons.play_circle_fill_rounded,
+    colorFn: (c) => c.youtube,
+  ),
+  _TabItem(
+    label: 'X',
+    filter: 'x',
+    icon: Icons.tag_rounded,
+    colorFn: (c) => c.xPlatform,
+  ),
+];
+
 class FeedPage extends ConsumerWidget {
   const FeedPage({super.key});
-
-  static const _tabs = [
-    _TabItem(label: 'All', filter: null, icon: Icons.grid_view_rounded),
-    _TabItem(
-      label: 'Reddit',
-      filter: 'reddit',
-      icon: Icons.forum_rounded,
-      color: AppColors.reddit,
-    ),
-    _TabItem(
-      label: 'YouTube',
-      filter: 'youtube',
-      icon: Icons.play_circle_fill_rounded,
-      color: AppColors.youtube,
-    ),
-    _TabItem(
-      label: 'X',
-      filter: 'x',
-      icon: Icons.tag_rounded,
-      color: AppColors.x,
-    ),
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,20 +75,6 @@ class FeedPage extends ConsumerWidget {
   }
 }
 
-class _TabItem {
-  final String label;
-  final String? filter;
-  final IconData icon;
-  final Color? color;
-
-  const _TabItem({
-    required this.label,
-    required this.filter,
-    required this.icon,
-    this.color,
-  });
-}
-
 class _FilterBar extends StatelessWidget {
   final List<_TabItem> tabs;
   final String? currentFilter;
@@ -89,6 +89,7 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tpColors = theme.trendPulseColors;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -96,7 +97,7 @@ class _FilterBar extends StatelessWidget {
         children: tabs.map((tab) {
           final isSelected = tab.filter == currentFilter;
           final chipColor =
-              tab.color ?? theme.colorScheme.primary;
+              tab.colorFn?.call(tpColors) ?? theme.colorScheme.primary;
 
           return Padding(
             padding: const EdgeInsets.only(right: 8),

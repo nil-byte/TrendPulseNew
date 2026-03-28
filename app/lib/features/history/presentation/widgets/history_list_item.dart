@@ -101,6 +101,7 @@ class _SourceIndicators extends StatelessWidget {
       return const SizedBox(width: 28);
     }
 
+    final colors = Theme.of(context).trendPulseColors;
     return SizedBox(
       width: 28,
       child: Column(
@@ -112,7 +113,7 @@ class _SourceIndicators extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: _colorForSource(source),
+                color: _colorForSource(source, colors),
                 shape: BoxShape.circle,
               ),
             ),
@@ -122,12 +123,12 @@ class _SourceIndicators extends StatelessWidget {
     );
   }
 
-  Color _colorForSource(String source) {
+  Color _colorForSource(String source, TrendPulseColors colors) {
     return switch (source.toLowerCase()) {
-      'reddit' => AppColors.reddit,
-      'youtube' => AppColors.youtube,
-      'x' || 'twitter' => AppColors.x,
-      _ => AppColors.neutral,
+      'reddit' => colors.reddit,
+      'youtube' => colors.youtube,
+      'x' || 'twitter' => colors.xPlatform,
+      _ => colors.neutral,
     };
   }
 }
@@ -140,11 +141,12 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.trendPulseColors;
     final (label, color) = switch (status) {
-      'completed' => ('Done', AppColors.positive),
-      'running' => ('Running', AppColors.seed),
-      'failed' => ('Failed', AppColors.negative),
-      _ => ('Pending', AppColors.neutral),
+      'completed' => ('Done', colors.positive),
+      'running' => ('Running', theme.colorScheme.primary),
+      'failed' => ('Failed', colors.negative),
+      _ => ('Pending', colors.neutral),
     };
 
     return Container(
@@ -173,14 +175,15 @@ class _TrailingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.trendPulseColors;
 
     if (item.isCompleted && item.sentimentScore != null) {
       final score = item.sentimentScore!;
       final color = score > 0.6
-          ? AppColors.positive
+          ? colors.positive
           : score < 0.4
-              ? AppColors.negative
-              : AppColors.neutral;
+              ? colors.negative
+              : colors.neutral;
 
       return Text(
         score.toStringAsFixed(2),

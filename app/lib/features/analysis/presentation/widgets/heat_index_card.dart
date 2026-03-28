@@ -10,6 +10,7 @@ class HeatIndexCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.trendPulseColors;
     final normalizedHeat = heatIndex.clamp(0.0, 100.0) / 100.0;
 
     return Card(
@@ -22,7 +23,7 @@ class HeatIndexCard extends StatelessWidget {
               heatIndex.round().toString(),
               style: theme.textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: AppColors.seed,
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 4),
@@ -42,8 +43,8 @@ class HeatIndexCard extends StatelessWidget {
                     theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   Color.lerp(
-                    AppColors.neutral,
-                    AppColors.negative,
+                    colors.neutral,
+                    colors.negative,
                     normalizedHeat,
                   )!,
                 ),

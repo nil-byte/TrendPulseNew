@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_spacing.dart';
 import 'app_typography.dart';
 
 abstract final class AppTheme {
@@ -8,25 +9,23 @@ abstract final class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.seed,
       brightness: Brightness.light,
-      surface: AppColors.lightSurface,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: AppTypography.textTheme,
-      scaffoldBackgroundColor: AppColors.lightBackground,
+      scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
+      extensions: const [TrendPulseColors.light],
       dividerTheme: const DividerThemeData(
         thickness: 0.5,
         space: 0.5,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: 0.5,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
         ),
         color: colorScheme.surface,
         margin: EdgeInsets.zero,
@@ -34,7 +33,7 @@ abstract final class AppTheme {
       appBarTheme: AppBarThemeData(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: AppColors.lightBackground,
+        backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: AppTypography.textTheme.titleLarge?.copyWith(
@@ -44,8 +43,11 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
-        backgroundColor: AppColors.lightSurface,
+        backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.primaryContainer.withValues(alpha: 0.7),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+        ),
         surfaceTintColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 64,
@@ -54,32 +56,27 @@ abstract final class AppTheme {
         filled: true,
         fillColor: colorScheme.surfaceContainerLowest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 1.5,
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 14,
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
           ),
         ),
       ),
@@ -87,11 +84,14 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
           ),
-          side: BorderSide(
-            color: colorScheme.outlineVariant,
-          ),
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
@@ -101,25 +101,23 @@ abstract final class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.seed,
       brightness: Brightness.dark,
-      surface: AppColors.darkSurface,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: AppTypography.textTheme,
-      scaffoldBackgroundColor: AppColors.darkBackground,
+      scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
+      extensions: const [TrendPulseColors.dark],
       dividerTheme: const DividerThemeData(
         thickness: 0.5,
         space: 0.5,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: 0.5,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
         ),
         color: colorScheme.surface,
         margin: EdgeInsets.zero,
@@ -127,7 +125,7 @@ abstract final class AppTheme {
       appBarTheme: AppBarThemeData(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: AppColors.darkBackground,
+        backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: AppTypography.textTheme.titleLarge?.copyWith(
@@ -137,8 +135,11 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+        ),
         surfaceTintColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 64,
@@ -147,32 +148,27 @@ abstract final class AppTheme {
         filled: true,
         fillColor: colorScheme.surfaceContainerLowest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 1.5,
-          ),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 14,
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
           ),
         ),
       ),
@@ -180,11 +176,14 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
           ),
-          side: BorderSide(
-            color: colorScheme.outlineVariant,
-          ),
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );

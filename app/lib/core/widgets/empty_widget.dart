@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/theme/app_spacing.dart';
+
 class EmptyWidget extends StatelessWidget {
   final String message;
+  final String? subtitle;
   final IconData icon;
 
   const EmptyWidget({
     super.key,
     required this.message,
+    this.subtitle,
     this.icon = Icons.inbox_outlined,
   });
 
@@ -15,7 +19,7 @@ class EmptyWidget extends StatelessWidget {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -25,7 +29,7 @@ class EmptyWidget extends StatelessWidget {
               color:
                   theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               message,
               style: theme.textTheme.bodyLarge?.copyWith(
@@ -34,6 +38,17 @@ class EmptyWidget extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
+            if (subtitle != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.4),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
