@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:trendpulse/features/settings/presentation/providers/api_client_provider.dart';
+import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/features/subscription/data/subscription_repository.dart';
 

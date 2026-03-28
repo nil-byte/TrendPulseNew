@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/features/feed/data/feed_repository_provider.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
-import 'package:trendpulse/features/settings/presentation/providers/api_client_provider.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 
 class _MockSettingsRepository extends Mock implements SettingsRepository {}
