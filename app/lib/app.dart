@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/animations/page_transitions.dart';
 import 'core/theme/app_theme.dart';
 import 'features/analysis/presentation/pages/analysis_page.dart';
 import 'features/detail/presentation/pages/detail_page.dart';
@@ -28,8 +29,11 @@ final _router = GoRouter(
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
       path: '/detail/:taskId',
-      builder: (context, state) => DetailPage(
-        taskId: state.pathParameters['taskId']!,
+      pageBuilder: (context, state) => slideUpTransitionPage(
+        state: state,
+        child: DetailPage(
+          taskId: state.pathParameters['taskId']!,
+        ),
       ),
     ),
 
@@ -62,8 +66,11 @@ final _router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'detail/:taskId',
-                  builder: (context, state) => DetailPage(
-                    taskId: state.pathParameters['taskId']!,
+                  pageBuilder: (context, state) => slideUpTransitionPage(
+                    state: state,
+                    child: DetailPage(
+                      taskId: state.pathParameters['taskId']!,
+                    ),
                   ),
                 ),
               ],
@@ -83,25 +90,36 @@ final _router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'new',
-                  builder: (context, state) =>
-                      const SubscriptionFormPage(),
+                  pageBuilder: (context, state) => slideUpTransitionPage(
+                    state: state,
+                    child: const SubscriptionFormPage(),
+                  ),
                 ),
                 GoRoute(
                   path: ':subId/edit',
-                  builder: (context, state) => SubscriptionFormPage(
-                    subId: state.pathParameters['subId'],
+                  pageBuilder: (context, state) => slideUpTransitionPage(
+                    state: state,
+                    child: SubscriptionFormPage(
+                      subId: state.pathParameters['subId'],
+                    ),
                   ),
                 ),
                 GoRoute(
                   path: ':subId/tasks',
-                  builder: (context, state) => SubscriptionTasksPage(
-                    subId: state.pathParameters['subId']!,
+                  pageBuilder: (context, state) => slideUpTransitionPage(
+                    state: state,
+                    child: SubscriptionTasksPage(
+                      subId: state.pathParameters['subId']!,
+                    ),
                   ),
                   routes: [
                     GoRoute(
                       path: 'detail/:taskId',
-                      builder: (context, state) => DetailPage(
-                        taskId: state.pathParameters['taskId']!,
+                      pageBuilder: (context, state) => slideUpTransitionPage(
+                        state: state,
+                        child: DetailPage(
+                          taskId: state.pathParameters['taskId']!,
+                        ),
                       ),
                     ),
                   ],

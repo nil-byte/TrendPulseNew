@@ -226,4 +226,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openOriginal => '查看原文';
+
+  @override
+  String get newLabel => '新建';
 }

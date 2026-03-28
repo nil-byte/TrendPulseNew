@@ -4,12 +4,14 @@ class NumberTicker extends StatefulWidget {
   final double targetValue;
   final TextStyle? style;
   final Duration duration;
+  final int decimalPlaces;
 
   const NumberTicker({
     super.key,
     required this.targetValue,
     this.style,
     this.duration = const Duration(milliseconds: 800),
+    this.decimalPlaces = 0,
   });
 
   @override
@@ -62,7 +64,7 @@ class _NumberTickerState extends State<NumberTicker>
       animation: _animation,
       builder: (context, _) {
         return Text(
-          _animation.value.toStringAsFixed(1),
+          _animation.value.toStringAsFixed(widget.decimalPlaces),
           style: widget.style,
         );
       },

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/animations/number_ticker.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 
 class SentimentGauge extends StatelessWidget {
@@ -37,8 +38,8 @@ class SentimentGauge extends StatelessWidget {
                       theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
                 ),
                 child: Center(
-                  child: Text(
-                    score.round().toString(),
+                  child: NumberTicker(
+                    targetValue: score,
                     style: theme.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: color,

@@ -227,4 +227,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openOriginal => 'Open original';
+
+  @override
+  String get newLabel => 'New';
 }

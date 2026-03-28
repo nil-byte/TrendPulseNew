@@ -49,10 +49,16 @@ class _DetailPageState extends ConsumerState<DetailPage>
               expandedHeight: 120,
               forceElevated: innerBoxIsScrolled,
               flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  keyword,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                title: Hero(
+                  tag: 'task-keyword-${widget.taskId}',
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Text(
+                      keyword,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
                 titlePadding: const EdgeInsetsDirectional.only(

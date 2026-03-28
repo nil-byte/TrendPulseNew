@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:trendpulse/core/animations/breathe_animation.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
@@ -293,10 +294,12 @@ class _EmptyHistoryView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.history_rounded,
-              size: 64,
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
+            BreatheAnimation(
+              child: Icon(
+                Icons.history_rounded,
+                size: 64,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(

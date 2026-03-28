@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/animations/number_ticker.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 
 class HeatIndexCard extends StatelessWidget {
@@ -19,8 +20,8 @@ class HeatIndexCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              heatIndex.round().toString(),
+            NumberTicker(
+              targetValue: heatIndex,
               style: theme.textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.primary,

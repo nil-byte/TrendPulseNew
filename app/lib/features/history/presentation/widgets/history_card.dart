@@ -55,13 +55,19 @@ class HistoryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                item.keyword,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+              Hero(
+                tag: 'task-keyword-${item.id}',
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Text(
+                    item.keyword,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
