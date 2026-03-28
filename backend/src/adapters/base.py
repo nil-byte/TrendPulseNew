@@ -1,0 +1,1 @@
+"""Base adapter abstract class."""
