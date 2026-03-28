@@ -36,6 +36,7 @@ app/*.iml
 # IDE
 .vscode/
 .idea/
+.worktrees/
 *.swp
 *.swo
 *~
