@@ -4,55 +4,124 @@ import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/analysis/presentation/pages/analysis_page.dart';
-import 'features/feed/presentation/pages/feed_page.dart';
+import 'features/detail/presentation/pages/detail_page.dart';
+import 'features/history/presentation/pages/history_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
+import 'features/subscription/presentation/pages/subscription_form_page.dart';
+import 'features/subscription/presentation/pages/subscription_page.dart';
+import 'features/subscription/presentation/pages/subscription_tasks_page.dart';
 import 'l10n/app_localizations.dart';
 
-class _PlaceholderPage extends StatelessWidget {
-  final String title;
-  const _PlaceholderPage({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(title, style: Theme.of(context).textTheme.headlineMedium),
-      ),
-    );
-  }
-}
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _analysisShellKey = GlobalKey<NavigatorState>(debugLabel: 'analysis');
+final _historyShellKey = GlobalKey<NavigatorState>(debugLabel: 'history');
+final _subscriptionShellKey =
+    GlobalKey<NavigatorState>(debugLabel: 'subscription');
+final _settingsShellKey = GlobalKey<NavigatorState>(debugLabel: 'settings');
 
 final _router = GoRouter(
+  navigatorKey: _rootNavigatorKey,
   initialLocation: '/analysis',
   routes: [
-    ShellRoute(
-      builder: (context, state, child) => _ScaffoldWithNav(child: child),
-      routes: [
-        GoRoute(
-          path: '/analysis',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: AnalysisPage(),
-          ),
+    // Top-level detail push (from analysis search)
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/detail/:taskId',
+      builder: (context, state) => DetailPage(
+        taskId: state.pathParameters['taskId']!,
+      ),
+    ),
+
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) =>
+          _ScaffoldWithNav(navigationShell: navigationShell),
+      branches: [
+        // Tab 0: Analysis
+        StatefulShellBranch(
+          navigatorKey: _analysisShellKey,
+          routes: [
+            GoRoute(
+              path: '/analysis',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: AnalysisPage(),
+              ),
+            ),
+          ],
         ),
-        GoRoute(
-          path: '/history',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: _PlaceholderPage(title: 'History'),
-          ),
+
+        // Tab 1: History
+        StatefulShellBranch(
+          navigatorKey: _historyShellKey,
+          routes: [
+            GoRoute(
+              path: '/history',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: HistoryPage(),
+              ),
+              routes: [
+                GoRoute(
+                  path: 'detail/:taskId',
+                  builder: (context, state) => DetailPage(
+                    taskId: state.pathParameters['taskId']!,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        GoRoute(
-          path: '/feed',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: FeedPage(),
-          ),
+
+        // Tab 2: Subscription
+        StatefulShellBranch(
+          navigatorKey: _subscriptionShellKey,
+          routes: [
+            GoRoute(
+              path: '/subscription',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: SubscriptionPage(),
+              ),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) =>
+                      const SubscriptionFormPage(),
+                ),
+                GoRoute(
+                  path: ':subId/edit',
+                  builder: (context, state) => SubscriptionFormPage(
+                    subId: state.pathParameters['subId'],
+                  ),
+                ),
+                GoRoute(
+                  path: ':subId/tasks',
+                  builder: (context, state) => SubscriptionTasksPage(
+                    subId: state.pathParameters['subId']!,
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'detail/:taskId',
+                      builder: (context, state) => DetailPage(
+                        taskId: state.pathParameters['taskId']!,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
-        GoRoute(
-          path: '/settings',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: SettingsPage(),
-          ),
+
+        // Tab 3: Settings
+        StatefulShellBranch(
+          navigatorKey: _settingsShellKey,
+          routes: [
+            GoRoute(
+              path: '/settings',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: SettingsPage(),
+              ),
+            ),
+          ],
         ),
       ],
     ),
@@ -60,57 +129,39 @@ final _router = GoRouter(
 );
 
 class _ScaffoldWithNav extends StatelessWidget {
-  final Widget child;
-  const _ScaffoldWithNav({required this.child});
+  final StatefulNavigationShell navigationShell;
 
-  static int _calculateSelectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    if (location.startsWith('/analysis')) return 0;
-    if (location.startsWith('/history')) return 1;
-    if (location.startsWith('/feed')) return 2;
-    if (location.startsWith('/settings')) return 3;
-    return 0;
-  }
+  const _ScaffoldWithNav({required this.navigationShell});
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = _calculateSelectedIndex(context);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      body: child,
+      body: navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/analysis');
-            case 1:
-              context.go('/history');
-            case 2:
-              context.go('/feed');
-            case 3:
-              context.go('/settings');
-          }
-        },
-        destinations: const [
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: (index) =>
+            navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex),
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Analysis',
+            icon: const Icon(Icons.analytics_outlined),
+            selectedIcon: const Icon(Icons.analytics),
+            label: l10n.analysisTab,
           ),
           NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: 'History',
+            icon: const Icon(Icons.history_outlined),
+            selectedIcon: const Icon(Icons.history),
+            label: l10n.historyTab,
           ),
           NavigationDestination(
-            icon: Icon(Icons.feed_outlined),
-            selectedIcon: Icon(Icons.feed),
-            label: 'Feed',
+            icon: const Icon(Icons.subscriptions_outlined),
+            selectedIcon: const Icon(Icons.subscriptions),
+            label: l10n.subscriptionTab,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: l10n.settingsTab,
           ),
         ],
       ),
