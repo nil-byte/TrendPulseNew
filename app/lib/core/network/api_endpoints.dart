@@ -8,6 +8,12 @@ abstract final class ApiEndpoints {
   static String taskReport(String id) => '$apiPrefix/tasks/$id/report';
   static String taskPosts(String id) => '$apiPrefix/tasks/$id/posts';
 
+  // Subscriptions
+  static const String subscriptions = '$apiPrefix/subscriptions';
+  static String subscriptionById(String id) => '$apiPrefix/subscriptions/$id';
+  static String subscriptionTasks(String id) =>
+      '$apiPrefix/subscriptions/$id/tasks';
+
   // Settings
   static const String settings = '$apiPrefix/settings';
 }
