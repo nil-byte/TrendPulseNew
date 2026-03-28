@@ -7,6 +7,7 @@ import 'features/analysis/presentation/pages/analysis_page.dart';
 import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
+import 'l10n/app_localizations.dart';
 
 class _PlaceholderPage extends StatelessWidget {
   final String title;
@@ -130,6 +131,8 @@ class TrendPulseApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: _router,
     );
   }
