@@ -11,15 +11,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.router import api_router
 from src.models.database import init_db
+from src.services.scheduler_service import SchedulerService
 
 logging.basicConfig(level=logging.INFO)
+
+_scheduler = SchedulerService()
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown lifecycle."""
     await init_db()
+    await _scheduler.start()
     yield
+    await _scheduler.stop()
 
 
 app = FastAPI(
