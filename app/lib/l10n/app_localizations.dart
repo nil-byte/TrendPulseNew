@@ -302,6 +302,18 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this task?'**
   String get deleteConfirmMessage;
 
+  /// No description provided for @deleteSubscriptionConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Subscription'**
+  String get deleteSubscriptionConfirmTitle;
+
+  /// No description provided for @deleteSubscriptionConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this subscription?'**
+  String get deleteSubscriptionConfirmMessage;
+
   /// No description provided for @noHistory.
   ///
   /// In en, this message translates to:

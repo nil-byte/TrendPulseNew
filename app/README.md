@@ -1,17 +1,5 @@
-# trendpulse
+# TrendPulse（Flutter 客户端）
 
-A new Flutter project.
+本目录为 TrendPulse 的跨平台前端，与仓库根目录下的 `backend/` 通过 REST API 通信。
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+说明、架构与 API 概览见仓库根目录 [README.md](../README.md)。

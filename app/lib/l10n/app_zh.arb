@@ -34,6 +34,8 @@
   "confirm": "确认",
   "deleteConfirmTitle": "删除任务",
   "deleteConfirmMessage": "确定要删除此任务吗？",
+  "deleteSubscriptionConfirmTitle": "删除订阅",
+  "deleteSubscriptionConfirmMessage": "确定要删除此订阅吗？",
   "noHistory": "暂无分析历史",
   "startFirstAnalysis": "开始你的第一次分析",
   "noSubscriptions": "暂无订阅",

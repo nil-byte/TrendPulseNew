@@ -112,6 +112,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to delete this task?';
 
   @override
+  String get deleteSubscriptionConfirmTitle => 'Delete Subscription';
+
+  @override
+  String get deleteSubscriptionConfirmMessage =>
+      'Are you sure you want to delete this subscription?';
+
+  @override
   String get noHistory => 'No analysis history yet';
 
   @override

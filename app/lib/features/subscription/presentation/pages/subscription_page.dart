@@ -149,8 +149,8 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteConfirmTitle),
-        content: Text(l10n.deleteConfirmMessage),
+        title: Text(l10n.deleteSubscriptionConfirmTitle),
+        content: Text(l10n.deleteSubscriptionConfirmMessage),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
         ),

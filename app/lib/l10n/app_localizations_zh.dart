@@ -111,6 +111,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteConfirmMessage => '确定要删除此任务吗？';
 
   @override
+  String get deleteSubscriptionConfirmTitle => '删除订阅';
+
+  @override
+  String get deleteSubscriptionConfirmMessage => '确定要删除此订阅吗？';
+
+  @override
   String get noHistory => '暂无分析历史';
 
   @override
