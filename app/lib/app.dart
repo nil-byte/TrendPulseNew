@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/analysis/presentation/pages/analysis_page.dart';
+import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
@@ -43,7 +44,7 @@ final _router = GoRouter(
         GoRoute(
           path: '/feed',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: _PlaceholderPage(title: 'Feed'),
+            child: FeedPage(),
           ),
         ),
         GoRoute(
