@@ -12,14 +12,13 @@ from src.models.database import get_db
 from src.models.schemas import (
     AnalysisReportResponse,
     CreateTaskRequest,
-    KeyInsight,
     PostListResponse,
     RawPost,
     RawPostResponse,
     TaskListResponse,
     TaskResponse,
 )
-from src.services.analyzer_service import AnalyzerService
+from src.services.analyzer_service import AnalysisResult, AnalyzerService
 from src.services.collector_service import CollectorService
 
 logger = logging.getLogger(__name__)
@@ -299,12 +298,7 @@ class TaskService:
         finally:
             await db.close()
 
-    async def _save_analysis_report(self, task_id: str, result: AnalyzerService | object) -> None:
-        from src.services.analyzer_service import AnalysisResult
-
-        if not isinstance(result, AnalysisResult):
-            return
-
+    async def _save_analysis_report(self, task_id: str, result: AnalysisResult) -> None:
         report_id = str(uuid.uuid4())
         now = _now_iso()
         insights_json = json.dumps(

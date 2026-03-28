@@ -30,6 +30,11 @@ class SchedulerService:
         self._task: asyncio.Task[None] | None = None
         self._task_service = TaskService()
 
+    @property
+    def is_running(self) -> bool:
+        """True if the background poll loop task is active."""
+        return self._task is not None
+
     async def start(self) -> None:
         """Start the background scheduler loop."""
         if self._task is not None:

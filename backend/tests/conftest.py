@@ -10,6 +10,7 @@ import aiosqlite
 from httpx import ASGITransport, AsyncClient
 
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_trendpulse.db"
+os.environ["SCHEDULER_ENABLED"] = "false"
 
 from src.main import app
 from src.models.database import init_db, get_db, close_db
@@ -24,6 +25,7 @@ async def setup_db():
     await db.execute("DELETE FROM analysis_reports")
     await db.execute("DELETE FROM raw_posts")
     await db.execute("DELETE FROM tasks")
+    await db.execute("DELETE FROM subscriptions")
     await db.commit()
     await close_db(db)
 

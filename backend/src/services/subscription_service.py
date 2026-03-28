@@ -202,6 +202,10 @@ class SubscriptionService:
     async def delete_subscription(self, sub_id: str) -> bool:
         """Delete a subscription.
 
+        Tasks that referenced this subscription keep their rows (history); their
+        ``subscription_id`` is cleared first so the delete does not violate the
+        foreign key to ``subscriptions.id``.
+
         Args:
             sub_id: UUID of the subscription.
 
@@ -215,6 +219,10 @@ class SubscriptionService:
             )
             if await cursor.fetchone() is None:
                 return False
+            await db.execute(
+                "UPDATE tasks SET subscription_id = NULL WHERE subscription_id = ?",
+                (sub_id,),
+            )
             await db.execute("DELETE FROM subscriptions WHERE id = ?", (sub_id,))
             await db.commit()
             return True

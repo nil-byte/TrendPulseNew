@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite+aiosqlite:///./trendpulse.db"
 
+    # Background jobs (tests set ``SCHEDULER_ENABLED=false`` to avoid real scheduler)
+    scheduler_enabled: bool = True
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
