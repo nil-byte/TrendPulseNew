@@ -67,6 +67,7 @@
   "settingsAbout": "关于",
   "settingsVersion": "版本",
   "settingsLicense": "许可协议",
+  "settingsAboutDescription": "聚合 Reddit、YouTube 与 X 的内容，生成 AI 舆情分析结果。",
   "sources": "来源",
   "emptyAnalysis": "输入主题开始分析",
   "errorGeneric": "出了点问题",

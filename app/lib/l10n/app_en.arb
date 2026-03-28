@@ -67,6 +67,7 @@
   "settingsAbout": "About",
   "settingsVersion": "Version",
   "settingsLicense": "License",
+  "settingsAboutDescription": "AI-powered social media trend analysis across Reddit, YouTube, and X.",
   "sources": "sources",
   "emptyAnalysis": "Enter a topic to start analysis",
   "errorGeneric": "Something went wrong",

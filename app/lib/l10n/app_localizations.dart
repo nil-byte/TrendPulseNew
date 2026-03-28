@@ -500,6 +500,12 @@ abstract class AppLocalizations {
   /// **'License'**
   String get settingsLicense;
 
+  /// No description provided for @settingsAboutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-powered social media trend analysis across Reddit, YouTube, and X.'**
+  String get settingsAboutDescription;
+
   /// No description provided for @sources.
   ///
   /// In en, this message translates to:

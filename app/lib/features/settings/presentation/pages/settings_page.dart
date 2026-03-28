@@ -311,9 +311,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     const Divider(height: AppSpacing.lg * 2),
                     Text(
-                      'AI-powered social media trend analysis. '
-                      'Aggregate content from Reddit, YouTube, and X, '
-                      'then generate insights with Grok.',
+                      l10n.settingsAboutDescription,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

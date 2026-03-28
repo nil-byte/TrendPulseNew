@@ -210,6 +210,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLicense => '许可协议';
 
   @override
+  String get settingsAboutDescription =>
+      '聚合 Reddit、YouTube 与 X 的内容，生成 AI 舆情分析结果。';
+
+  @override
   String get sources => '来源';
 
   @override

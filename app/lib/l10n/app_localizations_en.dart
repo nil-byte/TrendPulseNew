@@ -211,6 +211,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLicense => 'License';
 
   @override
+  String get settingsAboutDescription =>
+      'AI-powered social media trend analysis across Reddit, YouTube, and X.';
+
+  @override
   String get sources => 'sources';
 
   @override
