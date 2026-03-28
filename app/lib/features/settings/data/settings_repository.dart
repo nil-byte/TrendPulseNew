@@ -5,6 +5,8 @@ class SettingsRepository {
   static const _keyLanguage = 'settings_language';
   static const _keyMaxItems = 'settings_max_items';
   static const _keyThemeMode = 'settings_theme_mode';
+  static const _keyInAppNotify = 'in_app_notify';
+  static const _keySubscriptionNotify = 'subscription_notify';
 
   Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,5 +46,25 @@ class SettingsRepository {
   Future<void> setThemeMode(String mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyThemeMode, mode);
+  }
+
+  Future<bool> getInAppNotify() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyInAppNotify) ?? true;
+  }
+
+  Future<void> setInAppNotify(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyInAppNotify, value);
+  }
+
+  Future<bool> getSubscriptionNotify() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keySubscriptionNotify) ?? true;
+  }
+
+  Future<void> setSubscriptionNotify(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySubscriptionNotify, value);
   }
 }

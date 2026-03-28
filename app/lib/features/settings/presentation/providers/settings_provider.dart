@@ -31,6 +31,18 @@ final defaultMaxItemsProvider =
   return DefaultMaxItemsNotifier(repo);
 });
 
+final inAppNotifyProvider =
+    StateNotifierProvider<InAppNotifyNotifier, bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return InAppNotifyNotifier(repo);
+});
+
+final subscriptionNotifyProvider =
+    StateNotifierProvider<SubscriptionNotifyNotifier, bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return SubscriptionNotifyNotifier(repo);
+});
+
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   final SettingsRepository _repo;
 
@@ -109,5 +121,39 @@ class DefaultMaxItemsNotifier extends StateNotifier<int> {
   Future<void> setMaxItems(int maxItems) async {
     state = maxItems;
     await _repo.setMaxItems(maxItems);
+  }
+}
+
+class InAppNotifyNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+
+  InAppNotifyNotifier(this._repo) : super(true) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    state = await _repo.getInAppNotify();
+  }
+
+  Future<void> toggle() async {
+    state = !state;
+    await _repo.setInAppNotify(state);
+  }
+}
+
+class SubscriptionNotifyNotifier extends StateNotifier<bool> {
+  final SettingsRepository _repo;
+
+  SubscriptionNotifyNotifier(this._repo) : super(true) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    state = await _repo.getSubscriptionNotify();
+  }
+
+  Future<void> toggle() async {
+    state = !state;
+    await _repo.setSubscriptionNotify(state);
   }
 }

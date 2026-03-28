@@ -175,6 +175,7 @@ class TrendPulseApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final language = ref.watch(defaultLanguageProvider);
 
     return MaterialApp.router(
       title: 'TrendPulse',
@@ -182,6 +183,7 @@ class TrendPulseApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      locale: Locale(language),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: _router,
