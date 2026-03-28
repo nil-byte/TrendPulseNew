@@ -7,6 +7,6 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: TrendPulseApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Analysis'), findsWidgets);
+    expect(find.text('ANALYSIS'), findsWidgets);
   });
 }

@@ -9,9 +9,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Analysis'), findsWidgets);
-    expect(find.text('History'), findsWidgets);
-    expect(find.text('Subscription'), findsWidgets);
-    expect(find.text('Settings'), findsWidgets);
+    expect(find.text('ANALYSIS'), findsWidgets);
+    expect(find.text('HISTORY'), findsWidgets);
+    expect(find.text('SUBSCRIPTION'), findsWidgets);
+    expect(find.text('SETTINGS'), findsWidgets);
   });
 }

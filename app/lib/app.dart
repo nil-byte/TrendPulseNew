@@ -147,37 +147,92 @@ class _ScaffoldWithNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: theme.colorScheme.onSurface, width: 2.0)),
         ),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics),
-            label: l10n.analysisTab,
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (index) => navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.history_outlined),
-            selectedIcon: const Icon(Icons.history),
-            label: l10n.historyTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.subscriptions_outlined),
-            selectedIcon: const Icon(Icons.subscriptions),
-            label: l10n.subscriptionTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings),
-            label: l10n.settingsTab,
-          ),
-        ],
+          indicatorColor: Colors.transparent,
+          backgroundColor: theme.colorScheme.surface,
+          destinations: [
+            _EditorialNavDestination(
+              icon: Icons.analytics_outlined,
+              selectedIcon: Icons.analytics,
+              label: l10n.analysisTab.toUpperCase(),
+              isSelected: navigationShell.currentIndex == 0,
+            ),
+            _EditorialNavDestination(
+              icon: Icons.history_outlined,
+              selectedIcon: Icons.history,
+              label: l10n.historyTab.toUpperCase(),
+              isSelected: navigationShell.currentIndex == 1,
+            ),
+            _EditorialNavDestination(
+              icon: Icons.subscriptions_outlined,
+              selectedIcon: Icons.subscriptions,
+              label: l10n.subscriptionTab.toUpperCase(),
+              isSelected: navigationShell.currentIndex == 2,
+            ),
+            _EditorialNavDestination(
+              icon: Icons.settings_outlined,
+              selectedIcon: Icons.settings,
+              label: l10n.settingsTab.toUpperCase(),
+              isSelected: navigationShell.currentIndex == 3,
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _EditorialNavDestination extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isSelected;
+
+  const _EditorialNavDestination({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = isSelected
+        ? theme.colorScheme.onSurface
+        : theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    
+    return NavigationDestination(
+      icon: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.only(top: 6),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: isSelected
+                  ? color
+                  : theme.colorScheme.onSurface.withValues(alpha: 0),
+              width: 2.0,
+            ),
+          ),
+        ),
+        child: Icon(isSelected ? selectedIcon : icon, color: color),
+      ),
+      label: label,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/subscription/data/subscription_request.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -48,13 +49,34 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
     if (_isEdit && !_loaded) {
       final detailAsync = ref.watch(subscriptionDetailProvider(widget.subId!));
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.subscriptionKeyword)),
+        appBar: AppBar(
+          title: Text(
+            l10n.editEntry.toUpperCase(),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.0,
+            ),
+          ),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1.0),
+            child: EditorialDivider(topSpace: 0, bottomSpace: 0),
+          ),
+        ),
         body: detailAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('$e')),
+          error: (e, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                l10n.subscriptionLoadError,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
           data: (sub) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!_loaded) {
+              if (!_loaded && mounted) {
                 setState(() {
                   _keywordController.text = sub.keyword;
                   _language = sub.language;
@@ -75,96 +97,106 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _isEdit ? l10n.subscriptionKeyword : l10n.addFirstSubscription,
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.sm),
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l10n.confirm),
-            ),
+          (_isEdit ? l10n.editEntry : l10n.newEntry).toUpperCase(),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontFamily: theme.textTheme.displayLarge?.fontFamily,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
           ),
-        ],
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1.0),
+          child: EditorialDivider(topSpace: 0, bottomSpace: 0),
+        ),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            _SectionLabel(label: l10n.subscriptionKeyword, theme: theme),
-            const SizedBox(height: AppSpacing.sm),
+            _SectionLabel(
+              label: l10n.subscriptionSubjectLabel.toUpperCase(),
+              theme: theme,
+            ),
+            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
             TextFormField(
               controller: _keywordController,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w700,
+              ),
               decoration: InputDecoration(
-                hintText: l10n.searchHint,
+                hintText: l10n.subscriptionKeywordHint,
+                hintStyle: theme.textTheme.titleLarge?.copyWith(
+                  fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                  color: colorScheme.onSurface.withValues(alpha: 0.45),
+                  fontStyle: FontStyle.italic,
+                ),
                 filled: true,
-                fillColor: colorScheme.surfaceContainerLow,
+                fillColor: colorScheme.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusMd,
+                    AppSpacing.borderRadiusXl + 4,
                   ),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(color: colorScheme.outline),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusXl + 4,
+                  ),
+                  borderSide: BorderSide(color: colorScheme.outline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusXl + 4,
+                  ),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 1.4),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
+                  vertical: 18,
                 ),
               ),
               validator: (v) => (v == null || v.trim().isEmpty)
-                  ? l10n.subscriptionKeyword
+                  ? l10n.requiredField.toUpperCase()
                   : null,
             ),
 
-            const SizedBox(height: AppSpacing.lg),
-            _SectionLabel(label: l10n.language, theme: theme),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xl),
+            _SectionLabel(label: l10n.language.toUpperCase(), theme: theme),
+            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
-                ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
+                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish.toUpperCase())),
+                ButtonSegment(value: 'zh', label: Text(l10n.languageChinese.toUpperCase())),
               ],
               selected: {_language},
               onSelectionChanged: (v) => setState(() => _language = v.first),
-              style: SegmentedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusMd,
-                  ),
-                ),
-              ),
+              showSelectedIcon: false,
             ),
 
-            const SizedBox(height: AppSpacing.lg),
-            _SectionLabel(label: l10n.dataSources, theme: theme),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xl),
+            _SectionLabel(label: l10n.dataSources.toUpperCase(), theme: theme),
+            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
             Wrap(
               spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: [
                 _SourceFilterChip(
-                  label: l10n.platformReddit,
-                  icon: Icons.forum_rounded,
+                  label: l10n.platformReddit.toUpperCase(),
                   color: tpColors.reddit,
                   selected: _sources.contains('reddit'),
                   onSelected: (v) => setState(() => _toggleSource('reddit', v)),
                 ),
                 _SourceFilterChip(
-                  label: l10n.platformYouTube,
-                  icon: Icons.play_circle_rounded,
+                  label: l10n.platformYouTube.toUpperCase(),
                   color: tpColors.youtube,
                   selected: _sources.contains('youtube'),
                   onSelected: (v) =>
                       setState(() => _toggleSource('youtube', v)),
                 ),
                 _SourceFilterChip(
-                  label: l10n.platformX,
-                  icon: Icons.tag_rounded,
+                  label: l10n.platformX.toUpperCase(),
                   color: tpColors.xPlatform,
                   selected: _sources.contains('x'),
                   onSelected: (v) => setState(() => _toggleSource('x', v)),
@@ -172,9 +204,12 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               ],
             ),
 
-            const SizedBox(height: AppSpacing.lg),
-            _SectionLabel(label: l10n.subscriptionInterval, theme: theme),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xl),
+            _SectionLabel(
+              label: l10n.subscriptionInterval.toUpperCase(),
+              theme: theme,
+            ),
+            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
             SegmentedButton<String>(
               segments: [
                 ButtonSegment(
@@ -193,40 +228,77 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               ],
               selected: {_interval},
               onSelectionChanged: (v) => setState(() => _interval = v.first),
-              style: SegmentedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusMd,
-                  ),
-                ),
-              ),
+              showSelectedIcon: false,
             ),
 
-            const SizedBox(height: AppSpacing.lg),
-            _SectionLabel(
-              label: '${l10n.maxItems}: ${_maxItems.toInt()}',
-              theme: theme,
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _SectionLabel(
+                  label: l10n.maxItems.toUpperCase(),
+                  theme: theme,
+                ),
+                Text(
+                  _maxItems.toInt().toString(),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
             Slider(
               value: _maxItems,
               min: 10,
               max: 100,
               divisions: 9,
-              label: _maxItems.toInt().toString(),
               onChanged: (v) => setState(() => _maxItems = v),
             ),
 
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xl),
+            _SectionLabel(
+              label: l10n.settingsNotifications.toUpperCase(),
+              theme: theme,
+            ),
+            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: 0),
             SwitchListTile.adaptive(
-              title: Text(l10n.notify, style: theme.textTheme.titleSmall),
+              title: Text(
+                l10n.subscriptionEnableAlerts.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               value: _notify,
               onChanged: (v) => setState(() => _notify = v),
               contentPadding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+            ),
+            const EditorialDivider(topSpace: 0, bottomSpace: AppSpacing.xl),
+            
+            SizedBox(
+              height: 56,
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onPrimary,
+                        ),
+                      )
+                    : Text(
+                        l10n.subscriptionSaveAction.toUpperCase(),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
               ),
             ),
+            const SizedBox(height: AppSpacing.xxl),
           ],
         ),
       ),
@@ -269,11 +341,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$e'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
-            ),
+            content: Text(AppLocalizations.of(context)!.subscriptionSaveError),
           ),
         );
       }
@@ -293,9 +361,9 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: theme.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurfaceVariant,
+      style: theme.textTheme.labelSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.5,
       ),
     );
   }
@@ -303,14 +371,12 @@ class _SectionLabel extends StatelessWidget {
 
 class _SourceFilterChip extends StatelessWidget {
   final String label;
-  final IconData icon;
   final Color color;
   final bool selected;
   final ValueChanged<bool> onSelected;
 
   const _SourceFilterChip({
     required this.label,
-    required this.icon,
     required this.color,
     required this.selected,
     required this.onSelected,
@@ -318,19 +384,31 @@ class _SourceFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedFill = color.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.26 : 0.16,
+    );
+    final selectedStroke = color.withValues(alpha: 0.72);
+    final baseLabelStyle = theme.textTheme.labelLarge ?? const TextStyle();
+
     return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: selected ? color : null),
-          const SizedBox(width: AppSpacing.xs),
-          Text(label),
-        ],
-      ),
+      label: Text(label),
       selected: selected,
       onSelected: onSelected,
+      showCheckmark: false,
+      selectedColor: selectedFill,
+      labelStyle: baseLabelStyle.copyWith(
+        color: selected ? color : theme.colorScheme.onSurface,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.4,
+        fontSize: 13,
+      ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+      ),
+      side: BorderSide(
+        color: selected ? selectedStroke : theme.colorScheme.outline,
+        width: selected ? 1.2 : 1.0,
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/features/subscription/presentation/widgets/task_timeline_item.dart';
@@ -24,20 +25,39 @@ class SubscriptionTasksPage extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
 
     final title =
-        detailAsync.whenOrNull(data: (s) => s.keyword) ?? l10n.executionHistory;
+        detailAsync.whenOrNull(data: (s) => s.keyword.toUpperCase()) ??
+        l10n.executionHistory.toUpperCase();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontFamily: theme.textTheme.displayLarge?.fontFamily,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1.0),
+          child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
+        ),
         actions: [
-          TextButton.icon(
-            onPressed: () => _runNow(ref, context, l10n),
-            icon: Icon(
-              Icons.play_arrow_rounded,
-              size: 20,
-              color: colorScheme.primary,
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            child: OutlinedButton.icon(
+              onPressed: () => _runNow(ref, context, l10n),
+              icon: Icon(
+                Icons.play_arrow_rounded,
+                size: 20,
+                color: colorScheme.onSurface,
+              ),
+              label: Text(l10n.runNow.toUpperCase()),
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
             ),
-            label: Text(l10n.runNow),
           ),
         ],
       ),
@@ -45,14 +65,14 @@ class SubscriptionTasksPage extends ConsumerWidget {
         loading: () => const ShimmerLoading(
           itemCount: 5,
           itemHeight: 80,
-          borderRadius: AppSpacing.borderRadiusMd,
+          borderRadius: 0,
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
         ),
         error: (error, _) => AppErrorWidget(
-          message: error.toString(),
+          message: l10n.errorGeneric,
           retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(subscriptionTasksProvider(subId)),
         ),
@@ -62,6 +82,8 @@ class SubscriptionTasksPage extends ConsumerWidget {
           }
 
           return RefreshIndicator(
+            color: theme.colorScheme.onSurface,
+            backgroundColor: theme.colorScheme.surface,
             onRefresh: () async {
               ref.invalidate(subscriptionTasksProvider(subId));
               await ref.read(subscriptionTasksProvider(subId).future);
@@ -69,7 +91,7 @@ class SubscriptionTasksPage extends ConsumerWidget {
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.sm,
+                AppSpacing.lg,
                 AppSpacing.md,
                 AppSpacing.xl,
               ),
@@ -108,11 +130,10 @@ class SubscriptionTasksPage extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.statusCollecting),
+            content: Text(l10n.statusCollecting.toUpperCase()),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
-            ),
+            backgroundColor: Theme.of(context).colorScheme.onSurface,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
         );
       }
@@ -120,11 +141,10 @@ class SubscriptionTasksPage extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$e'),
+            content: Text(l10n.subscriptionRunNowError),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
-            ),
+            backgroundColor: Theme.of(context).colorScheme.onSurface,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
         );
       }
@@ -151,13 +171,15 @@ class _EmptyTasksView extends StatelessWidget {
             Icon(
               Icons.timeline_rounded,
               size: 64,
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
+              color: colorScheme.onSurface.withValues(alpha: 0.2),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              l10n.noExecutions,
+              l10n.noExecutions.toUpperCase(),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
               ),
             ),
           ],

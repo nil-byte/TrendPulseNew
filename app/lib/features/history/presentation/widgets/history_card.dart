@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 import 'package:trendpulse/core/animations/press_feedback.dart';
+import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/features/history/data/history_item.dart';
@@ -28,15 +28,10 @@ class HistoryCard extends StatelessWidget {
 
     return PressFeedback(
       onTap: onTap,
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: colorScheme.outline, width: 1.0),
         ),
-        color: colorScheme.surfaceContainer,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
@@ -54,36 +49,38 @@ class HistoryCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
               Hero(
                 tag: 'task-keyword-${item.id}',
                 child: Material(
                   type: MaterialType.transparency,
                   child: Text(
-                    item.keyword,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    item.keyword.toUpperCase(),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   Icon(
                     Icons.schedule_rounded,
                     size: 14,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
-                    _formatRelativeTime(item.createdAt),
+                    _formatRelativeTime(context, item.createdAt).toUpperCase(),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.6,
-                      ),
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
                     ),
                   ),
                   const Spacer(),
@@ -92,6 +89,7 @@ class HistoryCard extends StatelessWidget {
                       score: item.sentimentScore!,
                       tpColors: tpColors,
                       theme: theme,
+                      l10n: l10n,
                     ),
                   if (item.isRunning)
                     SizedBox(
@@ -99,7 +97,7 @@ class HistoryCard extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: colorScheme.primary,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                 ],
@@ -111,11 +109,21 @@ class HistoryCard extends StatelessWidget {
     );
   }
 
-  String _formatRelativeTime(String dateStr) {
+  String _formatRelativeTime(BuildContext context, String dateStr) {
     if (dateStr.isEmpty) return '';
     try {
       final date = DateTime.parse(dateStr);
-      return timeago.format(date);
+      final diff = DateTime.now().difference(date);
+      if (diff.inMinutes < 60) {
+        return AppLocalizations.of(context)!.relativeMinutesAgo(diff.inMinutes);
+      }
+      if (diff.inHours < 24) {
+        return AppLocalizations.of(context)!.relativeHoursAgo(diff.inHours);
+      }
+      if (diff.inDays < 7) {
+        return AppLocalizations.of(context)!.relativeDaysAgo(diff.inDays);
+      }
+      return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
     } catch (_) {
       return dateStr;
     }
@@ -139,6 +147,10 @@ class _SourceIcons extends StatelessWidget {
           if (i > 0) const SizedBox(width: AppSpacing.xs),
           _SourceDot(source: sources[i], colors: colors),
         ],
+        if (sources.length > 3) ...[
+          const SizedBox(width: AppSpacing.xs),
+          _OverflowBadge(count: sources.length - 3),
+        ],
       ],
     );
   }
@@ -152,6 +164,7 @@ class _SourceDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final (icon, color) = switch (source.toLowerCase()) {
       'reddit' => (Icons.forum_rounded, colors.reddit),
       'youtube' => (Icons.play_circle_rounded, colors.youtube),
@@ -163,10 +176,39 @@ class _SourceDot extends StatelessWidget {
       width: 24,
       height: 24,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
+        border: Border.all(color: color),
       ),
-      child: Icon(icon, size: 14, color: color),
+      child: Tooltip(
+        message: sourcePlatformLabel(source, l10n),
+        child: Icon(icon, size: 14, color: color),
+      ),
+    );
+  }
+}
+
+class _OverflowBadge extends StatelessWidget {
+  final int count;
+
+  const _OverflowBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border.all(color: theme.colorScheme.outline, width: 1),
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+      ),
+      child: Text(
+        '+$count',
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontSize: 12.5,
+          letterSpacing: 0.3,
+        ),
+      ),
     );
   }
 }
@@ -197,18 +239,20 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+        vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.72)),
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
       ),
       child: Text(
-        label,
+        label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.45,
+          fontSize: 12.5,
         ),
       ),
     );
@@ -219,39 +263,58 @@ class _SentimentIndicator extends StatelessWidget {
   final double score;
   final TrendPulseColors tpColors;
   final ThemeData theme;
+  final AppLocalizations l10n;
 
   const _SentimentIndicator({
     required this.score,
     required this.tpColors,
     required this.theme,
+    required this.l10n,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = score > 0.6
-        ? tpColors.positive
+    final (color, toneLabel) = score > 0.6
+        ? (tpColors.positive, l10n.positive)
         : score < 0.4
-        ? tpColors.negative
-        : tpColors.neutral;
+        ? (tpColors.negative, l10n.negative)
+        : (tpColors.neutral, l10n.neutral);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          (score * 100).toStringAsFixed(0),
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontFeatures: const [FontFeature.tabularFigures()],
+    return Semantics(
+      label:
+          '${l10n.sentimentScore}: ${(score * 100).toStringAsFixed(0)}, $toneLabel',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              border: Border.all(color: theme.colorScheme.onSurface, width: 1),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            (score * 100).toStringAsFixed(0),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            toneLabel.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

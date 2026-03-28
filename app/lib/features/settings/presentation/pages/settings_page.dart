@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_theme.dart';
+import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -38,6 +40,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final maxItems = ref.watch(defaultMaxItemsProvider);
     final inAppNotify = ref.watch(inAppNotifyProvider);
     final subscriptionNotify = ref.watch(subscriptionNotifyProvider);
+    final packageInfoAsync = ref.watch(packageInfoProvider);
+    final appVersion = packageInfoAsync.valueOrNull?.version ?? '...';
 
     ref.listen<String>(baseUrlProvider, (_, next) {
       if (_urlController.text != next) {
@@ -46,282 +50,276 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTab)),
+      appBar: AppBar(
+        title: Text(
+          l10n.settingsTitle.toUpperCase(),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontFamily: theme.textTheme.displayLarge?.fontFamily,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1.0),
+          child: EditorialDivider(topSpace: 0, bottomSpace: 0),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.lg,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- Appearance ---
             _SectionTitle(label: l10n.settingsAppearance),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.settingsTheme, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ThemePreviewCard(
-                            label: l10n.themeLight,
-                            selected: themeMode == ThemeMode.light,
-                            mode: ThemeMode.light,
-                            onTap: () => ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(ThemeMode.light),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _ThemePreviewCard(
-                            label: l10n.themeDark,
-                            selected: themeMode == ThemeMode.dark,
-                            mode: ThemeMode.dark,
-                            onTap: () => ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(ThemeMode.dark),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _ThemePreviewCard(
-                            label: l10n.themeSystem,
-                            selected: themeMode == ThemeMode.system,
-                            mode: ThemeMode.system,
-                            onTap: () => ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(ThemeMode.system),
-                          ),
-                        ),
-                      ],
+            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.md),
+            
+            Text(l10n.settingsTheme.toUpperCase(), style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: _ThemePreviewCard(
+                    label: l10n.themeLight.toUpperCase(),
+                    selected: themeMode == ThemeMode.light,
+                    mode: ThemeMode.light,
+                    onTap: () => ref
+                        .read(themeModeProvider.notifier)
+                        .setThemeMode(ThemeMode.light),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _ThemePreviewCard(
+                    label: l10n.themeDark.toUpperCase(),
+                    selected: themeMode == ThemeMode.dark,
+                    mode: ThemeMode.dark,
+                    onTap: () => ref
+                        .read(themeModeProvider.notifier)
+                        .setThemeMode(ThemeMode.dark),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _ThemePreviewCard(
+                    label: l10n.themeSystem.toUpperCase(),
+                    selected: themeMode == ThemeMode.system,
+                    mode: ThemeMode.system,
+                    onTap: () => ref
+                        .read(themeModeProvider.notifier)
+                        .setThemeMode(ThemeMode.system),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.settingsLanguageLabel.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(
+                      value: 'en',
+                      label: Text(l10n.languageEnglish.toUpperCase()),
                     ),
-                    const Divider(height: AppSpacing.lg * 2),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          l10n.settingsLanguageLabel,
-                          style: theme.textTheme.titleSmall,
-                        ),
-                        SegmentedButton<String>(
-                          segments: [
-                            ButtonSegment(
-                              value: 'en',
-                              label: Text(l10n.languageEnglish),
-                            ),
-                            ButtonSegment(
-                              value: 'zh',
-                              label: Text(l10n.languageChinese),
-                            ),
-                          ],
-                          selected: {language},
-                          onSelectionChanged: (values) {
-                            ref
-                                .read(defaultLanguageProvider.notifier)
-                                .setLanguage(values.first);
-                          },
-                          style: SegmentedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ],
+                    ButtonSegment(
+                      value: 'zh',
+                      label: Text(l10n.languageChinese.toUpperCase()),
                     ),
                   ],
+                  selected: {language},
+                  onSelectionChanged: (values) {
+                    ref
+                        .read(defaultLanguageProvider.notifier)
+                        .setLanguage(values.first);
+                  },
+                  showSelectedIcon: false,
                 ),
-              ),
+              ],
             ),
-
-            const SizedBox(height: AppSpacing.lg),
+            
+            const EditorialDivider.thick(topSpace: AppSpacing.xl, bottomSpace: AppSpacing.lg),
 
             // --- Service ---
             _SectionTitle(label: l10n.settingsService),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.settingsServerUrl,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _urlController,
-                            decoration: InputDecoration(
-                              hintText: ApiEndpoints.defaultBaseUrl,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.sm + 2,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppSpacing.borderRadiusMd,
-                                ),
-                              ),
-                            ),
-                            keyboardType: TextInputType.url,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _saveBaseUrl(),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        FilledButton.tonal(
-                          onPressed: _saveBaseUrl,
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          child: const Icon(Icons.save_outlined, size: 20),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: AppSpacing.lg * 2),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l10n.settingsDefaultItems,
-                            style: theme.textTheme.titleSmall,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm + 2,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(
-                              AppSpacing.borderRadiusSm,
-                            ),
-                          ),
-                          child: Text(
-                            '$maxItems',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Slider(
-                      value: maxItems.toDouble(),
-                      min: 10,
-                      max: 100,
-                      divisions: 9,
-                      label: '$maxItems',
-                      onChanged: (value) {
-                        ref
-                            .read(defaultMaxItemsProvider.notifier)
-                            .setMaxItems(value.round());
-                      },
-                    ),
-                  ],
-                ),
-              ),
+            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.md),
+            
+            Text(
+              l10n.settingsServerUrl.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
-
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _urlController,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: ApiEndpoints.defaultBaseUrl,
+                      isDense: true,
+                      filled: true,
+                      fillColor: colorScheme.surface,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadiusXl + 4,
+                        ),
+                        borderSide: BorderSide(color: colorScheme.outline),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadiusXl + 4,
+                        ),
+                        borderSide: BorderSide(color: colorScheme.outline),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadiusXl + 4,
+                        ),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.4,
+                        ),
+                      ),
+                    ),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _saveBaseUrl(),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                SizedBox(
+                  height: 52,
+                  width: 52,
+                  child: IconButton.filledTonal(
+                    onPressed: _saveBaseUrl,
+                    icon: const Icon(Icons.save_outlined),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.lg),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.settingsDefaultItems.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  '$maxItems',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            Slider(
+              value: maxItems.toDouble(),
+              min: 10,
+              max: 100,
+              divisions: 9,
+              onChanged: (value) {
+                ref
+                    .read(defaultMaxItemsProvider.notifier)
+                    .setMaxItems(value.round());
+              },
+            ),
+            
+            const EditorialDivider.thick(topSpace: AppSpacing.xl, bottomSpace: AppSpacing.lg),
 
             // --- Notifications ---
             _SectionTitle(label: l10n.settingsNotifications),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    title: Text(l10n.settingsInAppNotify),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    value: inAppNotify,
-                    onChanged: (_) =>
-                        ref.read(inAppNotifyProvider.notifier).toggle(),
-                  ),
-                  const Divider(
-                    indent: AppSpacing.md,
-                    endIndent: AppSpacing.md,
-                  ),
-                  SwitchListTile(
-                    title: Text(l10n.settingsSubscriptionNotify),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    value: subscriptionNotify,
-                    onChanged: (_) =>
-                        ref.read(subscriptionNotifyProvider.notifier).toggle(),
-                  ),
-                ],
+            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: 0),
+            
+            SwitchListTile(
+              title: Text(
+                l10n.settingsInAppNotify.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
+              contentPadding: EdgeInsets.zero,
+              value: inAppNotify,
+              onChanged: (_) =>
+                  ref.read(inAppNotifyProvider.notifier).toggle(),
             ),
+            const EditorialDivider(topSpace: 0, bottomSpace: 0),
+            SwitchListTile(
+              title: Text(
+                l10n.settingsSubscriptionNotify.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              contentPadding: EdgeInsets.zero,
+              value: subscriptionNotify,
+              onChanged: (_) =>
+                  ref.read(subscriptionNotifyProvider.notifier).toggle(),
+            ),
+            const EditorialDivider(topSpace: 0, bottomSpace: AppSpacing.lg),
 
             const SizedBox(height: AppSpacing.lg),
 
             // --- About ---
             _SectionTitle(label: l10n.settingsAbout),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
+            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.md),
+            
+            Row(
+              children: [
+                Icon(
+                  Icons.analytics_rounded,
+                  color: colorScheme.onSurface,
+                  size: 32,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.analytics_rounded,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          l10n.appTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '${l10n.settingsVersion} 0.1.0',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      l10n.appTitle.toUpperCase(),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.0,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '${l10n.settingsLicense}: MIT',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const Divider(height: AppSpacing.lg * 2),
-                    Text(
-                      l10n.settingsAboutDescription,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      l10n.settingsAboutMeta(appVersion, 'MIT').toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        letterSpacing: 1.0,
                       ),
                     ),
                   ],
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l10n.settingsAboutDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.8),
+                height: 1.6,
+                fontStyle: FontStyle.italic,
               ),
             ),
-
-            const SizedBox(height: AppSpacing.xl),
+            
+            const SizedBox(height: AppSpacing.xxl),
           ],
         ),
       ),
@@ -334,8 +332,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ref.read(baseUrlProvider.notifier).setBaseUrl(url);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.settingsServerUrl),
-          behavior: SnackBarBehavior.floating,
+          content: Text(
+            AppLocalizations.of(context)!.settingsServerUrlSaved.toUpperCase(),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -354,15 +353,12 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.xs),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.primary,
-          letterSpacing: 1.4,
-          fontWeight: FontWeight.w700,
-        ),
+    return Text(
+      label.toUpperCase(),
+      style: theme.textTheme.titleMedium?.copyWith(
+        fontFamily: theme.textTheme.displayLarge?.fontFamily,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 2.0,
       ),
     );
   }
@@ -389,57 +385,33 @@ class _ThemePreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    final bool isLight = mode == ThemeMode.light;
-    final bool isDark = mode == ThemeMode.dark;
-
-    final Color previewBg = isLight
-        ? const Color(0xFFF8FAFC)
-        : isDark
-        ? const Color(0xFF1E293B)
-        : const Color(0xFFF8FAFC); // system uses light as base
-    final Color previewHeader = isLight
-        ? colorScheme.primary
-        : isDark
-        ? colorScheme.primary.withValues(alpha: 0.7)
-        : colorScheme.primary;
-    final Color previewCard = isLight
-        ? const Color(0xFFFFFFFF)
-        : isDark
-        ? const Color(0xFF334155)
-        : const Color(0xFFFFFFFF);
-    final Color previewCardLine = isLight
-        ? const Color(0xFFE2E8F0)
-        : isDark
-        ? const Color(0xFF475569)
-        : const Color(0xFFE2E8F0);
+    final previewTheme = switch (mode) {
+      ThemeMode.dark => AppTheme.dark,
+      _ => AppTheme.light,
+    };
+    final previewColors = previewTheme.colorScheme;
 
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
+      child: Container(
         decoration: BoxDecoration(
           border: Border.all(
-            color: selected ? colorScheme.primary : colorScheme.outlineVariant,
-            width: selected ? 2.0 : 1.0,
+            color: selected
+                ? colorScheme.primary
+                : colorScheme.outline.withValues(alpha: 0.8),
+            width: selected ? 1.5 : 1.0,
           ),
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl + 4),
         ),
         child: Column(
           children: [
             // Mini preview
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppSpacing.borderRadiusMd - 1),
-              ),
-              child: _buildPreviewBody(
-                previewBg: previewBg,
-                previewHeader: previewHeader,
-                previewCard: previewCard,
-                previewCardLine: previewCardLine,
-                isSystem: mode == ThemeMode.system,
-              ),
+            _buildPreviewBody(
+              previewBg: previewColors.surfaceContainerLowest,
+              previewHeader: previewColors.onSurface,
+              previewCard: previewColors.surface,
+              previewCardLine: previewColors.outline,
+              isSystem: mode == ThemeMode.system,
             ),
 
             // Label area
@@ -447,40 +419,26 @@ class _ThemePreviewCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: selected
-                    ? colorScheme.primaryContainer.withValues(alpha: 0.4)
-                    : Colors.transparent,
+                color: selected ? colorScheme.primaryContainer : Colors.transparent,
+                border: Border(top: BorderSide(
+                  color: selected
+                      ? colorScheme.primary.withValues(alpha: 0.4)
+                      : colorScheme.outline.withValues(alpha: 0.8),
+                )),
                 borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(AppSpacing.borderRadiusMd - 1),
+                  bottom: Radius.circular(AppSpacing.borderRadiusXl + 4),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (selected) ...[
-                    Icon(
-                      Icons.check_circle_rounded,
-                      size: 14,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                  ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: selected
-                            ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: selected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -497,26 +455,27 @@ class _ThemePreviewCard extends StatelessWidget {
     required bool isSystem,
   }) {
     if (isSystem) {
+      final lightPreview = AppTheme.light.colorScheme;
+      final darkPreview = AppTheme.dark.colorScheme;
       return SizedBox(
-        height: 100,
+        height: 80,
         child: Row(
           children: [
             Expanded(
               child: _PreviewMock(
-                bg: const Color(0xFFF8FAFC),
-                header: previewHeader,
-                card: const Color(0xFFFFFFFF),
-                cardLine: const Color(0xFFE2E8F0),
-                clipLeft: true,
+                bg: lightPreview.surfaceContainerLowest,
+                header: lightPreview.onSurface,
+                card: lightPreview.surface,
+                cardLine: lightPreview.outline,
               ),
             ),
+            Container(width: 1, color: lightPreview.outline),
             Expanded(
               child: _PreviewMock(
-                bg: const Color(0xFF1E293B),
-                header: previewHeader.withValues(alpha: 0.7),
-                card: const Color(0xFF334155),
-                cardLine: const Color(0xFF475569),
-                clipRight: true,
+                bg: darkPreview.surfaceContainerLowest,
+                header: darkPreview.onSurface,
+                card: darkPreview.surface,
+                cardLine: darkPreview.outline,
               ),
             ),
           ],
@@ -525,7 +484,7 @@ class _ThemePreviewCard extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 100,
+      height: 80,
       child: _PreviewMock(
         bg: previewBg,
         header: previewHeader,
@@ -545,16 +504,12 @@ class _PreviewMock extends StatelessWidget {
   final Color header;
   final Color card;
   final Color cardLine;
-  final bool clipLeft;
-  final bool clipRight;
 
   const _PreviewMock({
     required this.bg,
     required this.header,
     required this.card,
     required this.cardLine,
-    this.clipLeft = false,
-    this.clipRight = false,
   });
 
   @override
@@ -567,42 +522,27 @@ class _PreviewMock extends StatelessWidget {
         children: [
           // AppBar mock
           Container(
-            height: 14,
-            decoration: BoxDecoration(
-              color: header,
-              borderRadius: BorderRadius.circular(3),
-            ),
+            height: 12,
+            color: header,
           ),
+          const SizedBox(height: 6),
+          // Divider mock
+          Container(height: 1, color: cardLine),
           const SizedBox(height: 6),
           // Card 1
           Expanded(
             child: Container(
               decoration: BoxDecoration(
                 color: card,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: cardLine, width: 0.5),
+                border: Border.all(color: cardLine, width: 1.0),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Container(
-                    height: 4,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: cardLine,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Container(
-                    height: 4,
-                    width: 24,
-                    decoration: BoxDecoration(
-                      color: cardLine,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                  Container(height: 2, width: double.infinity, color: cardLine),
+                  Container(height: 2, width: 24, color: cardLine),
                 ],
               ),
             ),
@@ -613,48 +553,16 @@ class _PreviewMock extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: card,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: cardLine, width: 0.5),
+                border: Border.all(color: cardLine, width: 1.0),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Container(
-                    height: 4,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: cardLine,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Container(
-                    height: 4,
-                    width: 18,
-                    decoration: BoxDecoration(
-                      color: cardLine,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                  Container(height: 2, width: double.infinity, color: cardLine),
+                  Container(height: 2, width: 18, color: cardLine),
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          // Nav dots
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              3,
-              (i) => Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: i == 0 ? header : cardLine,
-                  shape: BoxShape.circle,
-                ),
               ),
             ),
           ),

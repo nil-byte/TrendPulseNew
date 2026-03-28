@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -24,53 +25,65 @@ class KeyInsightCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sentimentColor = _sentimentColor(theme.trendPulseColors);
-    return Card(
-      child: IntrinsicHeight(
-        child: Row(
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.onSurface, width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: sentimentColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
+            Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: sentimentColor,
+                    border: Border.all(color: colorScheme.onSurface, width: 1),
+                  ),
                 ),
-              ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  insight.sentiment.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: sentimentColor,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: colorScheme.onSurface, width: 1),
+                  ),
+                  child: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.sourceCountLabel(insight.sourceCount).toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        insight.text,
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.sourceCountLabel(insight.sourceCount),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              insight.text,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
             ),
           ],

@@ -512,6 +512,24 @@ abstract class AppLocalizations {
   /// **'License'**
   String get settingsLicense;
 
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsServerUrlSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL saved'**
+  String get settingsServerUrlSaved;
+
+  /// No description provided for @settingsAboutMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} • License: {license}'**
+  String settingsAboutMeta(String version, String license);
+
   /// No description provided for @settingsAboutDescription.
   ///
   /// In en, this message translates to:
@@ -530,11 +548,23 @@ abstract class AppLocalizations {
   /// **'Enter a topic to start analysis'**
   String get emptyAnalysis;
 
+  /// No description provided for @noContentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Content'**
+  String get noContentTitle;
+
   /// No description provided for @errorGeneric.
   ///
   /// In en, this message translates to:
   /// **'Something went wrong'**
   String get errorGeneric;
+
+  /// No description provided for @systemErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System Error'**
+  String get systemErrorTitle;
 
   /// No description provided for @filterAll.
   ///
@@ -601,6 +631,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} sources'**
   String sourceCountLabel(int count);
+
+  /// No description provided for @postCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} posts'**
+  String postCountLabel(int count);
+
+  /// No description provided for @analysisMastheadTop.
+  ///
+  /// In en, this message translates to:
+  /// **'THE'**
+  String get analysisMastheadTop;
+
+  /// No description provided for @analysisMastheadSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Intelligence & Sentiment Analysis'**
+  String get analysisMastheadSubtitle;
+
+  /// No description provided for @analysisIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a topic or keyword to generate an editorial report that distills live public sentiment across major digital platforms.'**
+  String get analysisIntro;
+
+  /// No description provided for @analysisSearchHintEditorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject of inquiry...'**
+  String get analysisSearchHintEditorial;
+
+  /// No description provided for @analysisParametersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Parameters'**
+  String get analysisParametersTitle;
+
+  /// No description provided for @analysisStarterTopicsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Starter Topics'**
+  String get analysisStarterTopicsTitle;
+
+  /// No description provided for @analysisStarterTopicsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Try one of these sample topics to begin faster.'**
+  String get analysisStarterTopicsDescription;
+
+  /// No description provided for @analysisStarterTopicAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Artificial Intelligence'**
+  String get analysisStarterTopicAi;
+
+  /// No description provided for @analysisStarterTopicCrypto.
+  ///
+  /// In en, this message translates to:
+  /// **'Cryptocurrency'**
+  String get analysisStarterTopicCrypto;
+
+  /// No description provided for @analysisStarterTopicEv.
+  ///
+  /// In en, this message translates to:
+  /// **'Electric Vehicles'**
+  String get analysisStarterTopicEv;
+
+  /// No description provided for @analysisStarterTopicMarkets.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Markets'**
+  String get analysisStarterTopicMarkets;
+
+  /// No description provided for @analysisStarterTopicLayoffs.
+  ///
+  /// In en, this message translates to:
+  /// **'Tech Layoffs'**
+  String get analysisStarterTopicLayoffs;
+
+  /// No description provided for @analysisDataSourcesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Sources'**
+  String get analysisDataSourcesTitle;
+
+  /// No description provided for @analysisDataSourcesList.
+  ///
+  /// In en, this message translates to:
+  /// **'Reddit • YouTube • X'**
+  String get analysisDataSourcesList;
+
+  /// No description provided for @analysisKeywordRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a topic before starting analysis.'**
+  String get analysisKeywordRequiredMessage;
+
+  /// No description provided for @analysisCreateTaskError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to start this analysis right now. Please try again.'**
+  String get analysisCreateTaskError;
+
+  /// No description provided for @reportOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Report On'**
+  String get reportOn;
+
+  /// No description provided for @liveStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Status'**
+  String get liveStatus;
+
+  /// No description provided for @executiveSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Executive Summary'**
+  String get executiveSummary;
+
+  /// No description provided for @sentimentIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Sentiment Index'**
+  String get sentimentIndex;
+
+  /// No description provided for @heatShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Heat'**
+  String get heatShort;
+
+  /// No description provided for @volumeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get volumeShort;
+
+  /// No description provided for @insightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Insight {number}'**
+  String insightLabel(String number);
+
+  /// No description provided for @reportAnalysisFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analysis Failed'**
+  String get reportAnalysisFailedTitle;
+
+  /// No description provided for @allSources.
+  ///
+  /// In en, this message translates to:
+  /// **'All Sources'**
+  String get allSources;
+
+  /// No description provided for @noRecordsFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Records Found'**
+  String get noRecordsFoundTitle;
+
+  /// No description provided for @noRecordsFoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is available yet.'**
+  String get noRecordsFoundMessage;
+
+  /// No description provided for @noFilteredRecordsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Matches For This Filter'**
+  String get noFilteredRecordsTitle;
+
+  /// No description provided for @noFilteredRecordsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another source to see more posts.'**
+  String get noFilteredRecordsMessage;
+
+  /// No description provided for @filterScrollHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll to view more sources'**
+  String get filterScrollHint;
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Source Unavailable'**
+  String get sourceUnavailable;
+
+  /// No description provided for @searchArchivesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search archive...'**
+  String get searchArchivesHint;
+
+  /// No description provided for @archiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get archiveTitle;
+
+  /// No description provided for @archiveEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive Empty'**
+  String get archiveEmptyTitle;
+
+  /// No description provided for @archiveSearchEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Matching Records'**
+  String get archiveSearchEmptyTitle;
+
+  /// No description provided for @archiveSearchEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a shorter keyword or clear the search.'**
+  String get archiveSearchEmptyMessage;
+
+  /// No description provided for @newAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'New Analysis'**
+  String get newAnalysis;
+
+  /// No description provided for @historyDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Record?'**
+  String get historyDeleteDialogTitle;
+
+  /// No description provided for @historyDeleteDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this record?'**
+  String get historyDeleteDialogMessage;
+
+  /// No description provided for @historyDeleteError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to delete this record right now.'**
+  String get historyDeleteError;
+
+  /// No description provided for @catalogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalog'**
+  String get catalogTitle;
+
+  /// No description provided for @newEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'New Entry'**
+  String get newEntry;
+
+  /// No description provided for @createEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Entry'**
+  String get createEntry;
+
+  /// No description provided for @editEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Entry'**
+  String get editEntry;
+
+  /// No description provided for @catalogEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalog Empty'**
+  String get catalogEmptyTitle;
+
+  /// No description provided for @subscriptionDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Entry?'**
+  String get subscriptionDeleteDialogTitle;
+
+  /// No description provided for @subscriptionDeleteError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to delete this entry right now.'**
+  String get subscriptionDeleteError;
+
+  /// No description provided for @subscriptionToggleError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to update this subscription right now.'**
+  String get subscriptionToggleError;
+
+  /// No description provided for @subscriptionLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load this entry right now.'**
+  String get subscriptionLoadError;
+
+  /// No description provided for @subscriptionRunNowError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to start this run right now.'**
+  String get subscriptionRunNowError;
+
+  /// No description provided for @subscriptionSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save this entry right now.'**
+  String get subscriptionSaveError;
+
+  /// No description provided for @subscriptionSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject of Inquiry'**
+  String get subscriptionSubjectLabel;
+
+  /// No description provided for @subscriptionKeywordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter keyword...'**
+  String get subscriptionKeywordHint;
+
+  /// No description provided for @requiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'Required field'**
+  String get requiredField;
+
+  /// No description provided for @subscriptionEnableAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Alerts'**
+  String get subscriptionEnableAlerts;
+
+  /// No description provided for @subscriptionSaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Subscription'**
+  String get subscriptionSaveAction;
+
+  /// No description provided for @relativeMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m ago'**
+  String relativeMinutesAgo(int count);
+
+  /// No description provided for @relativeHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}h ago'**
+  String relativeHoursAgo(int count);
+
+  /// No description provided for @relativeDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d ago'**
+  String relativeDaysAgo(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/animations/press_feedback.dart';
+import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/features/feed/data/feed_model.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PostCard extends StatelessWidget {
   final SourcePost post;
@@ -18,109 +18,153 @@ class PostCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tpColors = theme.trendPulseColors;
     final l10n = AppLocalizations.of(context)!;
+    final hasSourceUrl = post.url != null;
 
-    return PressFeedback(
-      onTap: post.url != null ? () => _openUrl(post.url!) : null,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    _sourceIcon(post.source),
-                    size: 18,
-                    color: _sourceColor(post.source, tpColors),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    sourcePlatformLabel(post.source, l10n),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: _sourceColor(post.source, tpColors),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (post.author != null) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        post.author!,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ] else
-                    const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondaryContainer.withValues(
-                        alpha: 0.5,
-                      ),
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.borderRadiusSm,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.trending_up_rounded,
-                          size: 14,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${post.engagement}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSecondaryContainer,
-                            fontWeight: FontWeight.w600,
+    return Semantics(
+      link: hasSourceUrl,
+      child: PressFeedback(
+        onTap: hasSourceUrl ? () => _openUrl(post.url!) : null,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.outline, width: 1.0),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _sourceColor(
+                          post.source,
+                          tpColors,
+                        ).withValues(alpha: 0.08),
+                        border: Border.all(
+                          color: _sourceColor(post.source, tpColors).withValues(
+                            alpha: 0.72,
                           ),
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadiusMd + 4,
+                        ),
+                      ),
+                      child: Icon(
+                        _sourceIcon(post.source),
+                        size: 14,
+                        color: _sourceColor(post.source, tpColors),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                post.content,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  height: 1.5,
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      sourcePlatformLabel(post.source, l10n).toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: _sourceColor(post.source, tpColors),
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    if (post.author != null) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          post.author!.toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ] else
+                      const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        border: Border.all(color: theme.colorScheme.outline),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadiusFull,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.trending_up_rounded,
+                            size: 12,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${post.engagement}',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  if (post.publishedAt != null)
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  post.content,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    height: 1.6,
+                  ),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    if (post.publishedAt != null)
+                      Text(
+                        _formatDate(context, post.publishedAt!).toUpperCase(),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    const Spacer(),
                     Text(
-                      _formatDate(post.publishedAt!),
+                      hasSourceUrl
+                          ? l10n.openOriginal.toUpperCase()
+                          : l10n.sourceUnavailable.toUpperCase(),
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: hasSourceUrl
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.45,
                       ),
                     ),
-                  const Spacer(),
-                  if (post.url != null)
-                    Text(
-                      l10n.openOriginal,
-                      style: theme.textTheme.labelSmall?.copyWith(
+                    if (hasSourceUrl) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
                         color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                ],
-              ),
-            ],
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -160,15 +204,21 @@ class PostCard extends StatelessWidget {
     }
   }
 
-  String _formatDate(String isoDate) {
+  String _formatDate(BuildContext context, String isoDate) {
     try {
       final dt = DateTime.parse(isoDate);
       final now = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-      if (diff.inHours < 24) return '${diff.inHours}h';
-      if (diff.inDays < 7) return '${diff.inDays}d';
-      return '${dt.month}/${dt.day}';
+      if (diff.inMinutes < 60) {
+        return AppLocalizations.of(context)!.relativeMinutesAgo(diff.inMinutes);
+      }
+      if (diff.inHours < 24) {
+        return AppLocalizations.of(context)!.relativeHoursAgo(diff.inHours);
+      }
+      if (diff.inDays < 7) {
+        return AppLocalizations.of(context)!.relativeDaysAgo(diff.inDays);
+      }
+      return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
     } catch (_) {
       return isoDate;
     }

@@ -43,14 +43,8 @@ class TaskTimelineItem extends StatelessWidget {
                     height: 12,
                     decoration: BoxDecoration(
                       color: dotColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: dotColor.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      shape: BoxShape.rectangle,
+                      border: Border.all(color: colorScheme.onSurface, width: 1.5),
                     ),
                   ),
                   if (!isLast)
@@ -58,9 +52,7 @@ class TaskTimelineItem extends StatelessWidget {
                       child: Container(
                         width: 2,
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.3,
-                        ),
+                        color: colorScheme.onSurface,
                       ),
                     ),
                 ],
@@ -68,18 +60,11 @@ class TaskTimelineItem extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Card(
-                elevation: 0,
-                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusMd,
-                  ),
-                  side: BorderSide(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  ),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  border: Border.all(color: colorScheme.onSurface, width: 1.5),
                 ),
-                color: colorScheme.surfaceContainer,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
@@ -91,7 +76,7 @@ class TaskTimelineItem extends StatelessWidget {
                             child: Text(
                               _formatDateTime(task.createdAt),
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -107,7 +92,7 @@ class TaskTimelineItem extends StatelessWidget {
                         ],
                       ),
                       if (task.isCompleted) ...[
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.md),
                         Row(
                           children: [
                             if (task.sentimentScore != null) ...[
@@ -126,22 +111,22 @@ class TaskTimelineItem extends StatelessWidget {
                             if (task.postCount != null)
                               _MetricLabel(
                                 icon: Icons.article_outlined,
-                                value: '${task.postCount}',
-                                color: colorScheme.onSurfaceVariant,
+                                value: l10n
+                                    .postCountLabel(task.postCount!)
+                                    .toUpperCase(),
+                                color: colorScheme.onSurface,
                                 theme: theme,
-                                suffix: ' posts',
                               ),
                           ],
                         ),
                       ],
                       if (task.isRunning) ...[
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.md),
                         LinearProgressIndicator(
-                          borderRadius: BorderRadius.circular(2),
-                          minHeight: 3,
-                          color: colorScheme.primary,
-                          backgroundColor: colorScheme.primaryContainer
-                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.zero,
+                          minHeight: 2,
+                          color: colorScheme.onSurface,
+                          backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
                         ),
                       ],
                     ],
@@ -163,7 +148,7 @@ class TaskTimelineItem extends StatelessWidget {
     return switch (status) {
       'completed' => tpColors.positive,
       'failed' => tpColors.negative,
-      'running' || 'collecting' => colorScheme.primary,
+      'running' || 'collecting' => colorScheme.onSurface,
       _ => tpColors.neutral,
     };
   }
@@ -206,8 +191,8 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       'completed' => (l10n.statusCompleted, tpColors.positive),
-      'running' => (l10n.statusAnalyzing, theme.colorScheme.primary),
-      'collecting' => (l10n.statusCollecting, theme.colorScheme.primary),
+      'running' => (l10n.statusAnalyzing, theme.colorScheme.onSurface),
+      'collecting' => (l10n.statusCollecting, theme.colorScheme.onSurface),
       'failed' => (l10n.statusFailed, tpColors.negative),
       _ => (l10n.statusPending, tpColors.neutral),
     };
@@ -215,18 +200,18 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+        vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
+        border: Border.all(color: color),
       ),
       child: Text(
-        label,
+        label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          fontSize: 10,
         ),
       ),
     );
@@ -238,14 +223,12 @@ class _MetricLabel extends StatelessWidget {
   final String value;
   final Color color;
   final ThemeData theme;
-  final String? suffix;
 
   const _MetricLabel({
     required this.icon,
     required this.value,
     required this.color,
     required this.theme,
-    this.suffix,
   });
 
   @override
@@ -254,12 +237,13 @@ class _MetricLabel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: color),
-        const SizedBox(width: 3),
+        const SizedBox(width: 4),
         Text(
-          '$value${suffix ?? ''}',
+          value,
           style: theme.textTheme.labelMedium?.copyWith(
             color: color,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w900,
+            fontFamily: theme.textTheme.displayLarge?.fontFamily,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),

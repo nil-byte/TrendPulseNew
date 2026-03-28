@@ -36,51 +36,61 @@ class _StatusCardState extends State<StatusCard>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = theme.colorScheme;
 
     final (icon, statusText) = _statusInfo(widget.task, l10n);
+    final progress = _progressValue(widget.task);
 
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.onSurface, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FadeTransition(
-              opacity: _pulseController.drive(Tween(begin: 0.4, end: 1.0)),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusMd,
-                  ),
-                ),
-                child: Icon(icon, color: theme.colorScheme.onPrimaryContainer),
+            Text(
+              l10n.liveStatus.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    statusText,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                FadeTransition(
+                  opacity: _pulseController.drive(Tween(begin: 0.4, end: 1.0)),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: colorScheme.onSurface, width: 1.5),
+                    ),
+                    child: Icon(icon, color: colorScheme.onSurface, size: 20),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    statusText.toUpperCase(),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: _progressValue(widget.task),
-                      minHeight: 4,
-                      backgroundColor: theme.colorScheme.outlineVariant
-                          .withValues(alpha: 0.2),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 3,
+              borderRadius: BorderRadius.zero,
+              color: colorScheme.onSurface,
+              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
             ),
           ],
         ),

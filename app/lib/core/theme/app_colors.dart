@@ -1,7 +1,37 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const Color seed = Color(0xFF2196F3);
+  // Warm editorial foundation
+  static const Color seed = Color(0xFFB86A4F);
+
+  static const Color copper = Color(0xFFB86A4F);
+  static const Color copperLight = Color(0xFFD89A78);
+  static const Color copperContainer = Color(0xFFE9C8B8);
+  static const Color copperContainerDark = Color(0xFF6A4536);
+
+  static const Color brass = Color(0xFF9E7A52);
+  static const Color brassDark = Color(0xFFC4A26C);
+  static const Color brassContainer = Color(0xFFE5D6BC);
+  static const Color brassContainerDark = Color(0xFF564330);
+
+  static const Color moss = Color(0xFF6F7C5F);
+  static const Color mossDark = Color(0xFFA1B38A);
+
+  static const Color lightPaper = Color(0xFFFFFBF6);
+  static const Color lightLinen = Color(0xFFF7F0E6);
+  static const Color lightSurfaceRaised = Color(0xFFF0E4D5);
+  static const Color lightInk = Color(0xFF2F2925);
+  static const Color lightInkMuted = Color(0xFF6F6257);
+  static const Color lightOutline = Color(0xFFD6C5B4);
+  static const Color lightOutlineVariant = Color(0xFFE7DBCF);
+
+  static const Color darkEspresso = Color(0xFF181310);
+  static const Color darkWalnut = Color(0xFF241D1A);
+  static const Color darkSurfaceRaised = Color(0xFF332924);
+  static const Color darkIvory = Color(0xFFF3E8DA);
+  static const Color darkIvoryMuted = Color(0xFFCDBFAF);
+  static const Color darkOutline = Color(0xFF655548);
+  static const Color darkOutlineVariant = Color(0xFF4C4037);
 }
 
 @immutable
@@ -26,26 +56,28 @@ class TrendPulseColors extends ThemeExtension<TrendPulseColors> {
   final Color surfaceHighlight;
   final Color subtleBackground;
 
+  // Warm editorial light
   static const light = TrendPulseColors(
-    positive: Color(0xFF10B981),
-    negative: Color(0xFFEF4444),
-    neutral: Color(0xFF94A3B8),
-    reddit: Color(0xFFFF4500),
-    youtube: Color(0xFFFF0000),
-    xPlatform: Color(0xFF1DA1F2),
-    surfaceHighlight: Color(0xFFF1F5F9),
-    subtleBackground: Color(0xFFF8FAFC),
+    positive: AppColors.moss,
+    negative: Color(0xFFB85C42),
+    neutral: Color(0xFF8D7B6A),
+    reddit: Color(0xFFCC784C),
+    youtube: Color(0xFFC96B62),
+    xPlatform: Color(0xFF5F534A),
+    surfaceHighlight: AppColors.lightSurfaceRaised,
+    subtleBackground: AppColors.lightLinen,
   );
 
+  // Warm editorial dark
   static const dark = TrendPulseColors(
-    positive: Color(0xFF34D399),
-    negative: Color(0xFFF87171),
-    neutral: Color(0xFF94A3B8),
-    reddit: Color(0xFFFF6633),
-    youtube: Color(0xFFFF4444),
-    xPlatform: Color(0xFF60C5F7),
-    surfaceHighlight: Color(0xFF334155),
-    subtleBackground: Color(0xFF0F172A),
+    positive: AppColors.mossDark,
+    negative: Color(0xFFE39A7C),
+    neutral: Color(0xFFBCAA9B),
+    reddit: Color(0xFFE0A06E),
+    youtube: Color(0xFFD98C84),
+    xPlatform: Color(0xFFE3D7C9),
+    surfaceHighlight: AppColors.darkSurfaceRaised,
+    subtleBackground: AppColors.darkEspresso,
   );
 
   @override
@@ -97,5 +129,8 @@ class TrendPulseColors extends ThemeExtension<TrendPulseColors> {
 
 extension TrendPulseColorsExtension on ThemeData {
   TrendPulseColors get trendPulseColors =>
-      extension<TrendPulseColors>() ?? TrendPulseColors.light;
+      extension<TrendPulseColors>() ??
+      (brightness == Brightness.dark
+          ? TrendPulseColors.dark
+          : TrendPulseColors.light);
 }

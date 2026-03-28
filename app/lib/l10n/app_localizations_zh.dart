@@ -216,6 +216,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLicense => '许可协议';
 
   @override
+  String get settingsTitle => '偏好设置';
+
+  @override
+  String get settingsServerUrlSaved => '服务器地址已保存';
+
+  @override
+  String settingsAboutMeta(String version, String license) {
+    return '版本 $version • 许可协议：$license';
+  }
+
+  @override
   String get settingsAboutDescription =>
       '聚合 Reddit、YouTube 与 X 的内容，生成 AI 舆情分析结果。';
 
@@ -226,7 +237,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get emptyAnalysis => '输入主题开始分析';
 
   @override
+  String get noContentTitle => '暂无内容';
+
+  @override
   String get errorGeneric => '出了点问题';
+
+  @override
+  String get systemErrorTitle => '系统错误';
 
   @override
   String get filterAll => '全部';
@@ -261,5 +278,195 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String sourceCountLabel(int count) {
     return '$count 条来源';
+  }
+
+  @override
+  String postCountLabel(int count) {
+    return '$count 条内容';
+  }
+
+  @override
+  String get analysisMastheadTop => '今日';
+
+  @override
+  String get analysisMastheadSubtitle => '舆情情报与情感分析';
+
+  @override
+  String get analysisIntro => '输入一个主题或关键词，快速生成一份聚合主流平台舆情、观点与情绪走向的编辑式报告。';
+
+  @override
+  String get analysisSearchHintEditorial => '输入要追踪的话题...';
+
+  @override
+  String get analysisParametersTitle => '参数';
+
+  @override
+  String get analysisStarterTopicsTitle => '灵感选题';
+
+  @override
+  String get analysisStarterTopicsDescription => '先从一个示例话题开始，也可以直接输入自己的主题。';
+
+  @override
+  String get analysisStarterTopicAi => '人工智能';
+
+  @override
+  String get analysisStarterTopicCrypto => '加密货币';
+
+  @override
+  String get analysisStarterTopicEv => '电动车';
+
+  @override
+  String get analysisStarterTopicMarkets => '全球市场';
+
+  @override
+  String get analysisStarterTopicLayoffs => '科技裁员';
+
+  @override
+  String get analysisDataSourcesTitle => '数据来源';
+
+  @override
+  String get analysisDataSourcesList => 'Reddit • YouTube • X';
+
+  @override
+  String get analysisKeywordRequiredMessage => '请先输入一个要分析的话题。';
+
+  @override
+  String get analysisCreateTaskError => '暂时无法发起这次分析，请稍后再试。';
+
+  @override
+  String get reportOn => '报告主题';
+
+  @override
+  String get liveStatus => '实时状态';
+
+  @override
+  String get executiveSummary => '核心摘要';
+
+  @override
+  String get sentimentIndex => '情绪指数';
+
+  @override
+  String get heatShort => '热度';
+
+  @override
+  String get volumeShort => '样本量';
+
+  @override
+  String insightLabel(String number) {
+    return '洞察 $number';
+  }
+
+  @override
+  String get reportAnalysisFailedTitle => '分析失败';
+
+  @override
+  String get allSources => '全部来源';
+
+  @override
+  String get noRecordsFoundTitle => '暂无记录';
+
+  @override
+  String get noRecordsFoundMessage => '这里暂时还没有可展示的内容。';
+
+  @override
+  String get noFilteredRecordsTitle => '当前筛选下暂无结果';
+
+  @override
+  String get noFilteredRecordsMessage => '换一个来源试试，也许会看到更多内容。';
+
+  @override
+  String get filterScrollHint => '左右滑动可查看其他来源';
+
+  @override
+  String get sourceUnavailable => '原文暂不可用';
+
+  @override
+  String get searchArchivesHint => '搜索归档...';
+
+  @override
+  String get archiveTitle => '归档';
+
+  @override
+  String get archiveEmptyTitle => '归档为空';
+
+  @override
+  String get archiveSearchEmptyTitle => '没有找到匹配记录';
+
+  @override
+  String get archiveSearchEmptyMessage => '试试更短的关键词，或清空搜索。';
+
+  @override
+  String get newAnalysis => '新建分析';
+
+  @override
+  String get historyDeleteDialogTitle => '删除这条记录？';
+
+  @override
+  String get historyDeleteDialogMessage => '确定要删除这条记录吗？';
+
+  @override
+  String get historyDeleteError => '暂时无法删除这条记录。';
+
+  @override
+  String get catalogTitle => '目录';
+
+  @override
+  String get newEntry => '新建条目';
+
+  @override
+  String get createEntry => '创建条目';
+
+  @override
+  String get editEntry => '编辑条目';
+
+  @override
+  String get catalogEmptyTitle => '目录为空';
+
+  @override
+  String get subscriptionDeleteDialogTitle => '删除这条订阅？';
+
+  @override
+  String get subscriptionDeleteError => '暂时无法删除这条订阅。';
+
+  @override
+  String get subscriptionToggleError => '暂时无法更新这条订阅。';
+
+  @override
+  String get subscriptionLoadError => '暂时无法加载这条订阅。';
+
+  @override
+  String get subscriptionRunNowError => '暂时无法启动这次执行。';
+
+  @override
+  String get subscriptionSaveError => '暂时无法保存这条订阅。';
+
+  @override
+  String get subscriptionSubjectLabel => '关注主题';
+
+  @override
+  String get subscriptionKeywordHint => '输入关键词...';
+
+  @override
+  String get requiredField => '必填项';
+
+  @override
+  String get subscriptionEnableAlerts => '开启提醒';
+
+  @override
+  String get subscriptionSaveAction => '保存订阅';
+
+  @override
+  String relativeMinutesAgo(int count) {
+    return '$count分钟前';
+  }
+
+  @override
+  String relativeHoursAgo(int count) {
+    return '$count小时前';
+  }
+
+  @override
+  String relativeDaysAgo(int count) {
+    return '$count天前';
   }
 }

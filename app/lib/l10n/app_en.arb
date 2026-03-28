@@ -69,10 +69,25 @@
   "settingsAbout": "About",
   "settingsVersion": "Version",
   "settingsLicense": "License",
+  "settingsTitle": "Preferences",
+  "settingsServerUrlSaved": "Server URL saved",
+  "settingsAboutMeta": "Version {version} • License: {license}",
+  "@settingsAboutMeta": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAboutDescription": "AI-powered social media trend analysis across Reddit, YouTube, and X.",
   "sources": "sources",
   "emptyAnalysis": "Enter a topic to start analysis",
+  "noContentTitle": "No Content",
   "errorGeneric": "Something went wrong",
+  "systemErrorTitle": "System Error",
   "filterAll": "All",
   "engagement": "engagement",
   "openOriginal": "Open original",
@@ -85,6 +100,101 @@
   "poweredBy": "Powered by",
   "sourceCountLabel": "{count} sources",
   "@sourceCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "postCountLabel": "{count} posts",
+  "@postCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "analysisMastheadTop": "THE",
+  "analysisMastheadSubtitle": "Daily Intelligence & Sentiment Analysis",
+  "analysisIntro": "Enter a topic or keyword to generate an editorial report that distills live public sentiment across major digital platforms.",
+  "analysisSearchHintEditorial": "Subject of inquiry...",
+  "analysisParametersTitle": "Parameters",
+  "analysisStarterTopicsTitle": "Starter Topics",
+  "analysisStarterTopicsDescription": "Try one of these sample topics to begin faster.",
+  "analysisStarterTopicAi": "Artificial Intelligence",
+  "analysisStarterTopicCrypto": "Cryptocurrency",
+  "analysisStarterTopicEv": "Electric Vehicles",
+  "analysisStarterTopicMarkets": "Global Markets",
+  "analysisStarterTopicLayoffs": "Tech Layoffs",
+  "analysisDataSourcesTitle": "Data Sources",
+  "analysisDataSourcesList": "Reddit • YouTube • X",
+  "analysisKeywordRequiredMessage": "Enter a topic before starting analysis.",
+  "analysisCreateTaskError": "Unable to start this analysis right now. Please try again.",
+  "reportOn": "Report On",
+  "liveStatus": "Live Status",
+  "executiveSummary": "Executive Summary",
+  "sentimentIndex": "Sentiment Index",
+  "heatShort": "Heat",
+  "volumeShort": "Volume",
+  "insightLabel": "Insight {number}",
+  "@insightLabel": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "reportAnalysisFailedTitle": "Analysis Failed",
+  "allSources": "All Sources",
+  "noRecordsFoundTitle": "No Records Found",
+  "noRecordsFoundMessage": "Nothing is available yet.",
+  "noFilteredRecordsTitle": "No Matches For This Filter",
+  "noFilteredRecordsMessage": "Try another source to see more posts.",
+  "filterScrollHint": "Scroll to view more sources",
+  "sourceUnavailable": "Source Unavailable",
+  "searchArchivesHint": "Search archive...",
+  "archiveTitle": "Archive",
+  "archiveEmptyTitle": "Archive Empty",
+  "archiveSearchEmptyTitle": "No Matching Records",
+  "archiveSearchEmptyMessage": "Try a shorter keyword or clear the search.",
+  "newAnalysis": "New Analysis",
+  "historyDeleteDialogTitle": "Delete Record?",
+  "historyDeleteDialogMessage": "Are you sure you want to delete this record?",
+  "historyDeleteError": "Unable to delete this record right now.",
+  "catalogTitle": "Catalog",
+  "newEntry": "New Entry",
+  "createEntry": "Create Entry",
+  "editEntry": "Edit Entry",
+  "catalogEmptyTitle": "Catalog Empty",
+  "subscriptionDeleteDialogTitle": "Delete Entry?",
+  "subscriptionDeleteError": "Unable to delete this entry right now.",
+  "subscriptionToggleError": "Unable to update this subscription right now.",
+  "subscriptionLoadError": "Unable to load this entry right now.",
+  "subscriptionRunNowError": "Unable to start this run right now.",
+  "subscriptionSaveError": "Unable to save this entry right now.",
+  "subscriptionSubjectLabel": "Subject of Inquiry",
+  "subscriptionKeywordHint": "Enter keyword...",
+  "requiredField": "Required field",
+  "subscriptionEnableAlerts": "Enable Alerts",
+  "subscriptionSaveAction": "Save Subscription",
+  "relativeMinutesAgo": "{count}m ago",
+  "@relativeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeHoursAgo": "{count}h ago",
+  "@relativeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeDaysAgo": "{count}d ago",
+  "@relativeDaysAgo": {
     "placeholders": {
       "count": {
         "type": "int"

@@ -6,6 +6,7 @@ import 'package:trendpulse/core/animations/breathe_animation.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/history/data/history_item.dart';
 import 'package:trendpulse/features/history/presentation/providers/history_provider.dart';
@@ -45,19 +46,32 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.historyTab)),
+      appBar: AppBar(
+        title: Text(
+          l10n.archiveTitle.toUpperCase(),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontFamily: theme.textTheme.displayLarge?.fontFamily,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1.0),
+          child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
+        ),
+      ),
       body: historyAsync.when(
         loading: () => const ShimmerLoading(
           itemCount: 5,
           itemHeight: 110,
-          borderRadius: AppSpacing.borderRadiusLg,
+          borderRadius: 0,
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
         ),
         error: (error, _) => AppErrorWidget(
-          message: error.toString(),
+          message: l10n.errorGeneric,
           retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(historyListProvider),
         ),
@@ -70,88 +84,81 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
 
           return Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  AppSpacing.xs,
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: colorScheme.onSurface, width: 2.0)),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
                 ),
                 child: TextField(
                   controller: _searchController,
                   onChanged: (value) => setState(() => _searchQuery = value),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                    fontWeight: FontWeight.w700,
+                  ),
                   decoration: InputDecoration(
-                    hintText: l10n.searchHint,
+                    hintText: l10n.searchArchivesHint,
+                    hintStyle: theme.textTheme.titleMedium?.copyWith(
+                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                      color: colorScheme.onSurface.withValues(alpha: 0.3),
+                      fontStyle: FontStyle.italic,
+                    ),
                     prefixIcon: Icon(
                       Icons.search_rounded,
-                      color: colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.5,
-                      ),
+                      color: colorScheme.onSurface,
                     ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 20),
+                            icon: Icon(Icons.clear_rounded, color: colorScheme.onSurface),
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _searchQuery = '');
                             },
                           )
                         : null,
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerLow,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.borderRadiusMd,
-                      ),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                   ),
                 ),
               ),
               Expanded(
                 child: filteredItems.isEmpty
-                    ? Center(
-                        child: Text(
-                          l10n.noHistory,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.5,
-                            ),
-                          ),
-                        ),
+                    ? _SearchEmptyView(
+                        title: l10n.archiveSearchEmptyTitle,
+                        message: l10n.archiveSearchEmptyMessage,
                       )
                     : RefreshIndicator(
+                        color: theme.colorScheme.onSurface,
+                        backgroundColor: theme.colorScheme.surface,
                         onRefresh: () async {
                           ref.invalidate(historyListProvider);
                           await ref.read(historyListProvider.future);
                         },
-                        child: ListView.builder(
+                        child: ListView.separated(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm,
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.lg,
                           ),
                           itemCount: filteredItems.length,
+                          separatorBuilder: (_, __) => const EditorialDivider(topSpace: AppSpacing.md, bottomSpace: AppSpacing.md),
                           itemBuilder: (context, index) {
                             final item = filteredItems[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.sm,
-                              ),
-                              child: StaggeredListItem(
-                                index: index,
-                                child: _DismissibleCard(
-                                  item: item,
-                                  onTap: () => context.push(
-                                    '/history/detail/${item.id}',
-                                  ),
-                                  onDelete: () =>
-                                      _confirmDelete(context, item.id),
-                                  index: index,
+                            return StaggeredListItem(
+                              index: index,
+                              child: _DismissibleCard(
+                                item: item,
+                                onTap: () => context.push(
+                                  '/history/detail/${item.id}',
                                 ),
+                                onDelete: () =>
+                                    _confirmDelete(context, item.id),
+                                index: index,
                               ),
                             );
                           },
@@ -172,15 +179,25 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteConfirmTitle),
-        content: Text(l10n.deleteConfirmMessage),
+        title: Text(
+          l10n.historyDeleteDialogTitle.toUpperCase(),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontFamily: theme.textTheme.displayLarge?.fontFamily,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        content: Text(
+          l10n.historyDeleteDialogMessage,
+          style: theme.textTheme.bodyMedium,
+        ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: theme.colorScheme.onSurface, width: 2.0),
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancel),
+            child: Text(l10n.cancel.toUpperCase()),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -188,7 +205,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               backgroundColor: theme.colorScheme.error,
               foregroundColor: theme.colorScheme.onError,
             ),
-            child: Text(l10n.delete),
+            child: Text(l10n.delete.toUpperCase()),
           ),
         ],
       ),
@@ -204,15 +221,14 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       final repository = ref.read(historyRepositoryProvider);
       await repository.deleteTask(taskId);
       ref.invalidate(historyListProvider);
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$e'),
+            content: Text(AppLocalizations.of(context)!.historyDeleteError),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
-            ),
+            backgroundColor: Theme.of(context).colorScheme.onSurface,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
         );
         ref.invalidate(historyListProvider);
@@ -249,21 +265,19 @@ class _DismissibleCard extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: colorScheme.error.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
-        ),
+        color: colorScheme.onSurface,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+            Icon(Icons.delete_outline_rounded, color: colorScheme.surface),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              l10n.delete,
+              '${l10n.confirm.toUpperCase()} ${l10n.delete.toUpperCase()}',
               style: TextStyle(
-                color: colorScheme.error,
+                color: colorScheme.surface,
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
               ),
             ),
           ],
@@ -294,27 +308,80 @@ class _EmptyHistoryView extends StatelessWidget {
               child: Icon(
                 Icons.history_rounded,
                 size: 64,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
+                color: colorScheme.onSurface.withValues(alpha: 0.2),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              l10n.noHistory,
+              l10n.archiveEmptyTitle.toUpperCase(),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.sm),
             Text(
               l10n.startFirstAnalysis,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
+                fontStyle: FontStyle.italic,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton.tonal(
+            const SizedBox(height: AppSpacing.xl),
+            OutlinedButton(
               onPressed: () => context.go('/analysis'),
-              child: Text(l10n.startFirstAnalysis),
+              child: Text(l10n.newAnalysis.toUpperCase()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchEmptyView extends StatelessWidget {
+  final String title;
+  final String message;
+
+  const _SearchEmptyView({required this.title, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 56,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              title.toUpperCase(),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const EditorialDivider(
+              topSpace: AppSpacing.sm,
+              bottomSpace: AppSpacing.sm,
+            ),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ),

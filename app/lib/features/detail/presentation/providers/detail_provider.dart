@@ -75,6 +75,15 @@ final taskReportProvider =
 final detailSourceFilterProvider =
     AutoDisposeStateProviderFamily<String?, String>((ref, taskId) => null);
 
+final taskAllPostsProvider =
+    AutoDisposeFutureProviderFamily<List<SourcePost>, String>((
+      ref,
+      taskId,
+    ) async {
+      final repo = ref.read(feedRepositoryProvider);
+      return repo.getPosts(taskId);
+    });
+
 final taskPostsProvider =
     AutoDisposeFutureProviderFamily<List<SourcePost>, String>((
       ref,

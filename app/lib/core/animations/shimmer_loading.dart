@@ -6,19 +6,24 @@ class ShimmerLoading extends StatelessWidget {
   final double itemHeight;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
+  final bool showOutline;
 
   const ShimmerLoading({
     super.key,
     this.itemCount = 3,
     this.itemHeight = 120,
-    this.borderRadius = 12,
+    this.borderRadius = 0,
     this.padding = const EdgeInsets.symmetric(horizontal: 24),
+    this.showOutline = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outlineColor = colorScheme.onSurface.withValues(
+      alpha: isDark ? 0.18 : 0.08,
+    );
 
     return Shimmer.fromColors(
       baseColor: isDark
@@ -38,6 +43,9 @@ class ShimmerLoading extends StatelessWidget {
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(borderRadius),
+            border: showOutline
+                ? Border.all(color: outlineColor, width: 1.5)
+                : null,
           ),
         ),
       ),

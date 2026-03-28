@@ -218,6 +218,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLicense => 'License';
 
   @override
+  String get settingsTitle => 'Preferences';
+
+  @override
+  String get settingsServerUrlSaved => 'Server URL saved';
+
+  @override
+  String settingsAboutMeta(String version, String license) {
+    return 'Version $version • License: $license';
+  }
+
+  @override
   String get settingsAboutDescription =>
       'AI-powered social media trend analysis across Reddit, YouTube, and X.';
 
@@ -228,7 +239,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyAnalysis => 'Enter a topic to start analysis';
 
   @override
+  String get noContentTitle => 'No Content';
+
+  @override
   String get errorGeneric => 'Something went wrong';
+
+  @override
+  String get systemErrorTitle => 'System Error';
 
   @override
   String get filterAll => 'All';
@@ -263,5 +280,205 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String sourceCountLabel(int count) {
     return '$count sources';
+  }
+
+  @override
+  String postCountLabel(int count) {
+    return '$count posts';
+  }
+
+  @override
+  String get analysisMastheadTop => 'THE';
+
+  @override
+  String get analysisMastheadSubtitle =>
+      'Daily Intelligence & Sentiment Analysis';
+
+  @override
+  String get analysisIntro =>
+      'Enter a topic or keyword to generate an editorial report that distills live public sentiment across major digital platforms.';
+
+  @override
+  String get analysisSearchHintEditorial => 'Subject of inquiry...';
+
+  @override
+  String get analysisParametersTitle => 'Parameters';
+
+  @override
+  String get analysisStarterTopicsTitle => 'Starter Topics';
+
+  @override
+  String get analysisStarterTopicsDescription =>
+      'Try one of these sample topics to begin faster.';
+
+  @override
+  String get analysisStarterTopicAi => 'Artificial Intelligence';
+
+  @override
+  String get analysisStarterTopicCrypto => 'Cryptocurrency';
+
+  @override
+  String get analysisStarterTopicEv => 'Electric Vehicles';
+
+  @override
+  String get analysisStarterTopicMarkets => 'Global Markets';
+
+  @override
+  String get analysisStarterTopicLayoffs => 'Tech Layoffs';
+
+  @override
+  String get analysisDataSourcesTitle => 'Data Sources';
+
+  @override
+  String get analysisDataSourcesList => 'Reddit • YouTube • X';
+
+  @override
+  String get analysisKeywordRequiredMessage =>
+      'Enter a topic before starting analysis.';
+
+  @override
+  String get analysisCreateTaskError =>
+      'Unable to start this analysis right now. Please try again.';
+
+  @override
+  String get reportOn => 'Report On';
+
+  @override
+  String get liveStatus => 'Live Status';
+
+  @override
+  String get executiveSummary => 'Executive Summary';
+
+  @override
+  String get sentimentIndex => 'Sentiment Index';
+
+  @override
+  String get heatShort => 'Heat';
+
+  @override
+  String get volumeShort => 'Volume';
+
+  @override
+  String insightLabel(String number) {
+    return 'Insight $number';
+  }
+
+  @override
+  String get reportAnalysisFailedTitle => 'Analysis Failed';
+
+  @override
+  String get allSources => 'All Sources';
+
+  @override
+  String get noRecordsFoundTitle => 'No Records Found';
+
+  @override
+  String get noRecordsFoundMessage => 'Nothing is available yet.';
+
+  @override
+  String get noFilteredRecordsTitle => 'No Matches For This Filter';
+
+  @override
+  String get noFilteredRecordsMessage =>
+      'Try another source to see more posts.';
+
+  @override
+  String get filterScrollHint => 'Scroll to view more sources';
+
+  @override
+  String get sourceUnavailable => 'Source Unavailable';
+
+  @override
+  String get searchArchivesHint => 'Search archive...';
+
+  @override
+  String get archiveTitle => 'Archive';
+
+  @override
+  String get archiveEmptyTitle => 'Archive Empty';
+
+  @override
+  String get archiveSearchEmptyTitle => 'No Matching Records';
+
+  @override
+  String get archiveSearchEmptyMessage =>
+      'Try a shorter keyword or clear the search.';
+
+  @override
+  String get newAnalysis => 'New Analysis';
+
+  @override
+  String get historyDeleteDialogTitle => 'Delete Record?';
+
+  @override
+  String get historyDeleteDialogMessage =>
+      'Are you sure you want to delete this record?';
+
+  @override
+  String get historyDeleteError => 'Unable to delete this record right now.';
+
+  @override
+  String get catalogTitle => 'Catalog';
+
+  @override
+  String get newEntry => 'New Entry';
+
+  @override
+  String get createEntry => 'Create Entry';
+
+  @override
+  String get editEntry => 'Edit Entry';
+
+  @override
+  String get catalogEmptyTitle => 'Catalog Empty';
+
+  @override
+  String get subscriptionDeleteDialogTitle => 'Delete Entry?';
+
+  @override
+  String get subscriptionDeleteError =>
+      'Unable to delete this entry right now.';
+
+  @override
+  String get subscriptionToggleError =>
+      'Unable to update this subscription right now.';
+
+  @override
+  String get subscriptionLoadError => 'Unable to load this entry right now.';
+
+  @override
+  String get subscriptionRunNowError => 'Unable to start this run right now.';
+
+  @override
+  String get subscriptionSaveError => 'Unable to save this entry right now.';
+
+  @override
+  String get subscriptionSubjectLabel => 'Subject of Inquiry';
+
+  @override
+  String get subscriptionKeywordHint => 'Enter keyword...';
+
+  @override
+  String get requiredField => 'Required field';
+
+  @override
+  String get subscriptionEnableAlerts => 'Enable Alerts';
+
+  @override
+  String get subscriptionSaveAction => 'Save Subscription';
+
+  @override
+  String relativeMinutesAgo(int count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String relativeHoursAgo(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String relativeDaysAgo(int count) {
+    return '${count}d ago';
   }
 }

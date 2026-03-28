@@ -69,10 +69,25 @@
   "settingsAbout": "关于",
   "settingsVersion": "版本",
   "settingsLicense": "许可协议",
+  "settingsTitle": "偏好设置",
+  "settingsServerUrlSaved": "服务器地址已保存",
+  "settingsAboutMeta": "版本 {version} • 许可协议：{license}",
+  "@settingsAboutMeta": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAboutDescription": "聚合 Reddit、YouTube 与 X 的内容，生成 AI 舆情分析结果。",
   "sources": "来源",
   "emptyAnalysis": "输入主题开始分析",
+  "noContentTitle": "暂无内容",
   "errorGeneric": "出了点问题",
+  "systemErrorTitle": "系统错误",
   "filterAll": "全部",
   "engagement": "互动量",
   "openOriginal": "查看原文",
@@ -85,6 +100,101 @@
   "poweredBy": "数据来自",
   "sourceCountLabel": "{count} 条来源",
   "@sourceCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "postCountLabel": "{count} 条内容",
+  "@postCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "analysisMastheadTop": "今日",
+  "analysisMastheadSubtitle": "舆情情报与情感分析",
+  "analysisIntro": "输入一个主题或关键词，快速生成一份聚合主流平台舆情、观点与情绪走向的编辑式报告。",
+  "analysisSearchHintEditorial": "输入要追踪的话题...",
+  "analysisParametersTitle": "参数",
+  "analysisStarterTopicsTitle": "灵感选题",
+  "analysisStarterTopicsDescription": "先从一个示例话题开始，也可以直接输入自己的主题。",
+  "analysisStarterTopicAi": "人工智能",
+  "analysisStarterTopicCrypto": "加密货币",
+  "analysisStarterTopicEv": "电动车",
+  "analysisStarterTopicMarkets": "全球市场",
+  "analysisStarterTopicLayoffs": "科技裁员",
+  "analysisDataSourcesTitle": "数据来源",
+  "analysisDataSourcesList": "Reddit • YouTube • X",
+  "analysisKeywordRequiredMessage": "请先输入一个要分析的话题。",
+  "analysisCreateTaskError": "暂时无法发起这次分析，请稍后再试。",
+  "reportOn": "报告主题",
+  "liveStatus": "实时状态",
+  "executiveSummary": "核心摘要",
+  "sentimentIndex": "情绪指数",
+  "heatShort": "热度",
+  "volumeShort": "样本量",
+  "insightLabel": "洞察 {number}",
+  "@insightLabel": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "reportAnalysisFailedTitle": "分析失败",
+  "allSources": "全部来源",
+  "noRecordsFoundTitle": "暂无记录",
+  "noRecordsFoundMessage": "这里暂时还没有可展示的内容。",
+  "noFilteredRecordsTitle": "当前筛选下暂无结果",
+  "noFilteredRecordsMessage": "换一个来源试试，也许会看到更多内容。",
+  "filterScrollHint": "左右滑动可查看其他来源",
+  "sourceUnavailable": "原文暂不可用",
+  "searchArchivesHint": "搜索归档...",
+  "archiveTitle": "归档",
+  "archiveEmptyTitle": "归档为空",
+  "archiveSearchEmptyTitle": "没有找到匹配记录",
+  "archiveSearchEmptyMessage": "试试更短的关键词，或清空搜索。",
+  "newAnalysis": "新建分析",
+  "historyDeleteDialogTitle": "删除这条记录？",
+  "historyDeleteDialogMessage": "确定要删除这条记录吗？",
+  "historyDeleteError": "暂时无法删除这条记录。",
+  "catalogTitle": "目录",
+  "newEntry": "新建条目",
+  "createEntry": "创建条目",
+  "editEntry": "编辑条目",
+  "catalogEmptyTitle": "目录为空",
+  "subscriptionDeleteDialogTitle": "删除这条订阅？",
+  "subscriptionDeleteError": "暂时无法删除这条订阅。",
+  "subscriptionToggleError": "暂时无法更新这条订阅。",
+  "subscriptionLoadError": "暂时无法加载这条订阅。",
+  "subscriptionRunNowError": "暂时无法启动这次执行。",
+  "subscriptionSaveError": "暂时无法保存这条订阅。",
+  "subscriptionSubjectLabel": "关注主题",
+  "subscriptionKeywordHint": "输入关键词...",
+  "requiredField": "必填项",
+  "subscriptionEnableAlerts": "开启提醒",
+  "subscriptionSaveAction": "保存订阅",
+  "relativeMinutesAgo": "{count}分钟前",
+  "@relativeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeHoursAgo": "{count}小时前",
+  "@relativeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeDaysAgo": "{count}天前",
+  "@relativeDaysAgo": {
     "placeholders": {
       "count": {
         "type": "int"

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
@@ -44,6 +45,10 @@ final subscriptionNotifyProvider =
       final repo = ref.watch(settingsRepositoryProvider);
       return SubscriptionNotifyNotifier(repo);
     });
+
+final packageInfoProvider = FutureProvider<PackageInfo>((ref) async {
+  return PackageInfo.fromPlatform();
+});
 
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   final SettingsRepository _repo;

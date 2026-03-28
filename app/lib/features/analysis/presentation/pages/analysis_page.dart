@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:trendpulse/core/animations/press_feedback.dart';
-import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -33,8 +33,20 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   }
 
   Future<void> _onSearch() async {
+    final l10n = AppLocalizations.of(context)!;
     final keyword = _keywordController.text.trim();
-    if (keyword.isEmpty || _isSearching) return;
+    if (keyword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.analysisKeywordRequiredMessage),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.onSurface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        ),
+      );
+      return;
+    }
+    if (_isSearching) return;
 
     setState(() => _isSearching = true);
 
@@ -54,8 +66,10 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(l10n.analysisCreateTaskError),
             behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.onSurface,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
         );
       }
@@ -74,91 +88,151 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.trending_up_rounded,
-              color: theme.colorScheme.primary,
-              size: 26,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(l10n.appTitle),
-          ],
-        ),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final topPadding = (constraints.maxHeight * 0.12).clamp(24.0, 80.0);
-          return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topPadding,
-              AppSpacing.lg,
-              AppSpacing.xxl,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Column(
-                  children: [
-                    _SearchBar(
-                      controller: _keywordController,
-                      focusNode: _searchFocusNode,
-                      isSearching: _isSearching,
-                      configExpanded: _configExpanded,
-                      onSearch: _onSearch,
-                      onToggleConfig: () {
-                        setState(() => _configExpanded = !_configExpanded);
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    _ConfigPanel(
-                      expanded: _configExpanded,
-                      language: _language,
-                      sources: _sources,
-                      maxItems: _maxItems,
-                      onLanguageChanged: (v) => setState(() => _language = v),
-                      onSourcesChanged: (v) => setState(() => _sources = v),
-                      onMaxItemsChanged: (v) => setState(() => _maxItems = v),
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-                    _TrendingTopicsSection(onTopicTap: _fillSearchBar),
-                    const SizedBox(height: AppSpacing.xxl + AppSpacing.lg),
-                    const _PoweredByFooter(),
-                  ],
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.xl,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      StaggeredListItem(
+                        index: 0,
+                        child: Column(
+                          children: [
+                            Text(
+                              l10n.analysisMastheadTop.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                letterSpacing: 4.0,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              l10n.appTitle.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.displayLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -2.0,
+                                height: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              l10n.analysisMastheadSubtitle.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                            EditorialDivider.doubleLine(
+                              topSpace: AppSpacing.xl,
+                              bottomSpace: AppSpacing.xl,
+                            ),
+                          ],
+                        ),
+                      ),
+                      StaggeredListItem(
+                        index: 1,
+                        child: Text(
+                          l10n.analysisIntro,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontStyle: FontStyle.italic,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.8,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      StaggeredListItem(
+                        index: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _EditorialSearchBar(
+                              controller: _keywordController,
+                              focusNode: _searchFocusNode,
+                              isSearching: _isSearching,
+                              configExpanded: _configExpanded,
+                              searchHint: l10n.analysisSearchHintEditorial,
+                              onSearch: _onSearch,
+                              onToggleConfig: () {
+                                setState(
+                                  () => _configExpanded = !_configExpanded,
+                                );
+                              },
+                            ),
+                            _ConfigPanel(
+                              expanded: _configExpanded,
+                              language: _language,
+                              sources: _sources,
+                              maxItems: _maxItems,
+                              onLanguageChanged: (v) =>
+                                  setState(() => _language = v),
+                              onSourcesChanged: (v) =>
+                                  setState(() => _sources = v),
+                              onMaxItemsChanged: (v) =>
+                                  setState(() => _maxItems = v),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const EditorialDivider.thick(
+                        topSpace: AppSpacing.xxl,
+                        bottomSpace: AppSpacing.lg,
+                      ),
+                      StaggeredListItem(
+                        index: 3,
+                        child: _TrendingTopicsSection(onTopicTap: _fillSearchBar),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      const StaggeredListItem(
+                        index: 4,
+                        child: _PoweredByFooter(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Search Bar
+// Editorial Search Bar
 // ---------------------------------------------------------------------------
 
-class _SearchBar extends StatelessWidget {
+class _EditorialSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool isSearching;
   final bool configExpanded;
+  final String searchHint;
   final VoidCallback onSearch;
   final VoidCallback onToggleConfig;
 
-  const _SearchBar({
+  const _EditorialSearchBar({
     required this.controller,
     required this.focusNode,
     required this.isSearching,
     required this.configExpanded,
+    required this.searchHint,
     required this.onSearch,
     required this.onToggleConfig,
   });
@@ -166,130 +240,89 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
     final colors = theme.colorScheme;
 
-    return Material(
-      color: colors.surfaceContainerLowest,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
-        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.4)),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.onSurface, width: 2.0),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
-        onTap: () => focusNode.requestFocus(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: AppSpacing.xs,
-          ),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.md),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: colors.onSurfaceVariant,
-                  size: 22,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => onSearch(),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: InputDecoration(
+                hintText: searchHint,
+                hintStyle: theme.textTheme.titleLarge?.copyWith(
+                  fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                  color: colors.onSurface.withValues(alpha: 0.3),
+                  fontStyle: FontStyle.italic,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md,
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => onSearch(),
-                  style: theme.textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    hintText: l10n.searchHint,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.md,
-                    ),
-                    isCollapsed: true,
-                  ),
-                ),
-              ),
-              _ConfigToggle(expanded: configExpanded, onTap: onToggleConfig),
-              const SizedBox(width: AppSpacing.xs),
-              _SearchButton(isSearching: isSearching, onTap: onSearch),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ConfigToggle extends StatelessWidget {
-  final bool expanded;
-  final VoidCallback onTap;
-
-  const _ConfigToggle({required this.expanded, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return IconButton(
-      onPressed: onTap,
-      icon: AnimatedRotation(
-        turns: expanded ? 0.5 : 0.0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOutCubic,
-        child: Icon(
-          Icons.tune_rounded,
-          color: expanded ? colors.primary : colors.onSurfaceVariant,
-          size: 20,
-        ),
-      ),
-      style: IconButton.styleFrom(
-        backgroundColor: expanded
-            ? colors.primaryContainer.withValues(alpha: 0.5)
-            : null,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
-        ),
-      ),
-      tooltip: AppLocalizations.of(context)!.configureSearch,
-    );
-  }
-}
-
-class _SearchButton extends StatelessWidget {
-  final bool isSearching;
-  final VoidCallback onTap;
-
-  const _SearchButton({required this.isSearching, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    return FilledButton(
-      onPressed: isSearching ? null : onTap,
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        minimumSize: const Size(0, 40),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
-        ),
-      ),
-      child: isSearching
-          ? SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colors.onPrimary,
+          Container(
+            width: 2.0,
+            height: 56.0,
+            color: colors.onSurface,
+          ),
+          IconButton(
+            onPressed: onToggleConfig,
+            icon: Icon(
+              configExpanded ? Icons.close : Icons.tune_rounded,
+              color: colors.onSurface,
+            ),
+            style: IconButton.styleFrom(
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+            ),
+          ),
+          Container(
+            width: 2.0,
+            height: 56.0,
+            color: colors.onSurface,
+          ),
+          Semantics(
+            button: true,
+            child: InkWell(
+              onTap: isSearching ? null : onSearch,
+              child: Container(
+                width: 80,
+                height: 56.0,
+                color: colors.onSurface,
+                alignment: Alignment.center,
+                child: isSearching
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colors.surface,
+                        ),
+                      )
+                    : Icon(
+                        Icons.arrow_forward_rounded,
+                        color: colors.surface,
+                      ),
               ),
-            )
-          : Text(l10n.searchButton),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -332,120 +365,112 @@ class _ConfigPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final colors = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.md),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
-          border: Border.all(
-            color: colors.outlineVariant.withValues(alpha: 0.3),
-          ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(color: colors.onSurface, width: 2.0),
+          right: BorderSide(color: colors.onSurface, width: 2.0),
+          bottom: BorderSide(color: colors.onSurface, width: 2.0),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Language
-            Text(
-              l10n.language,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.analysisParametersTitle.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
             ),
-            const SizedBox(height: AppSpacing.sm),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
-                ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
-              ],
-              selected: {language},
-              onSelectionChanged: (v) => onLanguageChanged(v.first),
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-              ),
+          ),
+          const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+          
+          // Language
+          Text(
+            l10n.language.toUpperCase(),
+            style: theme.textTheme.labelSmall,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
+              ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
+            ],
+            selected: {language},
+            onSelectionChanged: (v) => onLanguageChanged(v.first),
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              side: BorderSide(color: colors.onSurface),
             ),
-            const SizedBox(height: AppSpacing.lg),
+          ),
+          const SizedBox(height: AppSpacing.lg),
 
-            // Data Sources
-            Text(
-              l10n.dataSources,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: colors.onSurfaceVariant,
+          // Data Sources
+          Text(
+            l10n.dataSources.toUpperCase(),
+            style: theme.textTheme.labelSmall,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _SourceChip(
+                label: l10n.platformReddit,
+                selected: sources.contains('reddit'),
+                onSelected: (v) => _toggleSource('reddit', v),
               ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                _SourceChip(
-                  label: l10n.platformReddit,
-                  icon: Icons.forum_rounded,
-                  color: theme.trendPulseColors.reddit,
-                  selected: sources.contains('reddit'),
-                  onSelected: (v) => _toggleSource('reddit', v),
-                ),
-                _SourceChip(
-                  label: l10n.platformYouTube,
-                  icon: Icons.play_circle_rounded,
-                  color: theme.trendPulseColors.youtube,
-                  selected: sources.contains('youtube'),
-                  onSelected: (v) => _toggleSource('youtube', v),
-                ),
-                _SourceChip(
-                  label: l10n.platformX,
-                  icon: Icons.tag_rounded,
-                  color: theme.trendPulseColors.xPlatform,
-                  selected: sources.contains('x'),
-                  onSelected: (v) => _toggleSource('x', v),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
+              _SourceChip(
+                label: l10n.platformYouTube,
+                selected: sources.contains('youtube'),
+                onSelected: (v) => _toggleSource('youtube', v),
+              ),
+              _SourceChip(
+                label: l10n.platformX,
+                selected: sources.contains('x'),
+                onSelected: (v) => _toggleSource('x', v),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
 
-            // Max Items
-            Row(
-              children: [
-                Text(
-                  l10n.maxItems,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+          // Max Items
+          Row(
+            children: [
+              Text(
+                l10n.maxItems.toUpperCase(),
+                style: theme.textTheme.labelSmall,
+              ),
+              const Spacer(),
+              Text(
+                maxItems.round().toString(),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                  fontWeight: FontWeight.w700,
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(
-                      AppSpacing.borderRadiusSm,
-                    ),
-                  ),
-                  child: Text(
-                    maxItems.round().toString(),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: colors.onSurface,
+              inactiveTrackColor: colors.onSurface.withValues(alpha: 0.2),
+              thumbColor: colors.onSurface,
+              overlayColor: colors.onSurface.withValues(alpha: 0.1),
+              trackHeight: 2.0,
             ),
-            Slider(
+            child: Slider(
               value: maxItems,
               min: 10,
               max: 100,
               divisions: 9,
               onChanged: onMaxItemsChanged,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -463,27 +488,30 @@ class _ConfigPanel extends StatelessWidget {
 
 class _SourceChip extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final Color color;
   final bool selected;
   final ValueChanged<bool> onSelected;
 
   const _SourceChip({
     required this.label,
-    required this.icon,
-    required this.color,
     required this.selected,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return FilterChip(
       label: Text(label),
-      avatar: Icon(icon, size: 18, color: selected ? color : null),
       selected: selected,
       onSelected: onSelected,
       showCheckmark: false,
+      selectedColor: colors.onSurface,
+      labelStyle: TextStyle(
+        color: selected ? colors.surface : colors.onSurface,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      side: BorderSide(color: colors.onSurface, width: 1.0),
     );
   }
 }
@@ -497,71 +525,71 @@ class _TrendingTopicsSection extends StatelessWidget {
 
   const _TrendingTopicsSection({required this.onTopicTap});
 
-  static const _topics = [
-    _TrendingTopic('AI', Icons.auto_awesome_rounded),
-    _TrendingTopic('Bitcoin', Icons.currency_bitcoin_rounded),
-    _TrendingTopic('iPhone', Icons.phone_iphone_rounded),
-    _TrendingTopic('Tesla', Icons.electric_car_rounded),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final colors = theme.colorScheme;
+    final topics = [
+      l10n.analysisStarterTopicAi,
+      l10n.analysisStarterTopicCrypto,
+      l10n.analysisStarterTopicEv,
+      l10n.analysisStarterTopicMarkets,
+      l10n.analysisStarterTopicLayoffs,
+    ];
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.local_fire_department_rounded,
-              size: 18,
-              color: colors.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              l10n.trendingTopics,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: colors.onSurfaceVariant.withValues(alpha: 0.7),
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
+        Text(
+          l10n.analysisStarterTopicsTitle.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+        Text(
+          l10n.analysisStarterTopicsDescription,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+            fontStyle: FontStyle.italic,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: _topics.map((topic) {
-            return PressFeedback(
-              onTap: () => onTopicTap(topic.label),
-              child: ActionChip(
-                avatar: Icon(topic.icon, size: 18),
-                label: Text(topic.label),
-                onPressed: () => onTopicTap(topic.label),
-                side: BorderSide(
-                  color: colors.outlineVariant.withValues(alpha: 0.5),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusXl,
+        ...List.generate(topics.length, (index) {
+          final topic = topics[index];
+          return InkWell(
+            onTap: () => onTopicTap(topic),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Row(
+                children: [
+                  Text(
+                    (index + 1).toString().padLeft(2, '0'),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      topic,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_rounded, size: 16),
+                ],
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }),
+        const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: 0),
       ],
     );
   }
-}
-
-class _TrendingTopic {
-  final String label;
-  final IconData icon;
-  const _TrendingTopic(this.label, this.icon);
 }
 
 // ---------------------------------------------------------------------------
@@ -575,47 +603,21 @@ class _PoweredByFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final tpColors = theme.trendPulseColors;
-    final muted = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-    );
-    final dotStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+    final style = theme.textTheme.labelSmall?.copyWith(
+      letterSpacing: 1.0,
+      fontWeight: FontWeight.w700,
     );
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
       children: [
-        Text('${l10n.poweredBy}  ', style: muted),
-        Icon(
-          Icons.forum_rounded,
-          size: 12,
-          color: tpColors.reddit.withValues(alpha: 0.5),
+        Text(l10n.analysisDataSourcesTitle.toUpperCase(), style: style),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          l10n.analysisDataSourcesList.toUpperCase(),
+          style: theme.textTheme.bodySmall?.copyWith(
+            letterSpacing: 2.0,
+          ),
         ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(l10n.platformReddit, style: muted),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Text('·', style: dotStyle),
-        ),
-        Icon(
-          Icons.play_circle_rounded,
-          size: 12,
-          color: tpColors.youtube.withValues(alpha: 0.5),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(l10n.platformYouTube, style: muted),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Text('·', style: dotStyle),
-        ),
-        Icon(
-          Icons.tag_rounded,
-          size: 12,
-          color: tpColors.xPlatform.withValues(alpha: 0.5),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(l10n.platformX, style: muted),
       ],
     );
   }

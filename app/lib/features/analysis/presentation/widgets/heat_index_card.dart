@@ -12,46 +12,39 @@ class HeatIndexCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.trendPulseColors;
-    final normalizedHeat = heatIndex.clamp(0.0, 100.0) / 100.0;
+    final tpColors = theme.trendPulseColors;
+    final l10n = AppLocalizations.of(context)!;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.heatIndex.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
             NumberTicker(
               targetValue: heatIndex,
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.primary,
+              style: theme.textTheme.displayLarge?.copyWith(
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -2.0,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              AppLocalizations.of(context)!.heatIndex,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: normalizedHeat,
-                minHeight: 6,
-                backgroundColor: theme.colorScheme.outlineVariant.withValues(
-                  alpha: 0.2,
-                ),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Color.lerp(colors.neutral, colors.negative, normalizedHeat)!,
-                ),
-              ),
+            Icon(
+              Icons.local_fire_department_rounded,
+              color: tpColors.reddit,
+              size: 24,
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
