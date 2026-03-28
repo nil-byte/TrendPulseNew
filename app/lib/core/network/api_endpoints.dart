@@ -1,5 +1,8 @@
 abstract final class ApiEndpoints {
-  static const String baseUrl = 'http://localhost:8000';
+  /// Single default for dev API base URL (settings + ApiClient fallback).
+  static const String defaultBaseUrl = 'http://localhost:8000';
+
+  static const String baseUrl = defaultBaseUrl;
   static const String apiPrefix = '/api/v1';
 
   // Tasks
@@ -13,7 +16,4 @@ abstract final class ApiEndpoints {
   static String subscriptionById(String id) => '$apiPrefix/subscriptions/$id';
   static String subscriptionTasks(String id) =>
       '$apiPrefix/subscriptions/$id/tasks';
-
-  // Settings
-  static const String settings = '$apiPrefix/settings';
 }

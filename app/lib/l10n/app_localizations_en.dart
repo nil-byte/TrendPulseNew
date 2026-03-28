@@ -230,4 +230,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newLabel => 'New';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageChinese => '中文';
+
+  @override
+  String get platformReddit => 'Reddit';
+
+  @override
+  String get platformYouTube => 'YouTube';
+
+  @override
+  String get platformX => 'X';
+
+  @override
+  String get poweredBy => 'Powered by';
+
+  @override
+  String sourceCountLabel(int count) {
+    return '$count sources';
+  }
 }

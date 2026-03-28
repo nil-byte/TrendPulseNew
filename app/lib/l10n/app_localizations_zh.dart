@@ -229,4 +229,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get newLabel => '新建';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageChinese => '中文';
+
+  @override
+  String get platformReddit => 'Reddit';
+
+  @override
+  String get platformYouTube => 'YouTube';
+
+  @override
+  String get platformX => 'X';
+
+  @override
+  String get poweredBy => '数据来自';
+
+  @override
+  String sourceCountLabel(int count) {
+    return '$count 条来源';
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -113,9 +114,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           style: theme.textTheme.titleSmall,
                         ),
                         SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(value: 'en', label: Text('English')),
-                            ButtonSegment(value: 'zh', label: Text('中文')),
+                          segments: [
+                            ButtonSegment(
+                              value: 'en',
+                              label: Text(l10n.languageEnglish),
+                            ),
+                            ButtonSegment(
+                              value: 'zh',
+                              label: Text(l10n.languageChinese),
+                            ),
                           ],
                           selected: {language},
                           onSelectionChanged: (values) {
@@ -156,7 +163,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           child: TextField(
                             controller: _urlController,
                             decoration: InputDecoration(
-                              hintText: 'http://localhost:8000',
+                              hintText: ApiEndpoints.defaultBaseUrl,
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: AppSpacing.md,

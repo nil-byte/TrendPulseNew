@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/number_ticker.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/l10n/app_localizations.dart';
 
 class SentimentGauge extends StatelessWidget {
   final double score;
@@ -50,7 +51,7 @@ class SentimentGauge extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Sentiment Score',
+              AppLocalizations.of(context)!.sentimentScore,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

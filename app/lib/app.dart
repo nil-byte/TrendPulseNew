@@ -196,7 +196,7 @@ class TrendPulseApp extends ConsumerWidget {
     final language = ref.watch(defaultLanguageProvider);
 
     return MaterialApp.router(
-      title: 'TrendPulse',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

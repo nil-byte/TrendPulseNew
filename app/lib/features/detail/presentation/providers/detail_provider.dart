@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
 import 'package:trendpulse/features/feed/data/feed_model.dart';
-import 'package:trendpulse/features/feed/presentation/providers/feed_provider.dart';
+import 'package:trendpulse/features/feed/data/feed_repository.dart';
+
+final feedRepositoryProvider = Provider<FeedRepository>((ref) {
+  return FeedRepository();
+});
 
 final taskDetailProvider =
     AutoDisposeAsyncNotifierProviderFamily<TaskDetailNotifier, AnalysisTask, String>(

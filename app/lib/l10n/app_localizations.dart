@@ -541,6 +541,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New'**
   String get newLabel;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'中文'**
+  String get languageChinese;
+
+  /// No description provided for @platformReddit.
+  ///
+  /// In en, this message translates to:
+  /// **'Reddit'**
+  String get platformReddit;
+
+  /// No description provided for @platformYouTube.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube'**
+  String get platformYouTube;
+
+  /// No description provided for @platformX.
+  ///
+  /// In en, this message translates to:
+  /// **'X'**
+  String get platformX;
+
+  /// No description provided for @poweredBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Powered by'**
+  String get poweredBy;
+
+  /// No description provided for @sourceCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sources'**
+  String sourceCountLabel(int count);
 }
 
 class _AppLocalizationsDelegate

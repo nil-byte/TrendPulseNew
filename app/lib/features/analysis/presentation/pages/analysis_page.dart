@@ -133,7 +133,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                       onTopicTap: _fillSearchBar,
                     ),
                     const SizedBox(height: AppSpacing.xxl + AppSpacing.lg),
-                    _PoweredByFooter(),
+                    const _PoweredByFooter(),
                   ],
                 ),
               ),
@@ -366,9 +366,9 @@ class _ConfigPanel extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'en', label: Text('English')),
-                ButtonSegment(value: 'zh', label: Text('中文')),
+              segments: [
+                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
+                ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
               ],
               selected: {language},
               onSelectionChanged: (v) => onLanguageChanged(v.first),
@@ -392,21 +392,21 @@ class _ConfigPanel extends StatelessWidget {
               runSpacing: AppSpacing.sm,
               children: [
                 _SourceChip(
-                  label: 'Reddit',
+                  label: l10n.platformReddit,
                   icon: Icons.forum_rounded,
                   color: theme.trendPulseColors.reddit,
                   selected: sources.contains('reddit'),
                   onSelected: (v) => _toggleSource('reddit', v),
                 ),
                 _SourceChip(
-                  label: 'YouTube',
+                  label: l10n.platformYouTube,
                   icon: Icons.play_circle_rounded,
                   color: theme.trendPulseColors.youtube,
                   selected: sources.contains('youtube'),
                   onSelected: (v) => _toggleSource('youtube', v),
                 ),
                 _SourceChip(
-                  label: 'X',
+                  label: l10n.platformX,
                   icon: Icons.tag_rounded,
                   color: theme.trendPulseColors.xPlatform,
                   selected: sources.contains('x'),
@@ -579,61 +579,52 @@ class _TrendingTopic {
 // ---------------------------------------------------------------------------
 
 class _PoweredByFooter extends StatelessWidget {
+  const _PoweredByFooter();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final tpColors = theme.trendPulseColors;
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+    );
+    final dotStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+    );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Powered by  ',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
+          '${l10n.poweredBy}  ',
+          style: muted,
         ),
         Icon(Icons.forum_rounded, size: 12, color: tpColors.reddit.withValues(alpha: 0.5)),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          'Reddit',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
+          l10n.platformReddit,
+          style: muted,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Text(
-            '·',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-            ),
-          ),
+          child: Text('·', style: dotStyle),
         ),
         Icon(Icons.play_circle_rounded, size: 12, color: tpColors.youtube.withValues(alpha: 0.5)),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          'YouTube',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
+          l10n.platformYouTube,
+          style: muted,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Text(
-            '·',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-            ),
-          ),
+          child: Text('·', style: dotStyle),
         ),
         Icon(Icons.tag_rounded, size: 12, color: tpColors.xPlatform.withValues(alpha: 0.5)),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          'X',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
+          l10n.platformX,
+          style: muted,
         ),
       ],
     );

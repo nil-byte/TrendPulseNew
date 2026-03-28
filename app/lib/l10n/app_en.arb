@@ -73,5 +73,19 @@
   "filterAll": "All",
   "engagement": "engagement",
   "openOriginal": "Open original",
-  "newLabel": "New"
+  "newLabel": "New",
+  "languageEnglish": "English",
+  "languageChinese": "中文",
+  "platformReddit": "Reddit",
+  "platformYouTube": "YouTube",
+  "platformX": "X",
+  "poweredBy": "Powered by",
+  "sourceCountLabel": "{count} sources",
+  "@sourceCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

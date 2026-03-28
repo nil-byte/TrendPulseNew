@@ -123,9 +123,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
             _SectionLabel(label: l10n.language, theme: theme),
             const SizedBox(height: AppSpacing.sm),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'en', label: Text('EN')),
-                ButtonSegment(value: 'zh', label: Text('ZH')),
+              segments: [
+                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
+                ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
               ],
               selected: {_language},
               onSelectionChanged: (v) => setState(() => _language = v.first),
@@ -144,7 +144,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               spacing: AppSpacing.sm,
               children: [
                 _SourceFilterChip(
-                  label: 'Reddit',
+                  label: l10n.platformReddit,
                   icon: Icons.forum_rounded,
                   color: tpColors.reddit,
                   selected: _sources.contains('reddit'),
@@ -152,7 +152,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                       setState(() => _toggleSource('reddit', v)),
                 ),
                 _SourceFilterChip(
-                  label: 'YouTube',
+                  label: l10n.platformYouTube,
                   icon: Icons.play_circle_rounded,
                   color: tpColors.youtube,
                   selected: _sources.contains('youtube'),
@@ -160,7 +160,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                       setState(() => _toggleSource('youtube', v)),
                 ),
                 _SourceFilterChip(
-                  label: 'X',
+                  label: l10n.platformX,
                   icon: Icons.tag_rounded,
                   color: tpColors.xPlatform,
                   selected: _sources.contains('x'),

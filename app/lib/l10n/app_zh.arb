@@ -73,5 +73,19 @@
   "filterAll": "全部",
   "engagement": "互动量",
   "openOriginal": "查看原文",
-  "newLabel": "新建"
+  "newLabel": "新建",
+  "languageEnglish": "English",
+  "languageChinese": "中文",
+  "platformReddit": "Reddit",
+  "platformYouTube": "YouTube",
+  "platformX": "X",
+  "poweredBy": "数据来自",
+  "sourceCountLabel": "{count} 条来源",
+  "@sourceCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

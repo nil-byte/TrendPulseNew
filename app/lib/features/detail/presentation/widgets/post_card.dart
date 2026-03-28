@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/animations/press_feedback.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
@@ -35,7 +36,7 @@ class PostCard extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    _sourceName(post.source),
+                    sourcePlatformLabel(post.source, l10n),
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: _sourceColor(post.source, tpColors),
                       fontWeight: FontWeight.w600,
@@ -154,19 +155,6 @@ class PostCard extends StatelessWidget {
         return colors.xPlatform;
       default:
         return colors.neutral;
-    }
-  }
-
-  String _sourceName(String source) {
-    switch (source.toLowerCase()) {
-      case 'reddit':
-        return 'Reddit';
-      case 'youtube':
-        return 'YouTube';
-      case 'x':
-        return 'X';
-      default:
-        return source;
     }
   }
 

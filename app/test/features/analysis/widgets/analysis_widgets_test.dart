@@ -3,12 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:trendpulse/core/animations/number_ticker.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
+import 'package:trendpulse/l10n/app_localizations.dart';
 import 'package:trendpulse/features/analysis/presentation/widgets/sentiment_gauge.dart';
 import 'package:trendpulse/features/analysis/presentation/widgets/heat_index_card.dart';
 import 'package:trendpulse/features/analysis/presentation/widgets/key_insight_card.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     theme: AppTheme.light,
     home: Scaffold(body: child),
   );
@@ -71,7 +75,10 @@ void main() {
       );
       await tester.pumpWidget(_wrap(const KeyInsightCard(insight: insight)));
       expect(find.text('AI adoption is accelerating'), findsOneWidget);
-      expect(find.text('12 sources'), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(KeyInsightCard)),
+      )!;
+      expect(find.text(l10n.sourceCountLabel(12)), findsOneWidget);
     });
 
     testWidgets('renders with negative sentiment', (tester) async {
@@ -82,7 +89,10 @@ void main() {
       );
       await tester.pumpWidget(_wrap(const KeyInsightCard(insight: insight)));
       expect(find.text('Market downturn expected'), findsOneWidget);
-      expect(find.text('5 sources'), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(KeyInsightCard)),
+      )!;
+      expect(find.text(l10n.sourceCountLabel(5)), findsOneWidget);
     });
 
     testWidgets('renders with neutral sentiment', (tester) async {
@@ -93,7 +103,10 @@ void main() {
       );
       await tester.pumpWidget(_wrap(const KeyInsightCard(insight: insight)));
       expect(find.text('Mixed signals observed'), findsOneWidget);
-      expect(find.text('8 sources'), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(KeyInsightCard)),
+      )!;
+      expect(find.text(l10n.sourceCountLabel(8)), findsOneWidget);
     });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -76,7 +77,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 class BaseUrlNotifier extends StateNotifier<String> {
   final SettingsRepository _repo;
 
-  BaseUrlNotifier(this._repo) : super('http://localhost:8000') {
+  BaseUrlNotifier(this._repo) : super(ApiEndpoints.defaultBaseUrl) {
     _load();
   }
 

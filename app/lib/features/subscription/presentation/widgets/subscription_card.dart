@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/animations/press_feedback.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
@@ -122,7 +123,11 @@ class SubscriptionCard extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _SourceChips(sources: item.sources, tpColors: tpColors),
+          child: _SourceChips(
+            sources: item.sources,
+            tpColors: tpColors,
+            l10n: l10n,
+          ),
         ),
         if (item.notify)
           Icon(
@@ -248,8 +253,13 @@ class SubscriptionCard extends StatelessWidget {
 class _SourceChips extends StatelessWidget {
   final List<String> sources;
   final TrendPulseColors tpColors;
+  final AppLocalizations l10n;
 
-  const _SourceChips({required this.sources, required this.tpColors});
+  const _SourceChips({
+    required this.sources,
+    required this.tpColors,
+    required this.l10n,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -258,17 +268,22 @@ class _SourceChips extends StatelessWidget {
     return Wrap(
       spacing: AppSpacing.xs,
       children: sources.map((s) {
-        final (icon, color, label) = switch (s.toLowerCase()) {
-          'reddit' => (Icons.forum_rounded, tpColors.reddit, 'Reddit'),
+        final lower = s.toLowerCase();
+        final (icon, color, label) = switch (lower) {
+          'reddit' => (
+              Icons.forum_rounded,
+              tpColors.reddit,
+              sourcePlatformLabel('reddit', l10n),
+            ),
           'youtube' => (
               Icons.play_circle_rounded,
               tpColors.youtube,
-              'YouTube'
+              sourcePlatformLabel('youtube', l10n),
             ),
           'x' || 'twitter' => (
               Icons.tag_rounded,
               tpColors.xPlatform,
-              'X'
+              sourcePlatformLabel('x', l10n),
             ),
           _ => (Icons.public_rounded, tpColors.neutral, s),
         };

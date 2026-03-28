@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:trendpulse/core/network/api_endpoints.dart';
+
 class SettingsRepository {
   static const _keyBaseUrl = 'settings_base_url';
   static const _keyLanguage = 'settings_language';
@@ -10,7 +12,7 @@ class SettingsRepository {
 
   Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyBaseUrl) ?? 'http://localhost:8000';
+    return prefs.getString(_keyBaseUrl) ?? ApiEndpoints.defaultBaseUrl;
   }
 
   Future<void> setBaseUrl(String url) async {

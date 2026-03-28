@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
+import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
@@ -41,7 +42,7 @@ class RawDataTab extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               _FilterChip(
-                label: 'Reddit',
+                label: sourcePlatformLabel('reddit', l10n),
                 selected: currentFilter == 'reddit',
                 color: tpColors.reddit,
                 onSelected: () => ref
@@ -50,7 +51,7 @@ class RawDataTab extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               _FilterChip(
-                label: 'YouTube',
+                label: sourcePlatformLabel('youtube', l10n),
                 selected: currentFilter == 'youtube',
                 color: tpColors.youtube,
                 onSelected: () => ref
@@ -59,7 +60,7 @@ class RawDataTab extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               _FilterChip(
-                label: 'X',
+                label: sourcePlatformLabel('x', l10n),
                 selected: currentFilter == 'x',
                 color: tpColors.xPlatform,
                 onSelected: () => ref

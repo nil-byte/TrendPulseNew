@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
+import 'package:trendpulse/l10n/app_localizations.dart';
 
 class KeyInsightCard extends StatelessWidget {
   final KeyInsight insight;
@@ -60,7 +61,8 @@ class KeyInsightCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${insight.sourceCount} sources',
+                        AppLocalizations.of(context)!
+                            .sourceCountLabel(insight.sourceCount),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

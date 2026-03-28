@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/number_ticker.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/l10n/app_localizations.dart';
 
 class HeatIndexCard extends StatelessWidget {
   final double heatIndex;
@@ -29,7 +30,7 @@ class HeatIndexCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Heat Index',
+              AppLocalizations.of(context)!.heatIndex,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
