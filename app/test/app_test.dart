@@ -13,7 +13,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Analysis'), findsWidgets);
     expect(find.text('History'), findsWidgets);
-    expect(find.text('Feed'), findsWidgets);
+    expect(find.text('Subscription'), findsWidgets);
     expect(find.text('Settings'), findsWidgets);
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/core/animations/number_ticker.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/widgets/sentiment_gauge.dart';
@@ -15,8 +16,10 @@ Widget _wrap(Widget child) {
 
 void main() {
   group('SentimentGauge', () {
-    testWidgets('displays score number', (tester) async {
+    testWidgets('displays score via NumberTicker', (tester) async {
       await tester.pumpWidget(_wrap(const SentimentGauge(score: 75)));
+      expect(find.byType(NumberTicker), findsOneWidget);
+      await tester.pumpAndSettle();
       expect(find.text('75'), findsOneWidget);
     });
 
@@ -32,13 +35,17 @@ void main() {
 
     testWidgets('rounds score to integer', (tester) async {
       await tester.pumpWidget(_wrap(const SentimentGauge(score: 72.8)));
+      await tester.pumpAndSettle();
       expect(find.text('73'), findsOneWidget);
     });
   });
 
   group('HeatIndexCard', () {
-    testWidgets('displays value and Heat Index label', (tester) async {
+    testWidgets('displays value via NumberTicker and Heat Index label',
+        (tester) async {
       await tester.pumpWidget(_wrap(const HeatIndexCard(heatIndex: 85)));
+      expect(find.byType(NumberTicker), findsOneWidget);
+      await tester.pumpAndSettle();
       expect(find.text('85'), findsOneWidget);
       expect(find.text('Heat Index'), findsOneWidget);
     });
@@ -50,6 +57,7 @@ void main() {
 
     testWidgets('rounds value to integer', (tester) async {
       await tester.pumpWidget(_wrap(const HeatIndexCard(heatIndex: 42.7)));
+      await tester.pumpAndSettle();
       expect(find.text('43'), findsOneWidget);
     });
   });

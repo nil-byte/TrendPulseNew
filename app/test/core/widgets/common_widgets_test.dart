@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/widgets/loading_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/core/widgets/empty_widget.dart';
 
 void main() {
   group('LoadingWidget', () {
-    testWidgets('renders shimmer placeholders', (tester) async {
+    testWidgets('renders ShimmerLoading placeholders', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: LoadingWidget())),
       );
       expect(find.byType(LoadingWidget), findsOneWidget);
+      expect(find.byType(ShimmerLoading), findsOneWidget);
     });
 
     testWidgets('respects itemCount parameter', (tester) async {
@@ -18,6 +20,7 @@ void main() {
         const MaterialApp(home: Scaffold(body: LoadingWidget(itemCount: 5))),
       );
       expect(find.byType(LoadingWidget), findsOneWidget);
+      expect(find.byType(ShimmerLoading), findsOneWidget);
     });
   });
 

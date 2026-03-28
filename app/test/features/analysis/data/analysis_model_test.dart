@@ -58,7 +58,7 @@ void main() {
   });
 
   group('AnalysisTask status getters', () {
-    AnalysisTask _makeTask(String status) => AnalysisTask(
+    AnalysisTask makeTask(String status) => AnalysisTask(
           id: 'id',
           keyword: 'kw',
           language: 'en',
@@ -70,33 +70,33 @@ void main() {
         );
 
     test('isPending', () {
-      expect(_makeTask('pending').isPending, isTrue);
-      expect(_makeTask('completed').isPending, isFalse);
+      expect(makeTask('pending').isPending, isTrue);
+      expect(makeTask('completed').isPending, isFalse);
     });
 
     test('isCollecting', () {
-      expect(_makeTask('collecting').isCollecting, isTrue);
+      expect(makeTask('collecting').isCollecting, isTrue);
     });
 
     test('isAnalyzing', () {
-      expect(_makeTask('analyzing').isAnalyzing, isTrue);
+      expect(makeTask('analyzing').isAnalyzing, isTrue);
     });
 
     test('isCompleted', () {
-      expect(_makeTask('completed').isCompleted, isTrue);
-      expect(_makeTask('pending').isCompleted, isFalse);
+      expect(makeTask('completed').isCompleted, isTrue);
+      expect(makeTask('pending').isCompleted, isFalse);
     });
 
     test('isFailed', () {
-      expect(_makeTask('failed').isFailed, isTrue);
+      expect(makeTask('failed').isFailed, isTrue);
     });
 
     test('isInProgress covers pending, collecting, analyzing', () {
-      expect(_makeTask('pending').isInProgress, isTrue);
-      expect(_makeTask('collecting').isInProgress, isTrue);
-      expect(_makeTask('analyzing').isInProgress, isTrue);
-      expect(_makeTask('completed').isInProgress, isFalse);
-      expect(_makeTask('failed').isInProgress, isFalse);
+      expect(makeTask('pending').isInProgress, isTrue);
+      expect(makeTask('collecting').isInProgress, isTrue);
+      expect(makeTask('analyzing').isInProgress, isTrue);
+      expect(makeTask('completed').isInProgress, isFalse);
+      expect(makeTask('failed').isInProgress, isFalse);
     });
   });
 
