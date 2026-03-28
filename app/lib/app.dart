@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/settings/presentation/pages/settings_page.dart';
+import 'features/settings/presentation/providers/settings_provider.dart';
 
 class _PlaceholderPage extends StatelessWidget {
   final String title;
@@ -45,7 +48,7 @@ final _router = GoRouter(
         GoRoute(
           path: '/settings',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: _PlaceholderPage(title: 'Settings'),
+            child: SettingsPage(),
           ),
         ),
       ],
@@ -112,17 +115,19 @@ class _ScaffoldWithNav extends StatelessWidget {
   }
 }
 
-class TrendPulseApp extends StatelessWidget {
+class TrendPulseApp extends ConsumerWidget {
   const TrendPulseApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       title: 'TrendPulse',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: _router,
     );
   }
