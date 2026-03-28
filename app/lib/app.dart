@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/analysis/presentation/pages/analysis_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
@@ -30,7 +31,7 @@ final _router = GoRouter(
         GoRoute(
           path: '/analysis',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: _PlaceholderPage(title: 'Analysis'),
+            child: AnalysisPage(),
           ),
         ),
         GoRoute(
