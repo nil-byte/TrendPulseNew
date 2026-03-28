@@ -69,6 +69,31 @@ _SQL_CREATE_INDEX_REPORTS_TASK = """
 CREATE INDEX IF NOT EXISTS idx_analysis_reports_task_id ON analysis_reports (task_id);
 """
 
+_SQL_CREATE_SUBSCRIPTIONS = """
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id          TEXT PRIMARY KEY,
+    keyword     TEXT NOT NULL,
+    language    TEXT NOT NULL DEFAULT 'en',
+    max_items   INTEGER NOT NULL DEFAULT 50,
+    sources     TEXT NOT NULL,
+    interval    TEXT NOT NULL DEFAULT 'daily',
+    is_active   INTEGER NOT NULL DEFAULT 1,
+    notify      INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    last_run_at TEXT,
+    next_run_at TEXT
+);
+"""
+
+_SQL_ADD_TASKS_SUBSCRIPTION_ID = """
+ALTER TABLE tasks ADD COLUMN subscription_id TEXT REFERENCES subscriptions(id);
+"""
+
+_SQL_CREATE_INDEX_SUBSCRIPTIONS_ACTIVE = """
+CREATE INDEX IF NOT EXISTS idx_subscriptions_is_active ON subscriptions (is_active);
+"""
+
 
 def _resolve_db_path() -> str:
     """Extract the SQLite file path from the database URL.
@@ -108,11 +133,31 @@ async def init_db() -> None:
         await db.execute(_SQL_CREATE_TASKS)
         await db.execute(_SQL_CREATE_RAW_POSTS)
         await db.execute(_SQL_CREATE_ANALYSIS_REPORTS)
+        await db.execute(_SQL_CREATE_SUBSCRIPTIONS)
         await db.execute(_SQL_CREATE_INDEX_RAW_POSTS_TASK)
         await db.execute(_SQL_CREATE_INDEX_REPORTS_TASK)
+        await db.execute(_SQL_CREATE_INDEX_SUBSCRIPTIONS_ACTIVE)
+        await _safe_add_column(db, "tasks", "subscription_id", _SQL_ADD_TASKS_SUBSCRIPTION_ID)
         await db.commit()
     finally:
         await close_db(db)
+
+
+async def _safe_add_column(
+    db: aiosqlite.Connection, table: str, column: str, ddl: str
+) -> None:
+    """Execute an ALTER TABLE only when the column does not yet exist.
+
+    Args:
+        db: Open aiosqlite connection.
+        table: Table name to inspect.
+        column: Column name to check for.
+        ddl: The ALTER TABLE DDL to run if the column is missing.
+    """
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    cols = [row[1] for row in await cursor.fetchall()]
+    if column not in cols:
+        await db.execute(ddl)
 
 
 async def close_db(db: aiosqlite.Connection) -> None:

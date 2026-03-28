@@ -40,11 +40,16 @@ class TaskService:
     # Public API
     # ------------------------------------------------------------------
 
-    async def create_task(self, request: CreateTaskRequest) -> TaskResponse:
+    async def create_task(
+        self,
+        request: CreateTaskRequest,
+        subscription_id: str | None = None,
+    ) -> TaskResponse:
         """Create a new analysis task and start background processing.
 
         Args:
             request: Validated task creation request.
+            subscription_id: Optional owning subscription UUID.
 
         Returns:
             The newly created task.
@@ -56,8 +61,8 @@ class TaskService:
         try:
             await db.execute(
                 """
-                INSERT INTO tasks (id, keyword, language, max_items, status, sources, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tasks (id, keyword, language, max_items, status, sources, created_at, updated_at, subscription_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task_id,
@@ -68,6 +73,7 @@ class TaskService:
                     json.dumps(request.sources),
                     now,
                     now,
+                    subscription_id,
                 ),
             )
             await db.commit()
@@ -85,6 +91,7 @@ class TaskService:
             sources=request.sources,
             created_at=now,
             updated_at=now,
+            subscription_id=subscription_id,
         )
 
     async def get_task(self, task_id: str) -> TaskResponse | None:
@@ -346,6 +353,7 @@ class TaskService:
             created_at=row["created_at"],  # type: ignore[index]
             updated_at=row["updated_at"],  # type: ignore[index]
             error_message=row["error_message"],  # type: ignore[index]
+            subscription_id=row["subscription_id"],  # type: ignore[index]
         )
 
     @staticmethod
