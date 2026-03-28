@@ -7,7 +7,6 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
 from src import main as main_module
 from src.models.database import get_db
@@ -79,8 +78,5 @@ async def test_delete_subscription_nulls_task_fk_preserves_task() -> None:
 @pytest.mark.asyncio
 async def test_scheduler_not_started_when_disabled_via_env() -> None:
     """When SCHEDULER_ENABLED is false, lifespan does not start the scheduler."""
-    transport = ASGITransport(app=main_module.app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health")
-        assert response.status_code == 200
-    assert main_module.get_scheduler().is_running is False
+    async with main_module.app.router.lifespan_context(main_module.app):
+        assert main_module.get_scheduler().is_running is False
