@@ -19,6 +19,7 @@ build/
 .ruff_cache/
 htmlcov/
 .coverage
+.cursor/
 
 # Flutter
 app/.dart_tool/
@@ -37,6 +38,7 @@ app/*.iml
 .vscode/
 .idea/
 .worktrees/
+.run/
 *.swp
 *.swo
 *~

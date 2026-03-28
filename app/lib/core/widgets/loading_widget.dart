@@ -6,17 +6,10 @@ class LoadingWidget extends StatelessWidget {
   final int itemCount;
   final double itemHeight;
 
-  const LoadingWidget({
-    super.key,
-    this.itemCount = 3,
-    this.itemHeight = 120,
-  });
+  const LoadingWidget({super.key, this.itemCount = 3, this.itemHeight = 120});
 
   @override
   Widget build(BuildContext context) {
-    return ShimmerLoading(
-      itemCount: itemCount,
-      itemHeight: itemHeight,
-    );
+    return ShimmerLoading(itemCount: itemCount, itemHeight: itemHeight);
   }
 }

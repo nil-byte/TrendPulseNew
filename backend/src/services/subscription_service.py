@@ -10,12 +10,14 @@ from datetime import datetime, timedelta, timezone
 from src.models.database import get_db
 from src.models.schemas import (
     CreateSubscriptionRequest,
+    CreateTaskRequest,
     SubscriptionListResponse,
     SubscriptionResponse,
     TaskListResponse,
     TaskResponse,
     UpdateSubscriptionRequest,
 )
+from src.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,9 @@ def _calc_next_run(interval: str, from_dt: datetime | None = None) -> str:
 
 class SubscriptionService:
     """Manages subscription CRUD operations."""
+
+    def __init__(self) -> None:
+        self._task_service = TaskService()
 
     async def create_subscription(
         self, request: CreateSubscriptionRequest
@@ -241,7 +246,9 @@ class SubscriptionService:
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT * FROM tasks WHERE subscription_id = ? ORDER BY created_at DESC",
+                "SELECT * FROM tasks "
+                "WHERE subscription_id = ? "
+                "ORDER BY created_at DESC",
                 (sub_id,),
             )
             rows = await cursor.fetchall()
@@ -249,6 +256,44 @@ class SubscriptionService:
             return TaskListResponse(tasks=tasks, total=len(tasks))
         finally:
             await db.close()
+
+    async def run_subscription_now(self, sub_id: str) -> TaskResponse | None:
+        """Trigger a task immediately using the persisted subscription config.
+
+        Args:
+            sub_id: UUID of the subscription.
+
+        Returns:
+            The newly created task, or ``None`` when the subscription does not
+            exist.
+        """
+        subscription = await self.get_subscription(sub_id)
+        if subscription is None:
+            return None
+
+        request = CreateTaskRequest(
+            keyword=subscription.keyword,
+            language=subscription.language,
+            max_items=subscription.max_items,
+            sources=subscription.sources,
+        )
+        task = await self._task_service.create_task(request, subscription_id=sub_id)
+        run_at = datetime.fromisoformat(task.created_at)
+        next_run_at = _calc_next_run(subscription.interval, run_at)
+
+        db = await get_db()
+        try:
+            await db.execute(
+                "UPDATE subscriptions "
+                "SET last_run_at = ?, next_run_at = ?, updated_at = ? "
+                "WHERE id = ?",
+                (task.created_at, next_run_at, task.created_at, sub_id),
+            )
+            await db.commit()
+        finally:
+            await db.close()
+
+        return task
 
     @staticmethod
     def _row_to_subscription(row: object) -> SubscriptionResponse:

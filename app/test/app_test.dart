@@ -5,9 +5,7 @@ import 'package:trendpulse/app.dart';
 
 void main() {
   testWidgets('App renders with navigation bar', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: TrendPulseApp()),
-    );
+    await tester.pumpWidget(const ProviderScope(child: TrendPulseApp()));
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);

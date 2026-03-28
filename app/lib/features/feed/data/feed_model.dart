@@ -24,15 +24,15 @@ class SourcePost {
   });
 
   factory SourcePost.fromJson(Map<String, dynamic> json) => SourcePost(
-        id: json['id'] as String,
-        taskId: json['task_id'] as String,
-        source: json['source'] as String,
-        sourceId: json['source_id'] as String?,
-        author: json['author'] as String?,
-        content: json['content'] as String,
-        url: json['url'] as String?,
-        engagement: json['engagement'] as int? ?? 0,
-        publishedAt: json['published_at'] as String?,
-        collectedAt: json['collected_at'] as String,
-      );
+    id: json['id'] as String,
+    taskId: json['task_id'] as String,
+    source: json['source'] as String,
+    sourceId: json['source_id'] as String?,
+    author: json['author'] as String?,
+    content: json['content'] as String,
+    url: json['url'] as String?,
+    engagement: json['engagement'] as int? ?? 0,
+    publishedAt: json['published_at'] as String?,
+    collectedAt: json['collected_at'] as String,
+  );
 }

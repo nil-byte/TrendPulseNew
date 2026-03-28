@@ -226,9 +226,7 @@ class _SectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Text(
       title,
-      style: theme.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
+      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }
@@ -250,8 +248,7 @@ class _SentimentDistributionBar extends StatelessWidget {
         child: Column(
           children: [
             ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(AppSpacing.borderRadiusSm),
+              borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
               child: SizedBox(
                 height: 12,
                 child: Row(
@@ -320,10 +317,7 @@ class _LegendItem extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: AppSpacing.xs),
         Text(

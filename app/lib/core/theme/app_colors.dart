@@ -81,8 +81,16 @@ class TrendPulseColors extends ThemeExtension<TrendPulseColors> {
       reddit: Color.lerp(reddit, other.reddit, t)!,
       youtube: Color.lerp(youtube, other.youtube, t)!,
       xPlatform: Color.lerp(xPlatform, other.xPlatform, t)!,
-      surfaceHighlight: Color.lerp(surfaceHighlight, other.surfaceHighlight, t)!,
-      subtleBackground: Color.lerp(subtleBackground, other.subtleBackground, t)!,
+      surfaceHighlight: Color.lerp(
+        surfaceHighlight,
+        other.surfaceHighlight,
+        t,
+      )!,
+      subtleBackground: Color.lerp(
+        subtleBackground,
+        other.subtleBackground,
+        t,
+      )!,
     );
   }
 }

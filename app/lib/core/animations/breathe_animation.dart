@@ -24,14 +24,13 @@ class _BreatheAnimationState extends State<BreatheAnimation>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    )..repeat(reverse: true);
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat(reverse: true);
 
-    _scale = Tween<double>(begin: 1.0, end: widget.maxScale).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: widget.maxScale,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -42,9 +41,6 @@ class _BreatheAnimationState extends State<BreatheAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      child: widget.child,
-    );
+    return ScaleTransition(scale: _scale, child: widget.child);
   }
 }

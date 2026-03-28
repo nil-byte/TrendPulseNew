@@ -23,8 +23,8 @@ class SubscriptionTasksPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final title = detailAsync.whenOrNull(data: (s) => s.keyword) ??
-        l10n.executionHistory;
+    final title =
+        detailAsync.whenOrNull(data: (s) => s.keyword) ?? l10n.executionHistory;
 
     return Scaffold(
       appBar: AppBar(
@@ -101,8 +101,10 @@ class SubscriptionTasksPage extends ConsumerWidget {
   ) async {
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
-      await repo.createSubscription({'subscription_id': subId});
+      await repo.runSubscriptionNow(subId);
       ref.invalidate(subscriptionTasksProvider(subId));
+      ref.invalidate(subscriptionDetailProvider(subId));
+      ref.invalidate(subscriptionListProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

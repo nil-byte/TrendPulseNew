@@ -61,10 +61,12 @@ class PostCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.secondaryContainer
-                          .withValues(alpha: 0.5),
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.borderRadiusSm),
+                      color: theme.colorScheme.secondaryContainer.withValues(
+                        alpha: 0.5,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.borderRadiusSm,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

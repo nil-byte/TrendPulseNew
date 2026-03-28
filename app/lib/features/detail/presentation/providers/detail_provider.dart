@@ -8,9 +8,11 @@ import 'package:trendpulse/features/feed/data/feed_model.dart';
 import 'package:trendpulse/features/feed/data/feed_repository_provider.dart';
 
 final taskDetailProvider =
-    AutoDisposeAsyncNotifierProviderFamily<TaskDetailNotifier, AnalysisTask, String>(
-  TaskDetailNotifier.new,
-);
+    AutoDisposeAsyncNotifierProviderFamily<
+      TaskDetailNotifier,
+      AnalysisTask,
+      String
+    >(TaskDetailNotifier.new);
 
 class TaskDetailNotifier
     extends AutoDisposeFamilyAsyncNotifier<AnalysisTask, String> {
@@ -59,24 +61,26 @@ class TaskDetailNotifier
 }
 
 final taskReportProvider =
-    AutoDisposeFutureProviderFamily<AnalysisReport?, String>(
-  (ref, taskId) async {
-    final taskAsync = ref.watch(taskDetailProvider(taskId));
-    final task = taskAsync.valueOrNull;
-    if (task == null || !task.isCompleted) return null;
-    final repo = ref.read(analysisRepositoryProvider);
-    return repo.getReport(taskId);
-  },
-);
+    AutoDisposeFutureProviderFamily<AnalysisReport?, String>((
+      ref,
+      taskId,
+    ) async {
+      final taskAsync = ref.watch(taskDetailProvider(taskId));
+      final task = taskAsync.valueOrNull;
+      if (task == null || !task.isCompleted) return null;
+      final repo = ref.read(analysisRepositoryProvider);
+      return repo.getReport(taskId);
+    });
 
 final detailSourceFilterProvider =
     AutoDisposeStateProviderFamily<String?, String>((ref, taskId) => null);
 
 final taskPostsProvider =
-    AutoDisposeFutureProviderFamily<List<SourcePost>, String>(
-  (ref, taskId) async {
-    final sourceFilter = ref.watch(detailSourceFilterProvider(taskId));
-    final repo = ref.read(feedRepositoryProvider);
-    return repo.getPosts(taskId, sourceFilter: sourceFilter);
-  },
-);
+    AutoDisposeFutureProviderFamily<List<SourcePost>, String>((
+      ref,
+      taskId,
+    ) async {
+      final sourceFilter = ref.watch(detailSourceFilterProvider(taskId));
+      final repo = ref.read(feedRepositoryProvider);
+      return repo.getPosts(taskId, sourceFilter: sourceFilter);
+    });

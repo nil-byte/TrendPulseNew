@@ -34,7 +34,8 @@ class Subscription {
       language: json['language'] as String? ?? 'en',
       interval: json['interval'] as String? ?? 'daily',
       maxItems: (json['max_items'] as num?)?.toInt() ?? 50,
-      sources: (json['sources'] as List<dynamic>?)
+      sources:
+          (json['sources'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -48,22 +49,22 @@ class Subscription {
   }
 
   Map<String, dynamic> toJson() => {
-        'keyword': keyword,
-        'language': language,
-        'interval': interval,
-        'max_items': maxItems,
-        'sources': sources,
-        'is_active': isActive,
-        'notify': notify,
-      };
+    'keyword': keyword,
+    'language': language,
+    'interval': interval,
+    'max_items': maxItems,
+    'sources': sources,
+    'is_active': isActive,
+    'notify': notify,
+  };
 
   String get intervalDisplayKey => switch (interval) {
-        'hourly' => 'intervalHourly',
-        '6hours' => 'intervalSixHours',
-        'daily' => 'intervalDaily',
-        'weekly' => 'intervalWeekly',
-        _ => 'intervalDaily',
-      };
+    'hourly' => 'intervalHourly',
+    '6hours' => 'intervalSixHours',
+    'daily' => 'intervalDaily',
+    'weekly' => 'intervalWeekly',
+    _ => 'intervalDaily',
+  };
 }
 
 class SubscriptionTask {

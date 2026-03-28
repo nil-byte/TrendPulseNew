@@ -36,46 +36,51 @@ class RawDataTab extends ConsumerWidget {
               _FilterChip(
                 label: l10n.filterAll,
                 selected: currentFilter == null,
-                onSelected: () => ref
-                    .read(detailSourceFilterProvider(taskId).notifier)
-                    .state = null,
+                onSelected: () =>
+                    ref
+                            .read(detailSourceFilterProvider(taskId).notifier)
+                            .state =
+                        null,
               ),
               const SizedBox(width: AppSpacing.sm),
               _FilterChip(
                 label: sourcePlatformLabel('reddit', l10n),
                 selected: currentFilter == 'reddit',
                 color: tpColors.reddit,
-                onSelected: () => ref
-                    .read(detailSourceFilterProvider(taskId).notifier)
-                    .state = 'reddit',
+                onSelected: () =>
+                    ref
+                            .read(detailSourceFilterProvider(taskId).notifier)
+                            .state =
+                        'reddit',
               ),
               const SizedBox(width: AppSpacing.sm),
               _FilterChip(
                 label: sourcePlatformLabel('youtube', l10n),
                 selected: currentFilter == 'youtube',
                 color: tpColors.youtube,
-                onSelected: () => ref
-                    .read(detailSourceFilterProvider(taskId).notifier)
-                    .state = 'youtube',
+                onSelected: () =>
+                    ref
+                            .read(detailSourceFilterProvider(taskId).notifier)
+                            .state =
+                        'youtube',
               ),
               const SizedBox(width: AppSpacing.sm),
               _FilterChip(
                 label: sourcePlatformLabel('x', l10n),
                 selected: currentFilter == 'x',
                 color: tpColors.xPlatform,
-                onSelected: () => ref
-                    .read(detailSourceFilterProvider(taskId).notifier)
-                    .state = 'x',
+                onSelected: () =>
+                    ref
+                            .read(detailSourceFilterProvider(taskId).notifier)
+                            .state =
+                        'x',
               ),
             ],
           ),
         ),
         Expanded(
           child: postsAsync.when(
-            loading: () => const ShimmerLoading(
-              itemCount: 5,
-              itemHeight: 100,
-            ),
+            loading: () => const ShimmerLoading(itemCount: 5, itemHeight: 100),
             error: (e, _) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -94,8 +99,7 @@ class RawDataTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   FilledButton.tonal(
-                    onPressed: () =>
-                        ref.invalidate(taskPostsProvider(taskId)),
+                    onPressed: () => ref.invalidate(taskPostsProvider(taskId)),
                     child: Text(l10n.retry),
                   ),
                 ],

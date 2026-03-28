@@ -35,8 +35,9 @@ class SentimentGauge extends StatelessWidget {
                 painter: _GaugeRingPainter(
                   progress: score / 100,
                   color: color,
-                  trackColor:
-                      theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  trackColor: theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.2,
+                  ),
                 ),
                 child: Center(
                   child: NumberTicker(

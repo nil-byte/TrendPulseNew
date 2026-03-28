@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:trendpulse/app_providers.dart';
+import 'package:trendpulse/core/network/api_client.dart';
 import 'package:trendpulse/features/feed/data/feed_repository_provider.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
@@ -99,4 +101,22 @@ void main() {
       expect(feedRepo.apiClientBaseUrl, 'http://feed-test.example:8080');
     },
   );
+
+  test('ApiClient remaps localhost for Android emulator', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    final client = ApiClient(baseUrl: 'http://localhost:8000');
+
+    expect(client.baseUrl, 'http://10.0.2.2:8000');
+  });
+
+  test('ApiClient remaps 127.0.0.1 for Android emulator', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    final client = ApiClient(baseUrl: 'http://127.0.0.1:9000');
+
+    expect(client.baseUrl, 'http://10.0.2.2:9000');
+  });
 }

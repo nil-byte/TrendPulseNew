@@ -102,8 +102,7 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
                             _toggleActive(context, sub, value),
                         onEdit: () =>
                             context.push('/subscription/${sub.id}/edit'),
-                        onDelete: () =>
-                            _confirmDelete(context, sub, l10n),
+                        onDelete: () => _confirmDelete(context, sub, l10n),
                       ),
                     ),
                   );
@@ -183,8 +182,7 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
               content: Text('$e'),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppSpacing.borderRadiusSm),
+                borderRadius: BorderRadius.circular(AppSpacing.borderRadiusSm),
               ),
             ),
           );

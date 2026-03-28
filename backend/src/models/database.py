@@ -137,7 +137,12 @@ async def init_db() -> None:
         await db.execute(_SQL_CREATE_INDEX_RAW_POSTS_TASK)
         await db.execute(_SQL_CREATE_INDEX_REPORTS_TASK)
         await db.execute(_SQL_CREATE_INDEX_SUBSCRIPTIONS_ACTIVE)
-        await _safe_add_column(db, "tasks", "subscription_id", _SQL_ADD_TASKS_SUBSCRIPTION_ID)
+        await _safe_add_column(
+            db,
+            "tasks",
+            "subscription_id",
+            _SQL_ADD_TASKS_SUBSCRIPTION_ID,
+        )
         await db.commit()
     finally:
         await close_db(db)

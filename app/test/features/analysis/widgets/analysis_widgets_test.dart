@@ -45,8 +45,9 @@ void main() {
   });
 
   group('HeatIndexCard', () {
-    testWidgets('displays value via NumberTicker and Heat Index label',
-        (tester) async {
+    testWidgets('displays value via NumberTicker and Heat Index label', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap(const HeatIndexCard(heatIndex: 85)));
       expect(find.byType(NumberTicker), findsOneWidget);
       await tester.pumpAndSettle();

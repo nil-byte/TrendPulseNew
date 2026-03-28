@@ -54,7 +54,12 @@ class CollectorService:
             valid_sources.append(source_name)
             tasks.append(
                 asyncio.create_task(
-                    self._collect_from_source(adapter, keyword, language, per_source_limit)
+                    self._collect_from_source(
+                        adapter,
+                        keyword,
+                        language,
+                        per_source_limit,
+                    )
                 )
             )
 
@@ -63,11 +68,19 @@ class CollectorService:
         all_posts: list[RawPost] = []
         for i, result in enumerate(results):
             if isinstance(result, BaseException):
-                logger.error("Collection failed for source %s: %s", valid_sources[i], result)
+                logger.error(
+                    "Collection failed for source %s: %s",
+                    valid_sources[i],
+                    result,
+                )
                 continue
             all_posts.extend(result)
 
-        logger.info("Collected %d total posts from %d sources", len(all_posts), len(valid_sources))
+        logger.info(
+            "Collected %d total posts from %d sources",
+            len(all_posts),
+            len(valid_sources),
+        )
         return all_posts
 
     async def _collect_from_source(

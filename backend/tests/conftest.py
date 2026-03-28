@@ -3,21 +3,20 @@
 from __future__ import annotations
 
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
-import aiosqlite
 from httpx import ASGITransport, AsyncClient
 
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_trendpulse.db"
 os.environ["SCHEDULER_ENABLED"] = "false"
 
 from src.main import app
-from src.models.database import init_db, get_db, close_db
+from src.models.database import close_db, get_db, init_db
 
 
 @pytest.fixture(autouse=True)
-async def setup_db():
+async def setup_db() -> AsyncGenerator[None, None]:
     """Initialize fresh test database for each test."""
     await init_db()
     yield

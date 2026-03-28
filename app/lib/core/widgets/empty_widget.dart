@@ -26,15 +26,15 @@ class EmptyWidget extends StatelessWidget {
             Icon(
               icon,
               size: 64,
-              color:
-                  theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
               message,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant
-                    .withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.6,
+                ),
               ),
               textAlign: TextAlign.center,
             ),
@@ -43,8 +43,9 @@ class EmptyWidget extends StatelessWidget {
               Text(
                 subtitle!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.4),
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.4,
+                  ),
                 ),
                 textAlign: TextAlign.center,
               ),

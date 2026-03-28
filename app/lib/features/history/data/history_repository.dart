@@ -7,7 +7,7 @@ class HistoryRepository {
   final ApiClient _apiClient;
 
   HistoryRepository({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   Future<List<HistoryItem>> getHistory() async {
     final response = await _apiClient.get(ApiEndpoints.tasks);

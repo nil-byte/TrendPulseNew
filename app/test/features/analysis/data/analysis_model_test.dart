@@ -59,15 +59,15 @@ void main() {
 
   group('AnalysisTask status getters', () {
     AnalysisTask makeTask(String status) => AnalysisTask(
-          id: 'id',
-          keyword: 'kw',
-          language: 'en',
-          maxItems: 50,
-          status: status,
-          sources: const [],
-          createdAt: '',
-          updatedAt: '',
-        );
+      id: 'id',
+      keyword: 'kw',
+      language: 'en',
+      maxItems: 50,
+      status: status,
+      sources: const [],
+      createdAt: '',
+      updatedAt: '',
+    );
 
     test('isPending', () {
       expect(makeTask('pending').isPending, isTrue);

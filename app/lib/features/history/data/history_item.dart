@@ -23,7 +23,8 @@ class HistoryItem {
       keyword: json['keyword'] as String,
       status: json['status'] as String? ?? 'pending',
       language: json['language'] as String? ?? 'en',
-      sources: (json['sources'] as List<dynamic>?)
+      sources:
+          (json['sources'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],

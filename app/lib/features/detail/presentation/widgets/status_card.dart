@@ -45,21 +45,17 @@ class _StatusCardState extends State<StatusCard>
         child: Row(
           children: [
             FadeTransition(
-              opacity: _pulseController.drive(
-                Tween(begin: 0.4, end: 1.0),
-              ),
+              opacity: _pulseController.drive(Tween(begin: 0.4, end: 1.0)),
               child: Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer,
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.borderRadiusMd),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusMd,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
+                child: Icon(icon, color: theme.colorScheme.onPrimaryContainer),
               ),
             ),
             const SizedBox(width: AppSpacing.md),

@@ -4,11 +4,7 @@ class PressFeedback extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  const PressFeedback({
-    super.key,
-    required this.child,
-    this.onTap,
-  });
+  const PressFeedback({super.key, required this.child, this.onTap});
 
   @override
   State<PressFeedback> createState() => _PressFeedbackState();

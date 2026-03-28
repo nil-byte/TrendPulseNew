@@ -26,13 +26,11 @@ class _NumberTickerState extends State<NumberTicker>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
-    _animation = Tween<double>(begin: 0, end: widget.targetValue).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _animation = Tween<double>(
+      begin: 0,
+      end: widget.targetValue,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -40,12 +38,13 @@ class _NumberTickerState extends State<NumberTicker>
   void didUpdateWidget(NumberTicker oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.targetValue != widget.targetValue) {
-      _animation = Tween<double>(
-        begin: _animation.value,
-        end: widget.targetValue,
-      ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-      );
+      _animation =
+          Tween<double>(
+            begin: _animation.value,
+            end: widget.targetValue,
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+          );
       _controller
         ..reset()
         ..forward();

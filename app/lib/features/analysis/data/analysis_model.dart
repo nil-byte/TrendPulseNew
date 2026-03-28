@@ -35,7 +35,8 @@ class AnalysisTask {
       language: (json['language'] as String?) ?? 'en',
       maxItems: (json['max_items'] as num?)?.toInt() ?? 50,
       status: json['status'] as String,
-      sources: (json['sources'] as List<dynamic>?)
+      sources:
+          (json['sources'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -105,7 +106,8 @@ class AnalysisReport {
       negativeRatio: (json['negative_ratio'] as num).toDouble(),
       neutralRatio: (json['neutral_ratio'] as num).toDouble(),
       heatIndex: (json['heat_index'] as num).toDouble(),
-      keyInsights: (json['key_insights'] as List<dynamic>?)
+      keyInsights:
+          (json['key_insights'] as List<dynamic>?)
               ?.map((e) => KeyInsight.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],

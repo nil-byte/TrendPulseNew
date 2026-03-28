@@ -60,7 +60,17 @@ class TaskService:
         try:
             await db.execute(
                 """
-                INSERT INTO tasks (id, keyword, language, max_items, status, sources, created_at, updated_at, subscription_id)
+                INSERT INTO tasks (
+                    id,
+                    keyword,
+                    language,
+                    max_items,
+                    status,
+                    sources,
+                    created_at,
+                    updated_at,
+                    subscription_id
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
@@ -175,12 +185,16 @@ class TaskService:
         try:
             if source:
                 cursor = await db.execute(
-                    "SELECT * FROM raw_posts WHERE task_id = ? AND source = ? ORDER BY engagement DESC",
+                    "SELECT * FROM raw_posts "
+                    "WHERE task_id = ? AND source = ? "
+                    "ORDER BY engagement DESC",
                     (task_id, source),
                 )
             else:
                 cursor = await db.execute(
-                    "SELECT * FROM raw_posts WHERE task_id = ? ORDER BY engagement DESC",
+                    "SELECT * FROM raw_posts "
+                    "WHERE task_id = ? "
+                    "ORDER BY engagement DESC",
                     (task_id,),
                 )
             rows = await cursor.fetchall()
@@ -204,7 +218,10 @@ class TaskService:
             if await cursor.fetchone() is None:
                 return False
 
-            await db.execute("DELETE FROM analysis_reports WHERE task_id = ?", (task_id,))
+            await db.execute(
+                "DELETE FROM analysis_reports WHERE task_id = ?",
+                (task_id,),
+            )
             await db.execute("DELETE FROM raw_posts WHERE task_id = ?", (task_id,))
             await db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
             await db.commit()
@@ -258,7 +275,9 @@ class TaskService:
         db = await get_db()
         try:
             await db.execute(
-                "UPDATE tasks SET status = ?, updated_at = ?, error_message = ? WHERE id = ?",
+                "UPDATE tasks "
+                "SET status = ?, updated_at = ?, error_message = ? "
+                "WHERE id = ?",
                 (status, _now_iso(), error_message, task_id),
             )
             await db.commit()
@@ -271,7 +290,11 @@ class TaskService:
         try:
             for post in posts:
                 post_id = str(uuid.uuid4())
-                metadata = json.dumps(post.metadata_extra) if post.metadata_extra else None
+                metadata = (
+                    json.dumps(post.metadata_extra)
+                    if post.metadata_extra
+                    else None
+                )
                 await db.execute(
                     """
                     INSERT INTO raw_posts

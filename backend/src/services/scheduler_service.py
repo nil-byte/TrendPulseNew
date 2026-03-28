@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from datetime import datetime, timedelta, timezone
@@ -47,10 +48,8 @@ class SchedulerService:
         if self._task is None:
             return
         self._task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self._task
-        except asyncio.CancelledError:
-            pass
         self._task = None
         logger.info("Scheduler stopped")
 
@@ -123,7 +122,9 @@ class SchedulerService:
         db = await get_db()
         try:
             await db.execute(
-                "UPDATE subscriptions SET last_run_at = ?, next_run_at = ?, updated_at = ? WHERE id = ?",
+                "UPDATE subscriptions "
+                "SET last_run_at = ?, next_run_at = ?, updated_at = ? "
+                "WHERE id = ?",
                 (now_iso, next_run, now_iso, sub_id),
             )
             await db.commit()

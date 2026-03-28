@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/features/subscription/data/subscription_request.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -106,8 +107,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                 filled: true,
                 fillColor: colorScheme.surfaceContainerLow,
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.borderRadiusMd),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusMd,
+                  ),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
@@ -115,8 +117,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                   vertical: AppSpacing.sm,
                 ),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? l10n.subscriptionKeyword : null,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? l10n.subscriptionKeyword
+                  : null,
             ),
 
             const SizedBox(height: AppSpacing.lg),
@@ -131,8 +134,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               onSelectionChanged: (v) => setState(() => _language = v.first),
               style: SegmentedButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.borderRadiusMd),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusMd,
+                  ),
                 ),
               ),
             ),
@@ -148,8 +152,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                   icon: Icons.forum_rounded,
                   color: tpColors.reddit,
                   selected: _sources.contains('reddit'),
-                  onSelected: (v) =>
-                      setState(() => _toggleSource('reddit', v)),
+                  onSelected: (v) => setState(() => _toggleSource('reddit', v)),
                 ),
                 _SourceFilterChip(
                   label: l10n.platformYouTube,
@@ -182,10 +185,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                   value: '6hours',
                   label: Text(l10n.intervalSixHours),
                 ),
-                ButtonSegment(
-                  value: 'daily',
-                  label: Text(l10n.intervalDaily),
-                ),
+                ButtonSegment(value: 'daily', label: Text(l10n.intervalDaily)),
                 ButtonSegment(
                   value: 'weekly',
                   label: Text(l10n.intervalWeekly),
@@ -195,8 +195,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               onSelectionChanged: (v) => setState(() => _interval = v.first),
               style: SegmentedButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.borderRadiusMd),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusMd,
+                  ),
                 ),
               ),
             ),
@@ -218,16 +219,12 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
 
             const SizedBox(height: AppSpacing.lg),
             SwitchListTile.adaptive(
-              title: Text(
-                l10n.notify,
-                style: theme.textTheme.titleSmall,
-              ),
+              title: Text(l10n.notify, style: theme.textTheme.titleSmall),
               value: _notify,
               onChanged: (v) => setState(() => _notify = v),
               contentPadding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppSpacing.borderRadiusMd),
+                borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
               ),
             ),
           ],
@@ -250,21 +247,21 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
 
     setState(() => _saving = true);
 
-    final body = {
-      'keyword': _keywordController.text.trim(),
-      'language': _language,
-      'sources': _sources.toList(),
-      'interval': _interval,
-      'max_items': _maxItems.toInt(),
-      'notify': _notify,
-    };
+    final request = SubscriptionUpsertRequest(
+      keyword: _keywordController.text.trim(),
+      language: _language,
+      sources: _sources.toList(),
+      interval: _interval,
+      maxItems: _maxItems.toInt(),
+      notify: _notify,
+    );
 
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
       if (_isEdit) {
-        await repo.updateSubscription(widget.subId!, body);
+        await repo.updateSubscription(widget.subId!, request);
       } else {
-        await repo.createSubscription(body);
+        await repo.createSubscription(request);
       }
       ref.invalidate(subscriptionListProvider);
       if (mounted) context.pop();

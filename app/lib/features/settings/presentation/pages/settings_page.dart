@@ -64,10 +64,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n.settingsTheme,
-                      style: theme.textTheme.titleSmall,
-                    ),
+                    Text(l10n.settingsTheme, style: theme.textTheme.titleSmall),
                     const SizedBox(height: AppSpacing.sm),
                     Row(
                       children: [
@@ -255,7 +252,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onChanged: (_) =>
                         ref.read(inAppNotifyProvider.notifier).toggle(),
                   ),
-                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+                  const Divider(
+                    indent: AppSpacing.md,
+                    endIndent: AppSpacing.md,
+                  ),
                   SwitchListTile(
                     title: Text(l10n.settingsSubscriptionNotify),
                     contentPadding: const EdgeInsets.symmetric(
@@ -393,30 +393,26 @@ class _ThemePreviewCard extends StatelessWidget {
     final bool isLight = mode == ThemeMode.light;
     final bool isDark = mode == ThemeMode.dark;
 
-    final Color previewBg =
-        isLight
-            ? const Color(0xFFF8FAFC)
-            : isDark
-                ? const Color(0xFF1E293B)
-                : const Color(0xFFF8FAFC); // system uses light as base
-    final Color previewHeader =
-        isLight
-            ? colorScheme.primary
-            : isDark
-                ? colorScheme.primary.withValues(alpha: 0.7)
-                : colorScheme.primary;
-    final Color previewCard =
-        isLight
-            ? const Color(0xFFFFFFFF)
-            : isDark
-                ? const Color(0xFF334155)
-                : const Color(0xFFFFFFFF);
-    final Color previewCardLine =
-        isLight
-            ? const Color(0xFFE2E8F0)
-            : isDark
-                ? const Color(0xFF475569)
-                : const Color(0xFFE2E8F0);
+    final Color previewBg = isLight
+        ? const Color(0xFFF8FAFC)
+        : isDark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFF8FAFC); // system uses light as base
+    final Color previewHeader = isLight
+        ? colorScheme.primary
+        : isDark
+        ? colorScheme.primary.withValues(alpha: 0.7)
+        : colorScheme.primary;
+    final Color previewCard = isLight
+        ? const Color(0xFFFFFFFF)
+        : isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFFFFFFF);
+    final Color previewCardLine = isLight
+        ? const Color(0xFFE2E8F0)
+        : isDark
+        ? const Color(0xFF475569)
+        : const Color(0xFFE2E8F0);
 
     return GestureDetector(
       onTap: onTap,
@@ -474,8 +470,9 @@ class _ThemePreviewCard extends StatelessWidget {
                     child: Text(
                       label,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: selected
                             ? colorScheme.primary
                             : colorScheme.onSurfaceVariant,

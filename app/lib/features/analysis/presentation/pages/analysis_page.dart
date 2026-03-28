@@ -125,13 +125,10 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                       maxItems: _maxItems,
                       onLanguageChanged: (v) => setState(() => _language = v),
                       onSourcesChanged: (v) => setState(() => _sources = v),
-                      onMaxItemsChanged: (v) =>
-                          setState(() => _maxItems = v),
+                      onMaxItemsChanged: (v) => setState(() => _maxItems = v),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
-                    _TrendingTopicsSection(
-                      onTopicTap: _fillSearchBar,
-                    ),
+                    _TrendingTopicsSection(onTopicTap: _fillSearchBar),
                     const SizedBox(height: AppSpacing.xxl + AppSpacing.lg),
                     const _PoweredByFooter(),
                   ],
@@ -177,9 +174,7 @@ class _SearchBar extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
-        side: BorderSide(
-          color: colors.outlineVariant.withValues(alpha: 0.4),
-        ),
+        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl),
@@ -220,15 +215,9 @@ class _SearchBar extends StatelessWidget {
                   ),
                 ),
               ),
-              _ConfigToggle(
-                expanded: configExpanded,
-                onTap: onToggleConfig,
-              ),
+              _ConfigToggle(expanded: configExpanded, onTap: onToggleConfig),
               const SizedBox(width: AppSpacing.xs),
-              _SearchButton(
-                isSearching: isSearching,
-                onTap: onSearch,
-              ),
+              _SearchButton(isSearching: isSearching, onTap: onSearch),
             ],
           ),
         ),
@@ -259,8 +248,9 @@ class _ConfigToggle extends StatelessWidget {
         ),
       ),
       style: IconButton.styleFrom(
-        backgroundColor:
-            expanded ? colors.primaryContainer.withValues(alpha: 0.5) : null,
+        backgroundColor: expanded
+            ? colors.primaryContainer.withValues(alpha: 0.5)
+            : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
         ),
@@ -433,8 +423,9 @@ class _ConfigPanel extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: colors.primaryContainer.withValues(alpha: 0.4),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.borderRadiusSm),
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.borderRadiusSm,
+                    ),
                   ),
                   child: Text(
                     maxItems.round().toString(),
@@ -553,12 +544,11 @@ class _TrendingTopicsSection extends StatelessWidget {
                   color: colors.outlineVariant.withValues(alpha: 0.5),
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.borderRadiusXl),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusXl,
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
               ),
             );
           }).toList(),
@@ -596,36 +586,36 @@ class _PoweredByFooter extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          '${l10n.poweredBy}  ',
-          style: muted,
+        Text('${l10n.poweredBy}  ', style: muted),
+        Icon(
+          Icons.forum_rounded,
+          size: 12,
+          color: tpColors.reddit.withValues(alpha: 0.5),
         ),
-        Icon(Icons.forum_rounded, size: 12, color: tpColors.reddit.withValues(alpha: 0.5)),
         const SizedBox(width: AppSpacing.xs),
-        Text(
-          l10n.platformReddit,
-          style: muted,
-        ),
+        Text(l10n.platformReddit, style: muted),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text('·', style: dotStyle),
         ),
-        Icon(Icons.play_circle_rounded, size: 12, color: tpColors.youtube.withValues(alpha: 0.5)),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          l10n.platformYouTube,
-          style: muted,
+        Icon(
+          Icons.play_circle_rounded,
+          size: 12,
+          color: tpColors.youtube.withValues(alpha: 0.5),
         ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(l10n.platformYouTube, style: muted),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text('·', style: dotStyle),
         ),
-        Icon(Icons.tag_rounded, size: 12, color: tpColors.xPlatform.withValues(alpha: 0.5)),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          l10n.platformX,
-          style: muted,
+        Icon(
+          Icons.tag_rounded,
+          size: 12,
+          color: tpColors.xPlatform.withValues(alpha: 0.5),
         ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(l10n.platformX, style: muted),
       ],
     );
   }

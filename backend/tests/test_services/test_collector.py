@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 from src.models.schemas import RawPost
 from src.services.collector_service import CollectorService
 

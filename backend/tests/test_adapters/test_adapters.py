@@ -6,12 +6,9 @@ import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from src.adapters.reddit_adapter import RedditAdapter
 from src.adapters.x_adapter import XAdapter
 from src.adapters.youtube_adapter import YouTubeAdapter
-from src.models.schemas import RawPost
 
 
 class TestRedditAdapter:
@@ -222,18 +219,18 @@ class TestXAdapter:
 class _AsyncIterator:
     """Helper to create an async iterator from a list."""
 
-    def __init__(self, items: list) -> None:
+    def __init__(self, items: list[object]) -> None:
         self._items = iter(items)
 
-    def __aiter__(self):
+    def __aiter__(self) -> _AsyncIterator:
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> object:
         try:
             return next(self._items)
-        except StopIteration:
-            raise StopAsyncIteration
+        except StopIteration as exc:
+            raise StopAsyncIteration from exc
 
 
-def _async_iter(items: list) -> _AsyncIterator:
+def _async_iter(items: list[object]) -> _AsyncIterator:
     return _AsyncIterator(items)

@@ -17,8 +17,9 @@ import 'l10n/app_localizations.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _analysisShellKey = GlobalKey<NavigatorState>(debugLabel: 'analysis');
 final _historyShellKey = GlobalKey<NavigatorState>(debugLabel: 'history');
-final _subscriptionShellKey =
-    GlobalKey<NavigatorState>(debugLabel: 'subscription');
+final _subscriptionShellKey = GlobalKey<NavigatorState>(
+  debugLabel: 'subscription',
+);
 final _settingsShellKey = GlobalKey<NavigatorState>(debugLabel: 'settings');
 
 final _router = GoRouter(
@@ -31,9 +32,7 @@ final _router = GoRouter(
       path: '/detail/:taskId',
       pageBuilder: (context, state) => slideUpTransitionPage(
         state: state,
-        child: DetailPage(
-          taskId: state.pathParameters['taskId']!,
-        ),
+        child: DetailPage(taskId: state.pathParameters['taskId']!),
       ),
     ),
 
@@ -47,9 +46,8 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/analysis',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: AnalysisPage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: AnalysisPage()),
             ),
           ],
         ),
@@ -60,17 +58,14 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/history',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: HistoryPage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: HistoryPage()),
               routes: [
                 GoRoute(
                   path: 'detail/:taskId',
                   pageBuilder: (context, state) => slideUpTransitionPage(
                     state: state,
-                    child: DetailPage(
-                      taskId: state.pathParameters['taskId']!,
-                    ),
+                    child: DetailPage(taskId: state.pathParameters['taskId']!),
                   ),
                 ),
               ],
@@ -84,9 +79,8 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/subscription',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: SubscriptionPage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: SubscriptionPage()),
               routes: [
                 GoRoute(
                   path: 'new',
@@ -135,9 +129,8 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/settings',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: SettingsPage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: SettingsPage()),
             ),
           ],
         ),
@@ -158,8 +151,10 @@ class _ScaffoldWithNav extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) =>
-            navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex),
+        onDestinationSelected: (index) => navigationShell.goBranch(
+          index,
+          initialLocation: index == navigationShell.currentIndex,
+        ),
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.analytics_outlined),

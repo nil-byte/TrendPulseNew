@@ -41,14 +41,11 @@ class HeatIndexCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: normalizedHeat,
                 minHeight: 6,
-                backgroundColor:
-                    theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                backgroundColor: theme.colorScheme.outlineVariant.withValues(
+                  alpha: 0.2,
+                ),
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  Color.lerp(
-                    colors.neutral,
-                    colors.negative,
-                    normalizedHeat,
-                  )!,
+                  Color.lerp(colors.neutral, colors.negative, normalizedHeat)!,
                 ),
               ),
             ),

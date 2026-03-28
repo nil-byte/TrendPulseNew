@@ -271,20 +271,20 @@ class _SourceChips extends StatelessWidget {
         final lower = s.toLowerCase();
         final (icon, color, label) = switch (lower) {
           'reddit' => (
-              Icons.forum_rounded,
-              tpColors.reddit,
-              sourcePlatformLabel('reddit', l10n),
-            ),
+            Icons.forum_rounded,
+            tpColors.reddit,
+            sourcePlatformLabel('reddit', l10n),
+          ),
           'youtube' => (
-              Icons.play_circle_rounded,
-              tpColors.youtube,
-              sourcePlatformLabel('youtube', l10n),
-            ),
+            Icons.play_circle_rounded,
+            tpColors.youtube,
+            sourcePlatformLabel('youtube', l10n),
+          ),
           'x' || 'twitter' => (
-              Icons.tag_rounded,
-              tpColors.xPlatform,
-              sourcePlatformLabel('x', l10n),
-            ),
+            Icons.tag_rounded,
+            tpColors.xPlatform,
+            sourcePlatformLabel('x', l10n),
+          ),
           _ => (Icons.public_rounded, tpColors.neutral, s),
         };
 
@@ -296,9 +296,9 @@ class _SourceChips extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         );

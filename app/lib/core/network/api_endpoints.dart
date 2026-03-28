@@ -16,4 +16,6 @@ abstract final class ApiEndpoints {
   static String subscriptionById(String id) => '$apiPrefix/subscriptions/$id';
   static String subscriptionTasks(String id) =>
       '$apiPrefix/subscriptions/$id/tasks';
+  static String subscriptionRunNow(String id) =>
+      '$apiPrefix/subscriptions/$id/tasks';
 }

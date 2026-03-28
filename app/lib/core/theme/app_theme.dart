@@ -17,10 +17,7 @@ abstract final class AppTheme {
       textTheme: AppTypography.textTheme,
       scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
       extensions: const [TrendPulseColors.light],
-      dividerTheme: const DividerThemeData(
-        thickness: 0.5,
-        space: 0.5,
-      ),
+      dividerTheme: const DividerThemeData(thickness: 0.5, space: 0.5),
       cardTheme: CardThemeData(
         elevation: 0.5,
         shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
@@ -90,9 +87,7 @@ abstract final class AppTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
@@ -109,10 +104,7 @@ abstract final class AppTheme {
       textTheme: AppTypography.textTheme,
       scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
       extensions: const [TrendPulseColors.dark],
-      dividerTheme: const DividerThemeData(
-        thickness: 0.5,
-        space: 0.5,
-      ),
+      dividerTheme: const DividerThemeData(thickness: 0.5, space: 0.5),
       cardTheme: CardThemeData(
         elevation: 0.5,
         shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
@@ -182,9 +174,7 @@ abstract final class AppTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }

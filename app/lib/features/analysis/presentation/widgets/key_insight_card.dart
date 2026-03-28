@@ -61,8 +61,9 @@ class KeyInsightCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!
-                            .sourceCountLabel(insight.sourceCount),
+                        AppLocalizations.of(
+                          context,
+                        )!.sourceCountLabel(insight.sourceCount),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

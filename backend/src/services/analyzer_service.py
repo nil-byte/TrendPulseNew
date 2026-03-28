@@ -43,14 +43,16 @@ class AnalysisResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 _MAP_SYSTEM_PROMPT = """\
-You are a sentiment analysis expert. Analyze the following social media posts about "{keyword}".
+You are a sentiment analysis expert.
+Analyze the following social media posts about "{keyword}".
 
 For each post, determine:
 1. Sentiment: positive, negative, or neutral
 2. Key opinion expressed (if any)
 
 Then provide an overall assessment:
-- Overall sentiment score (0-100, where 0=very negative, 50=neutral, 100=very positive)
+- Overall sentiment score
+  (0-100, where 0=very negative, 50=neutral, 100=very positive)
 - Top key opinions/viewpoints found
 - Sentiment distribution counts
 
@@ -58,7 +60,9 @@ Respond in valid JSON format:
 {{
   "overall_score": <number>,
   "sentiments": {{"positive": <count>, "negative": <count>, "neutral": <count>}},
-  "key_opinions": [{{"text": "<opinion>", "sentiment": "<pos/neg/neutral>", "frequency": <count>}}],
+  "key_opinions": [
+    {{"text": "<opinion>", "sentiment": "<pos/neg/neutral>", "frequency": <count>}}
+  ],
   "post_sentiments": [{{"index": <n>, "sentiment": "<pos/neg/neutral>"}}]
 }}\
 """
@@ -152,11 +156,14 @@ class AnalyzerService:
         if url_count >= 3:
             return True
         alpha_chars = [c for c in text if c.isalpha()]
-        if alpha_chars and sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars) > 0.8:
+        uppercase_ratio = (
+            sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars)
+            if alpha_chars
+            else 0
+        )
+        if uppercase_ratio > 0.8:
             return True
-        if _REPEATED_CHAR_PATTERN.search(text):
-            return True
-        return False
+        return bool(_REPEATED_CHAR_PATTERN.search(text))
 
     # ------------------------------------------------------------------
     # Step 2 — Map

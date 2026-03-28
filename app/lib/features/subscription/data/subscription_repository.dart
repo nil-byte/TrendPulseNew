@@ -1,13 +1,14 @@
 import 'package:trendpulse/core/network/api_client.dart';
 import 'package:trendpulse/core/network/api_endpoints.dart';
 
+import 'subscription_request.dart';
 import 'subscription_model.dart';
 
 class SubscriptionRepository {
   final ApiClient _apiClient;
 
   SubscriptionRepository({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   Future<List<Subscription>> getSubscriptions() async {
     final response = await _apiClient.get(ApiEndpoints.subscriptions);
@@ -24,19 +25,25 @@ class SubscriptionRepository {
     return Subscription.fromJson(data);
   }
 
-  Future<Subscription> createSubscription(Map<String, dynamic> body) async {
-    final response =
-        await _apiClient.post(ApiEndpoints.subscriptions, data: body);
+  Future<Subscription> createSubscription(
+    SubscriptionUpsertRequest request,
+  ) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.subscriptions,
+      data: request.toJson(),
+    );
     final data = response.data as Map<String, dynamic>;
     return Subscription.fromJson(data);
   }
 
   Future<Subscription> updateSubscription(
     String id,
-    Map<String, dynamic> body,
+    SubscriptionUpsertRequest request,
   ) async {
-    final response =
-        await _apiClient.put(ApiEndpoints.subscriptionById(id), data: body);
+    final response = await _apiClient.put(
+      ApiEndpoints.subscriptionById(id),
+      data: request.toJson(),
+    );
     final data = response.data as Map<String, dynamic>;
     return Subscription.fromJson(data);
   }
@@ -52,6 +59,10 @@ class SubscriptionRepository {
     return list
         .map((e) => SubscriptionTask.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<void> runSubscriptionNow(String id) async {
+    await _apiClient.post(ApiEndpoints.subscriptionRunNow(id));
   }
 
   Future<void> toggleActive(String id, {required bool isActive}) async {

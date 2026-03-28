@@ -45,9 +45,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.historyTab),
-      ),
+      appBar: AppBar(title: Text(l10n.historyTab)),
       body: historyAsync.when(
         loading: () => const ShimmerLoading(
           itemCount: 5,
@@ -86,7 +84,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     hintText: l10n.searchHint,
                     prefixIcon: Icon(
                       Icons.search_rounded,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                     ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -100,8 +100,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     filled: true,
                     fillColor: colorScheme.surfaceContainerLow,
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.borderRadiusMd),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.borderRadiusMd,
+                      ),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
@@ -117,8 +118,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                         child: Text(
                           l10n.noHistory,
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.5),
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                         ),
                       )
@@ -143,8 +145,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                                 index: index,
                                 child: _DismissibleCard(
                                   item: item,
-                                  onTap: () => context
-                                      .push('/history/detail/${item.id}'),
+                                  onTap: () => context.push(
+                                    '/history/detail/${item.id}',
+                                  ),
                                   onDelete: () =>
                                       _confirmDelete(context, item.id),
                                   index: index,
@@ -253,10 +256,7 @@ class _DismissibleCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.delete_outline_rounded,
-              color: colorScheme.error,
-            ),
+            Icon(Icons.delete_outline_rounded, color: colorScheme.error),
             const SizedBox(height: AppSpacing.xs),
             Text(
               l10n.delete,
@@ -269,11 +269,7 @@ class _DismissibleCard extends StatelessWidget {
           ],
         ),
       ),
-      child: HistoryCard(
-        item: item,
-        onTap: onTap,
-        index: index,
-      ),
+      child: HistoryCard(item: item, onTap: onTap, index: index),
     );
   }
 }

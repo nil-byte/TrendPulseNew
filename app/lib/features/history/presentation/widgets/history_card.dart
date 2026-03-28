@@ -81,8 +81,9 @@ class HistoryCard extends StatelessWidget {
                   Text(
                     _formatRelativeTime(item.createdAt),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color:
-                          colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -230,8 +231,8 @@ class _SentimentIndicator extends StatelessWidget {
     final color = score > 0.6
         ? tpColors.positive
         : score < 0.4
-            ? tpColors.negative
-            : tpColors.neutral;
+        ? tpColors.negative
+        : tpColors.neutral;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -239,10 +240,7 @@ class _SentimentIndicator extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: AppSpacing.xs),
         Text(

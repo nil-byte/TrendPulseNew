@@ -58,8 +58,9 @@ class TaskTimelineItem extends StatelessWidget {
                       child: Container(
                         width: 2,
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.3,
+                        ),
                       ),
                     ),
                 ],
@@ -71,11 +72,11 @@ class TaskTimelineItem extends StatelessWidget {
                 elevation: 0,
                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.borderRadiusMd),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.borderRadiusMd,
+                  ),
                   side: BorderSide(
-                    color:
-                        colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                   ),
                 ),
                 color: colorScheme.surfaceContainer,
@@ -92,7 +93,7 @@ class TaskTimelineItem extends StatelessWidget {
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w500,
                                 fontFeatures: const [
-                                  FontFeature.tabularFigures()
+                                  FontFeature.tabularFigures(),
                                 ],
                               ),
                             ),
@@ -139,10 +140,8 @@ class TaskTimelineItem extends StatelessWidget {
                           borderRadius: BorderRadius.circular(2),
                           minHeight: 3,
                           color: colorScheme.primary,
-                          backgroundColor:
-                              colorScheme.primaryContainer.withValues(
-                            alpha: 0.3,
-                          ),
+                          backgroundColor: colorScheme.primaryContainer
+                              .withValues(alpha: 0.3),
                         ),
                       ],
                     ],

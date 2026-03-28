@@ -7,7 +7,7 @@ class AnalysisRepository {
   final ApiClient _apiClient;
 
   AnalysisRepository({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   Future<AnalysisTask> createTask({
     required String keyword,

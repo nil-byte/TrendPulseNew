@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import AsyncMock
 
 from src.models.schemas import RawPost
-from src.services.analyzer_service import AnalyzerService, AnalysisResult
+from src.services.analyzer_service import AnalysisResult, AnalyzerService
 
 
 def _make_post(content: str, source: str = "reddit", engagement: int = 10) -> RawPost:

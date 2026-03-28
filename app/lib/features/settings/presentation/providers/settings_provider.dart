@@ -8,41 +8,42 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository();
 });
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
+  ref,
+) {
   final repo = ref.watch(settingsRepositoryProvider);
   return ThemeModeNotifier(repo);
 });
 
-final baseUrlProvider =
-    StateNotifierProvider<BaseUrlNotifier, String>((ref) {
+final baseUrlProvider = StateNotifierProvider<BaseUrlNotifier, String>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
   return BaseUrlNotifier(repo);
 });
 
 final defaultLanguageProvider =
     StateNotifierProvider<DefaultLanguageNotifier, String>((ref) {
-  final repo = ref.watch(settingsRepositoryProvider);
-  return DefaultLanguageNotifier(repo);
-});
+      final repo = ref.watch(settingsRepositoryProvider);
+      return DefaultLanguageNotifier(repo);
+    });
 
 final defaultMaxItemsProvider =
     StateNotifierProvider<DefaultMaxItemsNotifier, int>((ref) {
-  final repo = ref.watch(settingsRepositoryProvider);
-  return DefaultMaxItemsNotifier(repo);
-});
+      final repo = ref.watch(settingsRepositoryProvider);
+      return DefaultMaxItemsNotifier(repo);
+    });
 
-final inAppNotifyProvider =
-    StateNotifierProvider<InAppNotifyNotifier, bool>((ref) {
+final inAppNotifyProvider = StateNotifierProvider<InAppNotifyNotifier, bool>((
+  ref,
+) {
   final repo = ref.watch(settingsRepositoryProvider);
   return InAppNotifyNotifier(repo);
 });
 
 final subscriptionNotifyProvider =
     StateNotifierProvider<SubscriptionNotifyNotifier, bool>((ref) {
-  final repo = ref.watch(settingsRepositoryProvider);
-  return SubscriptionNotifyNotifier(repo);
-});
+      final repo = ref.watch(settingsRepositoryProvider);
+      return SubscriptionNotifyNotifier(repo);
+    });
 
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   final SettingsRepository _repo;
@@ -62,16 +63,16 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   static ThemeMode _fromString(String value) => switch (value) {
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
-      };
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
 
   static String _toString(ThemeMode mode) => switch (mode) {
-        ThemeMode.light => 'light',
-        ThemeMode.dark => 'dark',
-        ThemeMode.system => 'system',
-      };
+    ThemeMode.light => 'light',
+    ThemeMode.dark => 'dark',
+    ThemeMode.system => 'system',
+  };
 }
 
 class BaseUrlNotifier extends StateNotifier<String> {
@@ -82,7 +83,8 @@ class BaseUrlNotifier extends StateNotifier<String> {
   }
 
   Future<void> _load() async {
-    state = await _repo.getBaseUrl();
+    final loadedBaseUrl = await _repo.getBaseUrl();
+    state = loadedBaseUrl;
   }
 
   Future<void> setBaseUrl(String url) async {
