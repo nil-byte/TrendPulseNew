@@ -22,8 +22,8 @@ class Settings(BaseSettings):
 
     # Grok API (X data collection)
     grok_api_key: str = ""
-    grok_base_url: str = "https://wududu.edu.kg/v1"
-    grok_model: str = "grok-4.20-beta"
+    grok_base_url: str = "https://api.x.ai/v1"
+    grok_model: str = "grok-4.20-reasoning"
 
     # LLM Analysis API (OpenAI SDK compatible)
     llm_api_key: str = ""
