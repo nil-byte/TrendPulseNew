@@ -67,10 +67,49 @@ final taskReportProvider =
     ) async {
       final taskAsync = ref.watch(taskDetailProvider(taskId));
       final task = taskAsync.valueOrNull;
-      if (task == null || !task.isCompleted) return null;
+      if (task == null || !task.canViewReport) return null;
       final repo = ref.read(analysisRepositoryProvider);
       return repo.getReport(taskId);
     });
+
+final taskPostsRefreshVersionProvider =
+    AutoDisposeNotifierProviderFamily<
+      TaskPostsRefreshVersionNotifier,
+      int,
+      String
+    >(TaskPostsRefreshVersionNotifier.new);
+
+class TaskPostsRefreshVersionNotifier
+    extends AutoDisposeFamilyNotifier<int, String> {
+  bool _hasSeenInitialTaskSnapshot = false;
+
+  @override
+  int build(String arg) {
+    ref.listen<AsyncValue<AnalysisTask>>(taskDetailProvider(arg), (
+      previous,
+      next,
+    ) {
+      final nextTask = next.valueOrNull;
+      if (nextTask == null) {
+        return;
+      }
+
+      if (!_hasSeenInitialTaskSnapshot) {
+        _hasSeenInitialTaskSnapshot = true;
+        return;
+      }
+
+      final previousTask = previous?.valueOrNull;
+      final shouldRefreshPosts =
+          previousTask?.isInProgress == true || nextTask.isInProgress;
+      if (shouldRefreshPosts) {
+        state++;
+      }
+    }, fireImmediately: true);
+
+    return 0;
+  }
+}
 
 final detailSourceFilterProvider =
     AutoDisposeStateProviderFamily<String?, String>((ref, taskId) => null);
@@ -80,6 +119,7 @@ final taskAllPostsProvider =
       ref,
       taskId,
     ) async {
+      ref.watch(taskPostsRefreshVersionProvider(taskId));
       final repo = ref.read(feedRepositoryProvider);
       return repo.getPosts(taskId);
     });
@@ -90,6 +130,7 @@ final taskPostsProvider =
       taskId,
     ) async {
       final sourceFilter = ref.watch(detailSourceFilterProvider(taskId));
+      ref.watch(taskPostsRefreshVersionProvider(taskId));
       final repo = ref.read(feedRepositoryProvider);
       return repo.getPosts(taskId, sourceFilter: sourceFilter);
     });

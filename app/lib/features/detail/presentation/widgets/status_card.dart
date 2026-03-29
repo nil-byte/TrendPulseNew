@@ -26,7 +26,12 @@ class _StatusCardState extends State<StatusCard>
     _pulseController = AnimationController(
       vsync: this,
       duration: AppMotion.pulse,
-    )..repeat(reverse: true);
+    );
+    if (widget.task.isInProgress) {
+      _pulseController.repeat(reverse: true);
+    } else {
+      _pulseController.value = 1;
+    }
   }
 
   @override
@@ -46,7 +51,10 @@ class _StatusCardState extends State<StatusCard>
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.onSurface, width: AppBorders.medium),
+        border: Border.all(
+          color: colorScheme.onSurface,
+          width: AppBorders.medium,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -118,13 +126,23 @@ class _StatusCardState extends State<StatusCard>
     if (task.isAnalyzing) {
       return (Icons.psychology_rounded, l10n.statusAnalyzing);
     }
-    return (Icons.check_circle_rounded, l10n.statusCompleted);
+    if (task.isPartial) {
+      return (Icons.warning_amber_rounded, l10n.statusPartial);
+    }
+    if (task.isFailed) {
+      return (Icons.error_outline_rounded, l10n.statusFailed);
+    }
+    if (task.isCompleted) {
+      return (Icons.check_circle_rounded, l10n.statusCompleted);
+    }
+    return (Icons.hourglass_top_rounded, l10n.statusPending);
   }
 
   double? _progressValue(AnalysisTask task) {
     if (task.isPending) return null;
     if (task.isCollecting) return 0.4;
     if (task.isAnalyzing) return 0.75;
-    return 1.0;
+    if (task.isPartial || task.isCompleted || task.isFailed) return 1.0;
+    return null;
   }
 }

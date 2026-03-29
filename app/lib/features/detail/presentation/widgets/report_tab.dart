@@ -11,6 +11,7 @@ import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/detail/presentation/providers/detail_provider.dart';
+import 'package:trendpulse/features/detail/presentation/widgets/mermaid_mindmap_card.dart';
 import 'package:trendpulse/features/detail/presentation/widgets/status_card.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -47,7 +48,7 @@ class ReportTab extends ConsumerWidget {
         if (task.isInProgress) {
           return _InProgressContent(task: task);
         }
-        return _CompletedContent(taskId: taskId);
+        return _CompletedContent(taskId: taskId, task: task);
       },
     );
   }
@@ -78,8 +79,9 @@ class _InProgressContent extends StatelessWidget {
 
 class _CompletedContent extends ConsumerWidget {
   final String taskId;
+  final AnalysisTask task;
 
-  const _CompletedContent({required this.taskId});
+  const _CompletedContent({required this.taskId, required this.task});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -104,25 +106,42 @@ class _CompletedContent extends ConsumerWidget {
             cardSkeleton: true,
           );
         }
+        final mermaidMindmap = report.mermaidMindmap?.trim();
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            _MetricsRow(report: report),
-            const EditorialDivider.thick(topSpace: AppSpacing.xl, bottomSpace: AppSpacing.lg),
-            
+            if (task.isPartial) ...[
+              StatusCard(task: task),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+            _MetricsRow(report: report, task: task),
+            const EditorialDivider.thick(
+              topSpace: AppSpacing.xl,
+              bottomSpace: AppSpacing.lg,
+            ),
+
             _SectionHeader(title: l10n.executiveSummary),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
-            
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
+
             StaggeredListItem(
               index: 0,
               child: _EditorialSummary(text: report.summary),
             ),
-            
-            const EditorialDivider.thick(topSpace: AppSpacing.xl, bottomSpace: AppSpacing.lg),
-            
+
+            const EditorialDivider.thick(
+              topSpace: AppSpacing.xl,
+              bottomSpace: AppSpacing.lg,
+            ),
+
             _SectionHeader(title: l10n.keyInsights),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
-            
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
+
             ...List.generate(report.keyInsights.length, (i) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -135,14 +154,37 @@ class _CompletedContent extends ConsumerWidget {
                 ),
               );
             }),
-            
-            const EditorialDivider.thick(topSpace: AppSpacing.lg, bottomSpace: AppSpacing.lg),
-            
+
+            if (mermaidMindmap != null && mermaidMindmap.isNotEmpty) ...[
+              const EditorialDivider.thick(
+                topSpace: AppSpacing.lg,
+                bottomSpace: AppSpacing.lg,
+              ),
+              _SectionHeader(title: l10n.reportMindmap),
+              const EditorialDivider(
+                topSpace: AppSpacing.xs,
+                bottomSpace: AppSpacing.md,
+              ),
+              StaggeredListItem(
+                index: report.keyInsights.length + 2,
+                child: MermaidMindmapCard(mermaidMindmap: mermaidMindmap),
+              ),
+            ],
+
+            const EditorialDivider.thick(
+              topSpace: AppSpacing.lg,
+              bottomSpace: AppSpacing.lg,
+            ),
+
             _SectionHeader(title: l10n.sentimentDistribution),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
-            
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
+
             StaggeredListItem(
-              index: report.keyInsights.length + 2,
+              index: report.keyInsights.length +
+                  ((mermaidMindmap != null && mermaidMindmap.isNotEmpty) ? 3 : 2),
               child: _SentimentDistributionBar(report: report),
             ),
             const SizedBox(height: AppSpacing.xxl),
@@ -214,7 +256,9 @@ class _EditorialInsightBlock extends StatelessWidget {
             style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: 1.5,
-              color: theme.colorScheme.onSurface.withValues(alpha: AppOpacity.body),
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: AppOpacity.body,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -234,12 +278,16 @@ class _EditorialInsightBlock extends StatelessWidget {
 
 class _MetricsRow extends StatelessWidget {
   final AnalysisReport report;
+  final AnalysisTask task;
 
-  const _MetricsRow({required this.report});
+  const _MetricsRow({required this.report, required this.task});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final sentimentScore = task.sentimentScore ?? report.sentimentScore;
+    final postCount = task.postCount ?? report.totalPosts;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -247,7 +295,7 @@ class _MetricsRow extends StatelessWidget {
           flex: 2,
           child: _EditorialMetric(
             label: l10n.sentimentIndex,
-            value: report.sentimentScore.round().toString(),
+            value: sentimentScore.round().toString(),
             suffix: '/100',
             isHero: true,
           ),
@@ -267,10 +315,13 @@ class _MetricsRow extends StatelessWidget {
                 label: l10n.heatShort,
                 value: report.heatIndex.round().toString(),
               ),
-              const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.sm),
+              const EditorialDivider(
+                topSpace: AppSpacing.sm,
+                bottomSpace: AppSpacing.sm,
+              ),
               _EditorialMetric(
                 label: l10n.volumeShort,
-                value: report.totalPosts.toString(),
+                value: postCount.toString(),
               ),
             ],
           ),
@@ -306,35 +357,40 @@ class _EditorialMetric extends StatelessWidget {
             letterSpacing: 1.5,
           ),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              value,
-              style: isHero
-                  ? theme.textTheme.displayLarge?.copyWith(
-                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -2.0,
-                    )
-                  : theme.textTheme.headlineMedium?.copyWith(
-                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.0,
-                    ),
-            ),
-            if (suffix != null)
+        FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
               Text(
-                suffix!,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurface.withValues(
-                    alpha: AppOpacity.mutedSoft,
+                value,
+                style: isHero
+                    ? theme.textTheme.displayLarge?.copyWith(
+                        fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -2.0,
+                      )
+                    : theme.textTheme.headlineMedium?.copyWith(
+                        fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.0,
+                      ),
+              ),
+              if (suffix != null)
+                Text(
+                  suffix!,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface.withValues(
+                      alpha: AppOpacity.mutedSoft,
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -547,7 +603,10 @@ class _ErrorContent extends StatelessWidget {
               ),
             ),
             if (resolvedMessage != null && resolvedMessage.isNotEmpty) ...[
-              const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.sm),
+              const EditorialDivider(
+                topSpace: AppSpacing.sm,
+                bottomSpace: AppSpacing.sm,
+              ),
               Text(
                 resolvedMessage,
                 textAlign: TextAlign.center,
@@ -582,7 +641,11 @@ class _NeutralStripePainter extends CustomPainter {
     const spacing = 8.0;
 
     for (double x = -size.height; x < size.width; x += spacing) {
-      canvas.drawLine(Offset(x, size.height), Offset(x + size.height, 0), paint);
+      canvas.drawLine(
+        Offset(x, size.height),
+        Offset(x + size.height, 0),
+        paint,
+      );
     }
   }
 
