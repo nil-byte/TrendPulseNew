@@ -6,7 +6,7 @@ where appropriate.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared adapter model
@@ -88,6 +88,8 @@ class TaskResponse(BaseModel):
     updated_at: str
     error_message: str | None = None
     subscription_id: str | None = None
+    sentiment_score: float | None = Field(default=None, ge=0, le=100)
+    post_count: int | None = Field(default=None, ge=0)
 
 
 class RawPostResponse(BaseModel):
@@ -126,6 +128,7 @@ class AnalysisReportResponse(BaseModel):
     heat_index: float
     key_insights: list[KeyInsight]
     summary: str
+    mermaid_mindmap: str | None = None
     created_at: str
 
 
@@ -158,7 +161,7 @@ class CreateSubscriptionRequest(BaseModel):
     max_items: int = Field(default=50, ge=1, le=100)
     sources: list[str] = Field(default=["reddit", "youtube", "x"])
     interval: str = Field(default="daily")
-    notify: bool = Field(default=True)
+    notify: bool | None = Field(default=None)
 
     @field_validator("keyword")
     @classmethod
@@ -193,6 +196,13 @@ class CreateSubscriptionRequest(BaseModel):
         if v not in _VALID_INTERVALS:
             raise ValueError(f"interval must be one of {sorted(_VALID_INTERVALS)}")
         return v
+
+    @model_validator(mode="after")
+    def notify_must_be_boolean_when_provided(self) -> CreateSubscriptionRequest:
+        """Reject explicit ``null`` so callers must send a boolean or omit it."""
+        if "notify" in self.model_fields_set and self.notify is None:
+            raise ValueError("notify must be a boolean")
+        return self
 
 
 class UpdateSubscriptionRequest(BaseModel):
@@ -242,6 +252,19 @@ class UpdateSubscriptionRequest(BaseModel):
         return v
 
 
+class NotificationSettingsResponse(BaseModel):
+    """Notification settings exposed by the backend."""
+
+    subscription_notify_default: bool
+
+
+class UpdateNotificationSettingsRequest(BaseModel):
+    """Request body for updating notification settings."""
+
+    subscription_notify_default: bool
+    apply_to_existing: bool
+
+
 class SubscriptionResponse(BaseModel):
     """Single subscription in API responses."""
 
@@ -257,6 +280,9 @@ class SubscriptionResponse(BaseModel):
     updated_at: str
     last_run_at: str | None = None
     next_run_at: str | None = None
+    unread_alert_count: int = Field(default=0, ge=0)
+    latest_unread_alert_task_id: str | None = None
+    latest_unread_alert_score: float | None = Field(default=None, ge=0, le=100)
 
 
 class SubscriptionListResponse(BaseModel):

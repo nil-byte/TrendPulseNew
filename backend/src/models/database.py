@@ -7,6 +7,7 @@ the schema, obtain a connection, and tear it down.
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -86,6 +87,38 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 """
 
+_SQL_CREATE_APP_SETTINGS = """
+CREATE TABLE IF NOT EXISTS app_settings (
+    id                            INTEGER PRIMARY KEY CHECK (id = 1),
+    default_subscription_notify   INTEGER NOT NULL DEFAULT 1,
+    created_at                    TEXT NOT NULL,
+    updated_at                    TEXT NOT NULL
+);
+"""
+
+_SQL_INSERT_DEFAULT_APP_SETTINGS = """
+INSERT OR IGNORE INTO app_settings (
+    id,
+    default_subscription_notify,
+    created_at,
+    updated_at
+)
+VALUES (1, 1, ?, ?);
+"""
+
+_SQL_CREATE_SUBSCRIPTION_ALERTS = """
+CREATE TABLE IF NOT EXISTS subscription_alerts (
+    id              TEXT PRIMARY KEY,
+    subscription_id TEXT NOT NULL,
+    task_id         TEXT NOT NULL UNIQUE,
+    sentiment_score REAL NOT NULL,
+    is_read         INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE,
+    FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+);
+"""
+
 _SQL_ADD_TASKS_SUBSCRIPTION_ID = """
 ALTER TABLE tasks ADD COLUMN subscription_id TEXT REFERENCES subscriptions(id);
 """
@@ -93,6 +126,16 @@ ALTER TABLE tasks ADD COLUMN subscription_id TEXT REFERENCES subscriptions(id);
 _SQL_CREATE_INDEX_SUBSCRIPTIONS_ACTIVE = """
 CREATE INDEX IF NOT EXISTS idx_subscriptions_is_active ON subscriptions (is_active);
 """
+
+_SQL_CREATE_INDEX_SUBSCRIPTION_ALERTS_UNREAD = """
+CREATE INDEX IF NOT EXISTS idx_subscription_alerts_unread
+ON subscription_alerts (subscription_id, is_read, created_at DESC);
+"""
+
+
+def _now_iso() -> str:
+    """Return the current UTC timestamp in ISO-8601 format."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _resolve_db_path() -> str:
@@ -130,13 +173,18 @@ async def init_db() -> None:
     """Create all tables and indexes if they do not already exist."""
     db = await get_db()
     try:
+        now = _now_iso()
         await db.execute(_SQL_CREATE_TASKS)
         await db.execute(_SQL_CREATE_RAW_POSTS)
         await db.execute(_SQL_CREATE_ANALYSIS_REPORTS)
+        await db.execute(_SQL_CREATE_APP_SETTINGS)
         await db.execute(_SQL_CREATE_SUBSCRIPTIONS)
+        await db.execute(_SQL_CREATE_SUBSCRIPTION_ALERTS)
+        await db.execute(_SQL_INSERT_DEFAULT_APP_SETTINGS, (now, now))
         await db.execute(_SQL_CREATE_INDEX_RAW_POSTS_TASK)
         await db.execute(_SQL_CREATE_INDEX_REPORTS_TASK)
         await db.execute(_SQL_CREATE_INDEX_SUBSCRIPTIONS_ACTIVE)
+        await db.execute(_SQL_CREATE_INDEX_SUBSCRIPTION_ALERTS_UNREAD)
         await _safe_add_column(
             db,
             "tasks",
