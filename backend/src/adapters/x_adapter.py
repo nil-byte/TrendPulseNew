@@ -91,6 +91,8 @@ _SHARDS: list[tuple[str, str]] = [
 class XAdapter(BaseAdapter):
     """Collect posts from X via Grok API using Triple-Helix Sampling."""
 
+    _MISSING_API_KEY_MESSAGE = "Grok API key is not configured"
+
     @property
     def source_name(self) -> str:
         return "x"
@@ -109,8 +111,8 @@ class XAdapter(BaseAdapter):
             Deduplicated list of collected raw posts.
         """
         if not settings.grok_api_key:
-            logger.warning("Grok API key not configured — skipping X collection")
-            return []
+            logger.warning(self._MISSING_API_KEY_MESSAGE)
+            raise RuntimeError(self._MISSING_API_KEY_MESSAGE)
 
         client = AsyncOpenAI(
             api_key=settings.grok_api_key,
@@ -123,16 +125,43 @@ class XAdapter(BaseAdapter):
             self._query_shard(client, keyword, language, name, focus, shard_limit)
             for name, focus in _SHARDS
         ]
-        shard_results: list[list[RawPost]] = await asyncio.gather(*tasks)
+        shard_results: list[list[RawPost] | BaseException] = await asyncio.gather(
+            *tasks,
+            return_exceptions=True,
+        )
 
+        shard_errors: dict[str, str] = {}
         seen: dict[str | None, RawPost] = {}
-        for shard in shard_results:
+        for (dimension_name, _), shard in zip(_SHARDS, shard_results, strict=True):
+            if isinstance(shard, BaseException):
+                error_message = self._stringify_error(shard)
+                logger.warning(
+                    "Grok shard %r failed for keyword=%r: %s",
+                    dimension_name,
+                    keyword,
+                    error_message,
+                )
+                shard_errors[dimension_name] = error_message
+                continue
+
             for post in shard:
                 if post.source_id and post.source_id in seen:
                     continue
                 seen[post.source_id] = post
 
         posts = list(seen.values())[:limit]
+        if not posts and shard_errors:
+            raise RuntimeError(
+                f"X collection failed: {self._format_shard_errors(shard_errors)}"
+            )
+
+        if shard_errors:
+            logger.warning(
+                "X collection completed with shard failures for keyword=%r: %s",
+                keyword,
+                self._format_shard_errors(shard_errors),
+            )
+
         logger.info("X collected %d unique posts for keyword=%r", len(posts), keyword)
         return posts
 
@@ -157,24 +186,17 @@ class XAdapter(BaseAdapter):
             dimension_focus=dimension_focus,
         )
 
-        try:
-            response = await client.chat.completions.create(
-                model=settings.grok_model,
-                temperature=0.2,
-                messages=[
-                    {"role": "system", "content": _SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
+        response = await client.chat.completions.create(
+            model=settings.grok_model,
+            temperature=0.2,
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
 
-            raw_text = response.choices[0].message.content or ""
-            return self._parse_response(raw_text, dimension_name)
-
-        except Exception:
-            logger.exception(
-                "Grok shard %r failed for keyword=%r", dimension_name, keyword
-            )
-            return []
+        raw_text = response.choices[0].message.content or ""
+        return self._parse_response(raw_text, dimension_name)
 
     def _parse_response(
         self, raw_text: str, dimension_name: str
@@ -186,18 +208,16 @@ class XAdapter(BaseAdapter):
 
         json_match = re.search(r"\[.*]", text, re.DOTALL)
         if not json_match:
-            logger.warning(
-                "No JSON array found in Grok response for shard %r", dimension_name
+            raise ValueError(
+                f"No JSON array found in Grok response for shard {dimension_name}"
             )
-            return []
 
         try:
             items: list[dict[str, Any]] = json.loads(json_match.group())
-        except json.JSONDecodeError:
-            logger.warning(
-                "Invalid JSON in Grok response for shard %r", dimension_name
-            )
-            return []
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Invalid JSON in Grok response for shard {dimension_name}"
+            ) from exc
 
         posts: list[RawPost] = []
         for item in items:
@@ -218,3 +238,16 @@ class XAdapter(BaseAdapter):
                 logger.debug("Skipping malformed item in shard %r", dimension_name)
 
         return posts
+
+    @staticmethod
+    def _stringify_error(error: BaseException) -> str:
+        """Convert shard exceptions into stable human-readable messages."""
+        message = str(error).strip()
+        return message or error.__class__.__name__
+
+    @staticmethod
+    def _format_shard_errors(shard_errors: dict[str, str]) -> str:
+        """Render shard failures into a readable summary string."""
+        return "; ".join(
+            f"{shard_name}: {message}" for shard_name, message in shard_errors.items()
+        )

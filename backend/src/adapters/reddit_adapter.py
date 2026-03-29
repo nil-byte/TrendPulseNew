@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 class RedditAdapter(BaseAdapter):
     """Collect posts from Reddit via the official API (asyncpraw)."""
 
+    _MISSING_CREDENTIALS_MESSAGE = "Reddit credentials are not configured"
+
     @property
     def source_name(self) -> str:
         return "reddit"
@@ -35,8 +37,8 @@ class RedditAdapter(BaseAdapter):
             List of collected raw posts.
         """
         if not settings.reddit_client_id or not settings.reddit_client_secret:
-            logger.warning("Reddit credentials not configured — skipping collection")
-            return []
+            logger.warning(self._MISSING_CREDENTIALS_MESSAGE)
+            raise RuntimeError(self._MISSING_CREDENTIALS_MESSAGE)
 
         posts: list[RawPost] = []
         try:
@@ -80,8 +82,9 @@ class RedditAdapter(BaseAdapter):
                         )
                     )
 
-        except Exception:
+        except Exception as exc:
             logger.exception("Reddit collection failed for keyword=%r", keyword)
+            raise RuntimeError(f"Reddit collection failed: {exc}") from exc
 
         logger.info("Reddit collected %d posts for keyword=%r", len(posts), keyword)
         return posts

@@ -20,6 +20,8 @@ _TRANSCRIPT_MAX_CHARS = 2000
 class YouTubeAdapter(BaseAdapter):
     """Collect videos (with transcripts) from YouTube."""
 
+    _MISSING_API_KEY_MESSAGE = "YouTube API key is not configured"
+
     @property
     def source_name(self) -> str:
         return "youtube"
@@ -38,8 +40,8 @@ class YouTubeAdapter(BaseAdapter):
             List of collected raw posts.
         """
         if not settings.youtube_api_key:
-            logger.warning("YouTube API key not configured — skipping collection")
-            return []
+            logger.warning(self._MISSING_API_KEY_MESSAGE)
+            raise RuntimeError(self._MISSING_API_KEY_MESSAGE)
 
         posts: list[RawPost] = []
         try:
@@ -48,8 +50,9 @@ class YouTubeAdapter(BaseAdapter):
                 post = self._process_video(video, language)
                 if post is not None:
                     posts.append(post)
-        except Exception:
+        except Exception as exc:
             logger.exception("YouTube collection failed for keyword=%r", keyword)
+            raise RuntimeError(f"YouTube collection failed: {exc}") from exc
 
         logger.info("YouTube collected %d posts for keyword=%r", len(posts), keyword)
         return posts
