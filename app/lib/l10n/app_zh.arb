@@ -27,6 +27,7 @@
   "statusCollecting": "正在采集数据...",
   "statusAnalyzing": "正在分析情感...",
   "statusCompleted": "已完成",
+  "statusPartial": "部分完成",
   "statusFailed": "失败",
   "retry": "重试",
   "delete": "删除",
@@ -65,12 +66,17 @@
   "settingsDefaultItems": "默认最大条数",
   "settingsNotifications": "通知",
   "settingsInAppNotify": "应用内通知",
-  "settingsSubscriptionNotify": "订阅完成提醒",
+  "settingsInAppNotifyHint": "关闭后也不会隐藏订阅低分预警。",
+  "settingsSubscriptionNotify": "订阅低分预警",
   "settingsAbout": "关于",
   "settingsVersion": "版本",
   "settingsLicense": "许可协议",
   "settingsTitle": "偏好设置",
   "settingsServerUrlSaved": "服务器地址已保存",
+  "settingsServerUrlUseDefault": "恢复默认",
+  "settingsServerUrlResetToDefault": "已恢复默认服务器地址",
+  "settingsServerUrlInvalid": "请输入完整的 http:// 或 https:// 服务器地址。",
+  "settingsServerUrlAndroidHttpUnsupported": "Android 下 HTTP 仅支持 localhost、127.0.0.1 或 10.0.2.2，其他地址请使用 HTTPS。",
   "settingsAboutMeta": "版本 {version} • 许可协议：{license}",
   "@settingsAboutMeta": {
     "placeholders": {
@@ -133,6 +139,7 @@
   "reportOn": "报告主题",
   "liveStatus": "实时状态",
   "executiveSummary": "核心摘要",
+  "reportMindmap": "思维导图",
   "sentimentIndex": "情绪指数",
   "heatShort": "热度",
   "volumeShort": "样本量",
@@ -145,6 +152,8 @@
     }
   },
   "reportAnalysisFailedTitle": "分析失败",
+  "reportMindmapFallbackTitle": "当前导图暂不可视化",
+  "reportMindmapFallbackBody": "目前仅支持后端生成的 Mermaid mindmap 子集，以下保留原始文本，方便继续核对。",
   "allSources": "全部来源",
   "noRecordsFoundTitle": "暂无记录",
   "noRecordsFoundMessage": "这里暂时还没有可展示的内容。",
@@ -172,10 +181,19 @@
   "subscriptionLoadError": "暂时无法加载这条订阅。",
   "subscriptionRunNowError": "暂时无法启动这次执行。",
   "subscriptionSaveError": "暂时无法保存这条订阅。",
+  "subscriptionNegativeAlertTitle": "检测到负面情绪",
+  "subscriptionNegativeAlertMessage": "最近一次未读执行评分为 {score}，请及时查看执行历史。",
+  "@subscriptionNegativeAlertMessage": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
   "subscriptionSubjectLabel": "关注主题",
   "subscriptionKeywordHint": "输入关键词...",
   "requiredField": "必填项",
-  "subscriptionEnableAlerts": "开启提醒",
+  "subscriptionEnableAlerts": "开启低分预警",
   "subscriptionSaveAction": "保存订阅",
   "relativeMinutesAgo": "{count}分钟前",
   "@relativeMinutesAgo": {

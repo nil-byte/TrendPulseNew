@@ -260,6 +260,12 @@ abstract class AppLocalizations {
   /// **'Completed'**
   String get statusCompleted;
 
+  /// No description provided for @statusPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get statusPartial;
+
   /// No description provided for @statusFailed.
   ///
   /// In en, this message translates to:
@@ -488,10 +494,16 @@ abstract class AppLocalizations {
   /// **'In-app notifications'**
   String get settingsInAppNotify;
 
+  /// No description provided for @settingsInAppNotifyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning this off does not hide subscription low-score alerts.'**
+  String get settingsInAppNotifyHint;
+
   /// No description provided for @settingsSubscriptionNotify.
   ///
   /// In en, this message translates to:
-  /// **'Subscription completion alerts'**
+  /// **'Subscription low-score alerts'**
   String get settingsSubscriptionNotify;
 
   /// No description provided for @settingsAbout.
@@ -523,6 +535,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server URL saved'**
   String get settingsServerUrlSaved;
+
+  /// No description provided for @settingsServerUrlUseDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Default'**
+  String get settingsServerUrlUseDefault;
+
+  /// No description provided for @settingsServerUrlResetToDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Using default server URL'**
+  String get settingsServerUrlResetToDefault;
+
+  /// No description provided for @settingsServerUrlInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a full http:// or https:// server URL.'**
+  String get settingsServerUrlInvalid;
+
+  /// No description provided for @settingsServerUrlAndroidHttpUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'On Android, HTTP only works with localhost, 127.0.0.1, or 10.0.2.2. Use HTTPS for other hosts.'**
+  String get settingsServerUrlAndroidHttpUnsupported;
 
   /// No description provided for @settingsAboutMeta.
   ///
@@ -752,6 +788,12 @@ abstract class AppLocalizations {
   /// **'Executive Summary'**
   String get executiveSummary;
 
+  /// No description provided for @reportMindmap.
+  ///
+  /// In en, this message translates to:
+  /// **'Mind map'**
+  String get reportMindmap;
+
   /// No description provided for @sentimentIndex.
   ///
   /// In en, this message translates to:
@@ -781,6 +823,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Analysis Failed'**
   String get reportAnalysisFailedTitle;
+
+  /// No description provided for @reportMindmapFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mind map preview unavailable'**
+  String get reportMindmapFallbackTitle;
+
+  /// No description provided for @reportMindmapFallbackBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the backend-generated Mermaid mindmap subset is supported right now. The raw Mermaid text is shown below.'**
+  String get reportMindmapFallbackBody;
 
   /// No description provided for @allSources.
   ///
@@ -944,6 +998,18 @@ abstract class AppLocalizations {
   /// **'Unable to save this entry right now.'**
   String get subscriptionSaveError;
 
+  /// No description provided for @subscriptionNegativeAlertTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Negative sentiment detected'**
+  String get subscriptionNegativeAlertTitle;
+
+  /// No description provided for @subscriptionNegativeAlertMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest unread run scored {score}. Review the execution history now.'**
+  String subscriptionNegativeAlertMessage(String score);
+
   /// No description provided for @subscriptionSubjectLabel.
   ///
   /// In en, this message translates to:
@@ -965,7 +1031,7 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionEnableAlerts.
   ///
   /// In en, this message translates to:
-  /// **'Enable Alerts'**
+  /// **'Enable low-score alerts'**
   String get subscriptionEnableAlerts;
 
   /// No description provided for @subscriptionSaveAction.

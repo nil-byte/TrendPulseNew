@@ -90,6 +90,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusCompleted => 'Completed';
 
   @override
+  String get statusPartial => 'Partial';
+
+  @override
   String get statusFailed => 'Failed';
 
   @override
@@ -206,7 +209,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsInAppNotify => 'In-app notifications';
 
   @override
-  String get settingsSubscriptionNotify => 'Subscription completion alerts';
+  String get settingsInAppNotifyHint =>
+      'Turning this off does not hide subscription low-score alerts.';
+
+  @override
+  String get settingsSubscriptionNotify => 'Subscription low-score alerts';
 
   @override
   String get settingsAbout => 'About';
@@ -222,6 +229,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsServerUrlSaved => 'Server URL saved';
+
+  @override
+  String get settingsServerUrlUseDefault => 'Use Default';
+
+  @override
+  String get settingsServerUrlResetToDefault => 'Using default server URL';
+
+  @override
+  String get settingsServerUrlInvalid =>
+      'Enter a full http:// or https:// server URL.';
+
+  @override
+  String get settingsServerUrlAndroidHttpUnsupported =>
+      'On Android, HTTP only works with localhost, 127.0.0.1, or 10.0.2.2. Use HTTPS for other hosts.';
 
   @override
   String settingsAboutMeta(String version, String license) {
@@ -350,6 +371,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get executiveSummary => 'Executive Summary';
 
   @override
+  String get reportMindmap => 'Mind map';
+
+  @override
   String get sentimentIndex => 'Sentiment Index';
 
   @override
@@ -365,6 +389,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportAnalysisFailedTitle => 'Analysis Failed';
+
+  @override
+  String get reportMindmapFallbackTitle => 'Mind map preview unavailable';
+
+  @override
+  String get reportMindmapFallbackBody =>
+      'Only the backend-generated Mermaid mindmap subset is supported right now. The raw Mermaid text is shown below.';
 
   @override
   String get allSources => 'All Sources';
@@ -453,6 +484,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionSaveError => 'Unable to save this entry right now.';
 
   @override
+  String get subscriptionNegativeAlertTitle => 'Negative sentiment detected';
+
+  @override
+  String subscriptionNegativeAlertMessage(String score) {
+    return 'Latest unread run scored $score. Review the execution history now.';
+  }
+
+  @override
   String get subscriptionSubjectLabel => 'Subject of Inquiry';
 
   @override
@@ -462,7 +501,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requiredField => 'Required field';
 
   @override
-  String get subscriptionEnableAlerts => 'Enable Alerts';
+  String get subscriptionEnableAlerts => 'Enable low-score alerts';
 
   @override
   String get subscriptionSaveAction => 'Save Subscription';

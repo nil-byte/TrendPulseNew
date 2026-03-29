@@ -90,6 +90,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusCompleted => '已完成';
 
   @override
+  String get statusPartial => '部分完成';
+
+  @override
   String get statusFailed => '失败';
 
   @override
@@ -204,7 +207,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsInAppNotify => '应用内通知';
 
   @override
-  String get settingsSubscriptionNotify => '订阅完成提醒';
+  String get settingsInAppNotifyHint => '关闭后也不会隐藏订阅低分预警。';
+
+  @override
+  String get settingsSubscriptionNotify => '订阅低分预警';
 
   @override
   String get settingsAbout => '关于';
@@ -220,6 +226,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsServerUrlSaved => '服务器地址已保存';
+
+  @override
+  String get settingsServerUrlUseDefault => '恢复默认';
+
+  @override
+  String get settingsServerUrlResetToDefault => '已恢复默认服务器地址';
+
+  @override
+  String get settingsServerUrlInvalid => '请输入完整的 http:// 或 https:// 服务器地址。';
+
+  @override
+  String get settingsServerUrlAndroidHttpUnsupported =>
+      'Android 下 HTTP 仅支持 localhost、127.0.0.1 或 10.0.2.2，其他地址请使用 HTTPS。';
 
   @override
   String settingsAboutMeta(String version, String license) {
@@ -343,6 +362,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get executiveSummary => '核心摘要';
 
   @override
+  String get reportMindmap => '思维导图';
+
+  @override
   String get sentimentIndex => '情绪指数';
 
   @override
@@ -358,6 +380,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reportAnalysisFailedTitle => '分析失败';
+
+  @override
+  String get reportMindmapFallbackTitle => '当前导图暂不可视化';
+
+  @override
+  String get reportMindmapFallbackBody =>
+      '目前仅支持后端生成的 Mermaid mindmap 子集，以下保留原始文本，方便继续核对。';
 
   @override
   String get allSources => '全部来源';
@@ -441,6 +470,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionSaveError => '暂时无法保存这条订阅。';
 
   @override
+  String get subscriptionNegativeAlertTitle => '检测到负面情绪';
+
+  @override
+  String subscriptionNegativeAlertMessage(String score) {
+    return '最近一次未读执行评分为 $score，请及时查看执行历史。';
+  }
+
+  @override
   String get subscriptionSubjectLabel => '关注主题';
 
   @override
@@ -450,7 +487,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get requiredField => '必填项';
 
   @override
-  String get subscriptionEnableAlerts => '开启提醒';
+  String get subscriptionEnableAlerts => '开启低分预警';
 
   @override
   String get subscriptionSaveAction => '保存订阅';

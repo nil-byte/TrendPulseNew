@@ -27,6 +27,7 @@
   "statusCollecting": "Collecting data...",
   "statusAnalyzing": "Analyzing sentiment...",
   "statusCompleted": "Completed",
+  "statusPartial": "Partial",
   "statusFailed": "Failed",
   "retry": "Retry",
   "delete": "Delete",
@@ -65,12 +66,17 @@
   "settingsDefaultItems": "Default Max Items",
   "settingsNotifications": "Notifications",
   "settingsInAppNotify": "In-app notifications",
-  "settingsSubscriptionNotify": "Subscription completion alerts",
+  "settingsInAppNotifyHint": "Turning this off does not hide subscription low-score alerts.",
+  "settingsSubscriptionNotify": "Subscription low-score alerts",
   "settingsAbout": "About",
   "settingsVersion": "Version",
   "settingsLicense": "License",
   "settingsTitle": "Preferences",
   "settingsServerUrlSaved": "Server URL saved",
+  "settingsServerUrlUseDefault": "Use Default",
+  "settingsServerUrlResetToDefault": "Using default server URL",
+  "settingsServerUrlInvalid": "Enter a full http:// or https:// server URL.",
+  "settingsServerUrlAndroidHttpUnsupported": "On Android, HTTP only works with localhost, 127.0.0.1, or 10.0.2.2. Use HTTPS for other hosts.",
   "settingsAboutMeta": "Version {version} • License: {license}",
   "@settingsAboutMeta": {
     "placeholders": {
@@ -133,6 +139,7 @@
   "reportOn": "Report On",
   "liveStatus": "Live Status",
   "executiveSummary": "Executive Summary",
+  "reportMindmap": "Mind map",
   "sentimentIndex": "Sentiment Index",
   "heatShort": "Heat",
   "volumeShort": "Volume",
@@ -145,6 +152,8 @@
     }
   },
   "reportAnalysisFailedTitle": "Analysis Failed",
+  "reportMindmapFallbackTitle": "Mind map preview unavailable",
+  "reportMindmapFallbackBody": "Only the backend-generated Mermaid mindmap subset is supported right now. The raw Mermaid text is shown below.",
   "allSources": "All Sources",
   "noRecordsFoundTitle": "No Records Found",
   "noRecordsFoundMessage": "Nothing is available yet.",
@@ -172,10 +181,19 @@
   "subscriptionLoadError": "Unable to load this entry right now.",
   "subscriptionRunNowError": "Unable to start this run right now.",
   "subscriptionSaveError": "Unable to save this entry right now.",
+  "subscriptionNegativeAlertTitle": "Negative sentiment detected",
+  "subscriptionNegativeAlertMessage": "Latest unread run scored {score}. Review the execution history now.",
+  "@subscriptionNegativeAlertMessage": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
   "subscriptionSubjectLabel": "Subject of Inquiry",
   "subscriptionKeywordHint": "Enter keyword...",
   "requiredField": "Required field",
-  "subscriptionEnableAlerts": "Enable Alerts",
+  "subscriptionEnableAlerts": "Enable low-score alerts",
   "subscriptionSaveAction": "Save Subscription",
   "relativeMinutesAgo": "{count}m ago",
   "@relativeMinutesAgo": {

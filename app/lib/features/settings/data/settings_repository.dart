@@ -8,16 +8,24 @@ class SettingsRepository {
   static const _keyMaxItems = 'settings_max_items';
   static const _keyThemeMode = 'settings_theme_mode';
   static const _keyInAppNotify = 'in_app_notify';
-  static const _keySubscriptionNotify = 'subscription_notify';
 
   Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyBaseUrl) ?? ApiEndpoints.defaultBaseUrl;
+    final storedUrl = prefs.getString(_keyBaseUrl)?.trim();
+    if (storedUrl == null || storedUrl.isEmpty) {
+      return ApiEndpoints.defaultBaseUrl;
+    }
+    return storedUrl;
   }
 
   Future<void> setBaseUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyBaseUrl, url);
+    final trimmedUrl = url.trim();
+    if (trimmedUrl.isEmpty) {
+      await prefs.remove(_keyBaseUrl);
+      return;
+    }
+    await prefs.setString(_keyBaseUrl, trimmedUrl);
   }
 
   Future<String> getLanguage() async {
@@ -58,15 +66,5 @@ class SettingsRepository {
   Future<void> setInAppNotify(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyInAppNotify, value);
-  }
-
-  Future<bool> getSubscriptionNotify() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_keySubscriptionNotify) ?? true;
-  }
-
-  Future<void> setSubscriptionNotify(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_keySubscriptionNotify, value);
   }
 }
