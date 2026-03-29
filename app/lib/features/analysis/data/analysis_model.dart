@@ -8,6 +8,8 @@ class AnalysisTask {
   final String createdAt;
   final String updatedAt;
   final String? errorMessage;
+  final double? sentimentScore;
+  final int? postCount;
 
   const AnalysisTask({
     required this.id,
@@ -19,14 +21,18 @@ class AnalysisTask {
     required this.createdAt,
     required this.updatedAt,
     this.errorMessage,
+    this.sentimentScore,
+    this.postCount,
   });
 
   bool get isPending => status == 'pending';
   bool get isCollecting => status == 'collecting';
   bool get isAnalyzing => status == 'analyzing';
+  bool get isPartial => status == 'partial';
   bool get isCompleted => status == 'completed';
   bool get isFailed => status == 'failed';
   bool get isInProgress => isPending || isCollecting || isAnalyzing;
+  bool get canViewReport => isCompleted || isPartial;
 
   factory AnalysisTask.fromJson(Map<String, dynamic> json) {
     return AnalysisTask(
@@ -43,6 +49,8 @@ class AnalysisTask {
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
       errorMessage: json['error_message'] as String?,
+      sentimentScore: (json['sentiment_score'] as num?)?.toDouble(),
+      postCount: (json['post_count'] as num?)?.toInt(),
     );
   }
 }
@@ -77,6 +85,7 @@ class AnalysisReport {
   final double heatIndex;
   final List<KeyInsight> keyInsights;
   final String summary;
+  final String? mermaidMindmap;
   final String createdAt;
 
   const AnalysisReport({
@@ -89,6 +98,7 @@ class AnalysisReport {
     required this.heatIndex,
     required this.keyInsights,
     required this.summary,
+    this.mermaidMindmap,
     required this.createdAt,
   });
 
@@ -112,6 +122,7 @@ class AnalysisReport {
               .toList() ??
           const [],
       summary: (json['summary'] as String?) ?? '',
+      mermaidMindmap: json['mermaid_mindmap'] as String?,
       createdAt: json['created_at'] as String,
     );
   }

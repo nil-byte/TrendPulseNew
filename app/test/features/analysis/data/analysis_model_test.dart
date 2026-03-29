@@ -13,6 +13,9 @@ void main() {
         'sources': ['reddit', 'youtube'],
         'created_at': '2026-03-28T00:00:00Z',
         'updated_at': '2026-03-28T01:00:00Z',
+        'sentiment_score': 72.5,
+        'post_count': 12,
+        'error_message': 'Completed with source failures: youtube (API down).',
       };
       final task = AnalysisTask.fromJson(json);
 
@@ -24,7 +27,12 @@ void main() {
       expect(task.sources, ['reddit', 'youtube']);
       expect(task.createdAt, '2026-03-28T00:00:00Z');
       expect(task.updatedAt, '2026-03-28T01:00:00Z');
-      expect(task.errorMessage, isNull);
+      expect(task.sentimentScore, 72.5);
+      expect(task.postCount, 12);
+      expect(
+        task.errorMessage,
+        'Completed with source failures: youtube (API down).',
+      );
     });
 
     test('uses defaults for optional fields', () {
@@ -85,6 +93,15 @@ void main() {
     test('isCompleted', () {
       expect(makeTask('completed').isCompleted, isTrue);
       expect(makeTask('pending').isCompleted, isFalse);
+    });
+
+    test('partial can view report without masquerading as completed', () {
+      final task = makeTask('partial');
+
+      expect(task.isPartial, isTrue);
+      expect(task.isCompleted, isFalse);
+      expect(task.canViewReport, isTrue);
+      expect(task.isInProgress, isFalse);
     });
 
     test('isFailed', () {
