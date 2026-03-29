@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
 from src import main as main_module
-from src.models.database import get_db
+from src.models.database import _resolve_db_path, get_db
 from src.services.subscription_service import SubscriptionService
 
 
@@ -80,3 +81,9 @@ async def test_scheduler_not_started_when_disabled_via_env() -> None:
     """When SCHEDULER_ENABLED is false, lifespan does not start the scheduler."""
     async with main_module.app.router.lifespan_context(main_module.app):
         assert main_module.get_scheduler().is_running is False
+
+
+@pytest.mark.asyncio
+async def test_each_test_uses_an_isolated_temp_database(tmp_path: Path) -> None:
+    """The test DB should live under pytest's per-test temp directory."""
+    assert Path(_resolve_db_path()).parent == tmp_path

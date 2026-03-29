@@ -48,11 +48,13 @@ class TestCollectorService:
         mock_x_cls.return_value = mock_x
 
         service = CollectorService()
-        posts = await service.collect("AI", "en", 30, ["reddit", "youtube", "x"])
+        result = await service.collect("AI", "en", 30, ["reddit", "youtube", "x"])
 
-        assert len(posts) == 3
-        sources = {p.source for p in posts}
+        assert len(result.posts) == 3
+        sources = {p.source for p in result.posts}
         assert sources == {"reddit", "youtube", "x"}
+        assert result.source_errors == {}
+        assert result.failed_sources == []
 
     @patch("src.services.collector_service.XAdapter")
     @patch("src.services.collector_service.YouTubeAdapter")
@@ -84,15 +86,39 @@ class TestCollectorService:
         mock_x_cls.return_value = mock_x
 
         service = CollectorService()
-        posts = await service.collect("AI", "en", 30, ["reddit", "youtube", "x"])
+        result = await service.collect("AI", "en", 30, ["reddit", "youtube", "x"])
 
-        assert len(posts) == 2
-        sources = {p.source for p in posts}
+        assert len(result.posts) == 2
+        sources = {p.source for p in result.posts}
         assert "youtube" not in sources
+        assert result.source_errors == {"youtube": "API down"}
+        assert result.failed_sources == ["youtube"]
 
     async def test_collect_unknown_source(self) -> None:
         """Verify unknown source name is skipped with warning."""
         service = CollectorService()
-        posts = await service.collect("AI", "en", 10, ["nonexistent_source"])
+        result = await service.collect("AI", "en", 10, ["nonexistent_source"])
 
-        assert posts == []
+        assert result.posts == []
+        assert result.source_errors == {
+            "nonexistent_source": "Unsupported source: nonexistent_source"
+        }
+        assert result.failed_sources == ["nonexistent_source"]
+
+    @patch("src.adapters.reddit_adapter.settings")
+    async def test_collect_records_real_adapter_configuration_failure(
+        self, mock_settings: type
+    ) -> None:
+        """Collector must capture source errors raised by a real adapter."""
+        mock_settings.reddit_client_id = ""
+        mock_settings.reddit_client_secret = ""
+        mock_settings.reddit_user_agent = "test-agent"
+
+        service = CollectorService()
+        result = await service.collect("AI", "en", 10, ["reddit"])
+
+        assert result.posts == []
+        assert result.source_errors == {
+            "reddit": "Reddit credentials are not configured"
+        }
+        assert result.failed_sources == ["reddit"]

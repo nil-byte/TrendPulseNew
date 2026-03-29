@@ -6,6 +6,8 @@ import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from src.adapters.reddit_adapter import RedditAdapter
 from src.adapters.x_adapter import XAdapter
 from src.adapters.youtube_adapter import YouTubeAdapter
@@ -54,17 +56,31 @@ class TestRedditAdapter:
         assert posts[0].engagement == 42
 
     @patch("src.adapters.reddit_adapter.settings")
-    async def test_reddit_handles_empty_credentials(
+    async def test_reddit_raises_when_credentials_missing(
         self, mock_settings: MagicMock
     ) -> None:
-        """Verify adapter returns empty list when API keys are empty."""
+        """Missing Reddit credentials must raise instead of silently returning []."""
         mock_settings.reddit_client_id = ""
         mock_settings.reddit_client_secret = ""
 
         adapter = RedditAdapter()
-        posts = await adapter.collect("test", "en", 10)
+        with pytest.raises(RuntimeError, match="Reddit credentials"):
+            await adapter.collect("test", "en", 10)
 
-        assert posts == []
+    @patch("src.adapters.reddit_adapter.settings")
+    @patch("src.adapters.reddit_adapter.asyncpraw")
+    async def test_reddit_raises_on_top_level_collection_failure(
+        self, mock_asyncpraw: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Top-level Reddit failures must bubble up to CollectorService."""
+        mock_settings.reddit_client_id = "test_id"
+        mock_settings.reddit_client_secret = "test_secret"
+        mock_settings.reddit_user_agent = "test_agent"
+        mock_asyncpraw.Reddit.side_effect = RuntimeError("auth failed")
+
+        adapter = RedditAdapter()
+        with pytest.raises(RuntimeError, match="auth failed"):
+            await adapter.collect("test", "en", 10)
 
 
 class TestYouTubeAdapter:
@@ -123,20 +139,84 @@ class TestYouTubeAdapter:
         assert posts[0].engagement == 1000
 
     @patch("src.adapters.youtube_adapter.settings")
-    async def test_youtube_handles_empty_credentials(
+    async def test_youtube_raises_when_api_key_missing(
         self, mock_settings: MagicMock
     ) -> None:
-        """Verify adapter returns empty list when API key is empty."""
+        """Missing YouTube API key must raise instead of silently returning []."""
         mock_settings.youtube_api_key = ""
 
         adapter = YouTubeAdapter()
-        posts = await adapter.collect("test", "en", 10)
+        with pytest.raises(RuntimeError, match="YouTube API key"):
+            await adapter.collect("test", "en", 10)
 
-        assert posts == []
+    @patch("src.adapters.youtube_adapter.build")
+    @patch("src.adapters.youtube_adapter.settings")
+    async def test_youtube_raises_on_top_level_collection_failure(
+        self, mock_settings: MagicMock, mock_build: MagicMock
+    ) -> None:
+        """Top-level YouTube search failures must bubble up to CollectorService."""
+        mock_settings.youtube_api_key = "test_key"
+        mock_build.side_effect = RuntimeError("quota exceeded")
+
+        adapter = YouTubeAdapter()
+        with pytest.raises(RuntimeError, match="quota exceeded"):
+            await adapter.collect("test", "en", 10)
 
 
 class TestXAdapter:
     """Tests for XAdapter.collect()."""
+
+    @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    async def test_x_collect_uses_settings_base_url_for_client(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """`collect()` must construct the OpenAI client with `settings.grok_base_url`."""
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://configured.example/v1"
+        mock_settings.grok_model = "test-model"
+
+        mock_openai_cls.return_value = MagicMock()
+        adapter = XAdapter()
+
+        with patch.object(adapter, "_query_shard", AsyncMock(return_value=[])):
+            posts = await adapter.collect("test", "en", 3)
+
+        assert posts == []
+        mock_openai_cls.assert_called_once_with(
+            api_key=mock_settings.grok_api_key,
+            base_url=mock_settings.grok_base_url,
+        )
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_uses_settings_model(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """`_query_shard()` must send `settings.grok_model` to Grok completions."""
+        mock_settings.grok_model = "configured-model"
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="[]"))]
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        adapter = XAdapter()
+        posts = await adapter._query_shard(
+            mock_client,
+            keyword="test",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=1,
+        )
+
+        assert posts == []
+        mock_client.chat.completions.create.assert_awaited_once()
+        assert (
+            mock_client.chat.completions.create.await_args.kwargs["model"]
+            == mock_settings.grok_model
+        )
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
@@ -188,16 +268,35 @@ class TestXAdapter:
         assert len(ids) == len(set(ids))
 
     @patch("src.adapters.x_adapter.settings")
-    async def test_x_handles_empty_credentials(
+    async def test_x_raises_when_api_key_missing(
         self, mock_settings: MagicMock
     ) -> None:
-        """Verify adapter returns empty list when Grok API key is empty."""
+        """Missing Grok API key must raise instead of silently returning []."""
         mock_settings.grok_api_key = ""
 
         adapter = XAdapter()
-        posts = await adapter.collect("test", "en", 10)
+        with pytest.raises(RuntimeError, match="Grok API key"):
+            await adapter.collect("test", "en", 10)
 
-        assert posts == []
+    @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    async def test_x_raises_when_all_shards_fail(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Whole-source X failures must not silently collapse into an empty list."""
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://test.api/v1"
+        mock_settings.grok_model = "test-model"
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=RuntimeError("upstream down")
+        )
+        mock_openai_cls.return_value = mock_client
+
+        adapter = XAdapter()
+        with pytest.raises(RuntimeError, match="upstream down"):
+            await adapter.collect("test", "en", 10)
 
     async def test_x_adapter_handles_think_tags(self) -> None:
         """Verify <think> tag stripping works in _parse_response."""
