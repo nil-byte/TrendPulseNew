@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:trendpulse/core/network/api_base_url_resolver.dart';
 import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
@@ -9,6 +10,7 @@ import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/editorial_switch_row.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
+import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -20,6 +22,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   late final TextEditingController _urlController;
+  bool _isSubscriptionNotifySaving = false;
 
   @override
   void initState() {
@@ -42,7 +45,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final language = ref.watch(defaultLanguageProvider);
     final maxItems = ref.watch(defaultMaxItemsProvider);
     final inAppNotify = ref.watch(inAppNotifyProvider);
-    final subscriptionNotify = ref.watch(subscriptionNotifyProvider);
+    final subscriptionNotifyAsync = ref.watch(subscriptionNotifyProvider);
     final packageInfoAsync = ref.watch(packageInfoProvider);
     final appVersion = packageInfoAsync.valueOrNull?.version ?? '...';
 
@@ -77,9 +80,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           children: [
             // --- Appearance ---
             _SectionTitle(label: l10n.settingsAppearance),
-            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.md),
-            
-            Text(l10n.settingsTheme.toUpperCase(), style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const EditorialDivider(
+              topSpace: AppSpacing.sm,
+              bottomSpace: AppSpacing.md,
+            ),
+
+            Text(
+              l10n.settingsTheme.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
@@ -118,13 +129,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   l10n.settingsLanguageLabel.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 SegmentedButton<String>(
                   segments: [
@@ -147,16 +160,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ],
             ),
-            
-            const EditorialDivider.thick(topSpace: AppSpacing.xl, bottomSpace: AppSpacing.lg),
+
+            const EditorialDivider.thick(
+              topSpace: AppSpacing.xl,
+              bottomSpace: AppSpacing.lg,
+            ),
 
             // --- Service ---
             _SectionTitle(label: l10n.settingsService),
-            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.md),
-            
+            const EditorialDivider(
+              topSpace: AppSpacing.sm,
+              bottomSpace: AppSpacing.md,
+            ),
+
             Text(
               l10n.settingsServerUrl.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Row(
@@ -174,7 +195,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     keyboardType: TextInputType.url,
                     textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _saveBaseUrl(),
+                    onSubmitted: (_) {
+                      _saveBaseUrl();
+                    },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -182,7 +205,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   height: 52,
                   width: 52,
                   child: IconButton.filled(
-                    onPressed: _saveBaseUrl,
+                    onPressed: () {
+                      _saveBaseUrl();
+                    },
                     icon: const Icon(Icons.save_outlined),
                     style: IconButton.styleFrom(
                       backgroundColor: colorScheme.primary,
@@ -192,15 +217,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.xs),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  _resetBaseUrl();
+                },
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: Text(l10n.settingsServerUrlUseDefault.toUpperCase()),
+              ),
+            ),
             const SizedBox(height: AppSpacing.lg),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
                     l10n.settingsDefaultItems.toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 Text(
@@ -223,13 +261,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     .setMaxItems(value.round());
               },
             ),
-            
-            const EditorialDivider.thick(topSpace: AppSpacing.xl, bottomSpace: AppSpacing.lg),
+
+            const EditorialDivider.thick(
+              topSpace: AppSpacing.xl,
+              bottomSpace: AppSpacing.lg,
+            ),
 
             // --- Notifications ---
             _SectionTitle(label: l10n.settingsNotifications),
             const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: 0),
-            
+
             EditorialSwitchRow(
               title: Text(
                 l10n.settingsInAppNotify.toUpperCase(),
@@ -240,26 +281,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               value: inAppNotify,
               onChanged: (_) => ref.read(inAppNotifyProvider.notifier).toggle(),
             ),
-            const EditorialDivider(topSpace: 0, bottomSpace: 0),
-            EditorialSwitchRow(
-              title: Text(
-                l10n.settingsSubscriptionNotify.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                0,
+                AppSpacing.sm,
+                AppSpacing.sm,
+              ),
+              child: Text(
+                l10n.settingsInAppNotifyHint,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(
+                    alpha: AppOpacity.body,
+                  ),
+                  height: 1.5,
                 ),
               ),
-              value: subscriptionNotify,
-              onChanged: (_) =>
-                  ref.read(subscriptionNotifyProvider.notifier).toggle(),
             ),
+            const EditorialDivider(topSpace: 0, bottomSpace: 0),
+            _buildSubscriptionNotifyRow(subscriptionNotifyAsync, theme, l10n),
             const EditorialDivider(topSpace: 0, bottomSpace: AppSpacing.lg),
 
             const SizedBox(height: AppSpacing.lg),
 
             // --- About ---
             _SectionTitle(label: l10n.settingsAbout),
-            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.md),
-            
+            const EditorialDivider(
+              topSpace: AppSpacing.sm,
+              bottomSpace: AppSpacing.md,
+            ),
+
             Row(
               children: [
                 Icon(
@@ -296,12 +347,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             Text(
               l10n.settingsAboutDescription,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: AppOpacity.primary),
+                color: colorScheme.onSurface.withValues(
+                  alpha: AppOpacity.primary,
+                ),
                 height: 1.6,
                 fontStyle: FontStyle.italic,
               ),
             ),
-            
+
             const SizedBox(height: AppSpacing.xxl),
           ],
         ),
@@ -309,20 +362,126 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  void _saveBaseUrl() {
-    final url = _urlController.text.trim();
-    if (url.isNotEmpty) {
-      ref.read(baseUrlProvider.notifier).setBaseUrl(url);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.settingsServerUrlSaved.toUpperCase(),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+  Future<void> _saveBaseUrl() async {
+    final l10n = AppLocalizations.of(context)!;
+    final rawUrl = _urlController.text;
+    final trimmedUrl = rawUrl.trim();
+    final targetPlatform = ref.read(baseUrlTargetPlatformProvider);
+    final isWeb = ref.read(baseUrlIsWebProvider);
+    if (trimmedUrl.isEmpty) {
+      await _resetBaseUrl();
+      return;
+    }
+
+    final validationError = ApiBaseUrlResolver.validateBaseUrl(
+      trimmedUrl,
+      targetPlatform: targetPlatform,
+      isWeb: isWeb,
+    );
+    if (validationError != null) {
+      _showBaseUrlSnackBar(_messageForValidationError(validationError, l10n));
+      return;
+    }
+
+    await ref.read(baseUrlProvider.notifier).setBaseUrl(trimmedUrl);
+    if (!mounted) {
+      return;
+    }
+    _showBaseUrlSnackBar(l10n.settingsServerUrlSaved);
+  }
+
+  Future<void> _resetBaseUrl() async {
+    final l10n = AppLocalizations.of(context)!;
+    await ref.read(baseUrlProvider.notifier).setBaseUrl('');
+    if (!mounted) {
+      return;
+    }
+    _showBaseUrlSnackBar(l10n.settingsServerUrlResetToDefault);
+  }
+
+  Future<void> _setSubscriptionNotifyDefault(bool value) async {
+    if (_isSubscriptionNotifySaving) {
+      return;
+    }
+
+    setState(() {
+      _isSubscriptionNotifySaving = true;
+    });
+
+    try {
+      await ref
+          .read(notificationSettingsControllerProvider)
+          .setSubscriptionNotifyDefault(value);
+      ref.invalidate(subscriptionListProvider);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showBaseUrlSnackBar(AppLocalizations.of(context)!.errorGeneric);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubscriptionNotifySaving = false;
+        });
+      }
     }
   }
+
+  Widget _buildSubscriptionNotifyRow(
+    AsyncValue<bool> subscriptionNotifyAsync,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final title = Text(
+      l10n.settingsSubscriptionNotify.toUpperCase(),
+      style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+    );
+
+    return subscriptionNotifyAsync.when(
+      data: (subscriptionNotify) => EditorialSwitchRow(
+        title: title,
+        value: subscriptionNotify,
+        onChanged: _isSubscriptionNotifySaving
+            ? null
+            : _setSubscriptionNotifyDefault,
+      ),
+      loading: () => _AsyncSettingsRow(
+        title: title,
+        trailing: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => _AsyncSettingsRow(
+        title: title,
+        trailing: TextButton(
+          onPressed: () => ref.invalidate(notificationSettingsProvider),
+          child: Text(l10n.retry.toUpperCase()),
+        ),
+      ),
+    );
+  }
+
+  void _showBaseUrlSnackBar(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message.toUpperCase()),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  String _messageForValidationError(
+    ApiBaseUrlValidationError error,
+    AppLocalizations l10n,
+  ) => switch (error) {
+    ApiBaseUrlValidationError.invalidUrl => l10n.settingsServerUrlInvalid,
+    ApiBaseUrlValidationError.unsupportedAndroidHttp =>
+      l10n.settingsServerUrlAndroidHttpUnsupported,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -342,6 +501,27 @@ class _SectionTitle extends StatelessWidget {
         fontFamily: theme.textTheme.displayLarge?.fontFamily,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
+      ),
+    );
+  }
+}
+
+class _AsyncSettingsRow extends StatelessWidget {
+  final Widget title;
+  final Widget trailing;
+
+  const _AsyncSettingsRow({required this.title, required this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+      child: Row(
+        children: [
+          Expanded(child: title),
+          const SizedBox(width: AppSpacing.md),
+          trailing,
+        ],
       ),
     );
   }
@@ -404,11 +584,17 @@ class _ThemePreviewCard extends StatelessWidget {
                 color: selected
                     ? colorScheme.primary.withValues(alpha: AppOpacity.focus)
                     : Colors.transparent,
-                border: Border(top: BorderSide(
-                  color: selected
-                      ? colorScheme.primary.withValues(alpha: AppOpacity.mutedSoft)
-                      : colorScheme.outline.withValues(alpha: AppOpacity.primary),
-                )),
+                border: Border(
+                  top: BorderSide(
+                    color: selected
+                        ? colorScheme.primary.withValues(
+                            alpha: AppOpacity.mutedSoft,
+                          )
+                        : colorScheme.outline.withValues(
+                            alpha: AppOpacity.primary,
+                          ),
+                  ),
+                ),
                 borderRadius: BorderRadius.zero,
               ),
               child: Text(
@@ -417,9 +603,7 @@ class _ThemePreviewCard extends StatelessWidget {
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: selected
-                      ? colorScheme.primary
-                      : colorScheme.onSurface,
+                  color: selected ? colorScheme.primary : colorScheme.onSurface,
                 ),
               ),
             ),
@@ -503,10 +687,7 @@ class _PreviewMock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // AppBar mock
-          Container(
-            height: 12,
-            color: header,
-          ),
+          Container(height: 12, color: header),
           const SizedBox(height: 6),
           // Divider mock
           Container(height: 1, color: cardLine),

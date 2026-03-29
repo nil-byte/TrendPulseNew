@@ -2,26 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
+import 'package:trendpulse/features/settings/data/notification_settings.dart';
+import 'package:trendpulse/features/settings/data/notification_settings_repository.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
 import 'package:trendpulse/features/settings/presentation/pages/settings_page.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
 class _FakeSettingsRepository extends SettingsRepository {
-  String _baseUrl = 'http://localhost:8000';
+  String? _baseUrl = ApiEndpoints.defaultBaseUrl;
   String _language = 'en';
   int _maxItems = 50;
   String _themeMode = 'system';
   bool _inAppNotify = true;
-  bool _subscriptionNotify = true;
 
   @override
-  Future<String> getBaseUrl() async => _baseUrl;
+  Future<String> getBaseUrl() async {
+    final storedUrl = _baseUrl?.trim();
+    if (storedUrl == null || storedUrl.isEmpty) {
+      return ApiEndpoints.defaultBaseUrl;
+    }
+    return storedUrl;
+  }
 
   @override
   Future<void> setBaseUrl(String url) async {
-    _baseUrl = url;
+    final trimmedUrl = url.trim();
+    _baseUrl = trimmedUrl.isEmpty ? null : trimmedUrl;
   }
 
   @override
@@ -55,17 +64,51 @@ class _FakeSettingsRepository extends SettingsRepository {
   Future<void> setInAppNotify(bool value) async {
     _inAppNotify = value;
   }
+}
+
+class _FakeNotificationSettingsRepository
+    extends NotificationSettingsRepository {
+  _FakeNotificationSettingsRepository({bool subscriptionNotifyDefault = true})
+    : _settings = NotificationSettings(
+        subscriptionNotifyDefault: subscriptionNotifyDefault,
+      );
+
+  NotificationSettings _settings;
+  int getCalls = 0;
+  int updateCalls = 0;
+  bool? lastSubscriptionNotifyDefault;
+  bool? lastApplyToExisting;
 
   @override
-  Future<bool> getSubscriptionNotify() async => _subscriptionNotify;
+  Future<NotificationSettings> getNotificationSettings() async {
+    getCalls++;
+    return _settings;
+  }
 
   @override
-  Future<void> setSubscriptionNotify(bool value) async {
-    _subscriptionNotify = value;
+  Future<NotificationSettings> updateNotificationSettings({
+    required bool subscriptionNotifyDefault,
+    required bool applyToExisting,
+  }) async {
+    updateCalls++;
+    lastSubscriptionNotifyDefault = subscriptionNotifyDefault;
+    lastApplyToExisting = applyToExisting;
+    _settings = NotificationSettings(
+      subscriptionNotifyDefault: subscriptionNotifyDefault,
+    );
+    return _settings;
   }
 }
 
-Widget _wrap(Widget child, {Locale locale = const Locale('en')}) {
+Widget _wrap(
+  Widget child, {
+  Locale locale = const Locale('en'),
+  SettingsRepository? repository,
+  NotificationSettingsRepository? notificationSettingsRepository,
+  String initialBaseUrl = ApiEndpoints.defaultBaseUrl,
+  TargetPlatform baseUrlTargetPlatform = TargetPlatform.iOS,
+  bool baseUrlIsWeb = false,
+}) {
   PackageInfo.setMockInitialValues(
     appName: 'TrendPulse',
     packageName: 'trendpulse',
@@ -76,7 +119,15 @@ Widget _wrap(Widget child, {Locale locale = const Locale('en')}) {
 
   return ProviderScope(
     overrides: [
-      settingsRepositoryProvider.overrideWithValue(_FakeSettingsRepository()),
+      settingsRepositoryProvider.overrideWithValue(
+        repository ?? _FakeSettingsRepository(),
+      ),
+      notificationSettingsRepositoryProvider.overrideWithValue(
+        notificationSettingsRepository ?? _FakeNotificationSettingsRepository(),
+      ),
+      initialBaseUrlProvider.overrideWithValue(initialBaseUrl),
+      baseUrlTargetPlatformProvider.overrideWithValue(baseUrlTargetPlatform),
+      baseUrlIsWebProvider.overrideWithValue(baseUrlIsWeb),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -96,7 +147,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final segmented = tester.widget<SegmentedButton<String>>(
-      find.byWidgetPredicate((widget) => widget is SegmentedButton<String>).first,
+      find
+          .byWidgetPredicate((widget) => widget is SegmentedButton<String>)
+          .first,
     );
     expect(segmented.style, isNull);
 
@@ -157,4 +210,208 @@ void main() {
     expect(find.textContaining('1.0.0'), findsOneWidget);
     expect(find.textContaining('0.1.0'), findsNothing);
   });
+
+  testWidgets('settings page clear and save restores default server url', (
+    tester,
+  ) async {
+    final repository = _FakeSettingsRepository();
+    await repository.setBaseUrl('http://custom.example:9000');
+    final initialBaseUrl = await repository.getBaseUrl();
+
+    await tester.pumpWidget(
+      _wrap(
+        const SettingsPage(),
+        repository: repository,
+        initialBaseUrl: initialBaseUrl,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '');
+    await tester.tap(find.byIcon(Icons.save_outlined));
+    await tester.pumpAndSettle();
+
+    final textField = tester.widget<TextField>(find.byType(TextField));
+    expect(textField.controller?.text, ApiEndpoints.defaultBaseUrl);
+    expect(await repository.getBaseUrl(), ApiEndpoints.defaultBaseUrl);
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets(
+    'settings page explicit reset button restores default server url',
+    (tester) async {
+      final repository = _FakeSettingsRepository();
+      await repository.setBaseUrl('http://custom.example:9000');
+      final initialBaseUrl = await repository.getBaseUrl();
+
+      await tester.pumpWidget(
+        _wrap(
+          const SettingsPage(),
+          repository: repository,
+          initialBaseUrl: initialBaseUrl,
+          baseUrlTargetPlatform: TargetPlatform.android,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('USE DEFAULT'));
+      await tester.pumpAndSettle();
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, ApiEndpoints.defaultBaseUrl);
+      expect(await repository.getBaseUrl(), ApiEndpoints.defaultBaseUrl);
+    },
+  );
+
+  testWidgets('settings page rejects missing scheme server url', (
+    tester,
+  ) async {
+    final repository = _FakeSettingsRepository();
+    await repository.setBaseUrl('http://custom.example:9000');
+    final initialBaseUrl = await repository.getBaseUrl();
+
+    await tester.pumpWidget(
+      _wrap(
+        const SettingsPage(),
+        repository: repository,
+        initialBaseUrl: initialBaseUrl,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'api.example.com:8000');
+    await tester.tap(find.byIcon(Icons.save_outlined));
+    await tester.pumpAndSettle();
+
+    expect(await repository.getBaseUrl(), 'http://custom.example:9000');
+    expect(
+      find.textContaining('HTTP:// OR HTTPS:// SERVER URL'),
+      findsOneWidget,
+    );
+    expect(find.text('SERVER URL SAVED'), findsNothing);
+  });
+
+  testWidgets('settings page rejects non-http server url', (tester) async {
+    final repository = _FakeSettingsRepository();
+    await repository.setBaseUrl('http://custom.example:9000');
+    final initialBaseUrl = await repository.getBaseUrl();
+
+    await tester.pumpWidget(
+      _wrap(
+        const SettingsPage(),
+        repository: repository,
+        initialBaseUrl: initialBaseUrl,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'ftp://api.example.com');
+    await tester.tap(find.byIcon(Icons.save_outlined));
+    await tester.pumpAndSettle();
+
+    expect(await repository.getBaseUrl(), 'http://custom.example:9000');
+    expect(
+      find.textContaining('HTTP:// OR HTTPS:// SERVER URL'),
+      findsOneWidget,
+    );
+    expect(find.text('SERVER URL SAVED'), findsNothing);
+  });
+
+  testWidgets('settings page loads remote low-score alert default from API', (
+    tester,
+  ) async {
+    final notificationSettingsRepository = _FakeNotificationSettingsRepository(
+      subscriptionNotifyDefault: false,
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        const SettingsPage(),
+        notificationSettingsRepository: notificationSettingsRepository,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('SUBSCRIPTION LOW-SCORE ALERTS'), findsOneWidget);
+
+    final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
+    expect(switches.last.value, isFalse);
+    expect(notificationSettingsRepository.getCalls, greaterThanOrEqualTo(1));
+  });
+
+  testWidgets(
+    'settings page explains that in-app notifications do not hide low-score alerts',
+    (tester) async {
+      await tester.pumpWidget(_wrap(const SettingsPage()));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Turning this off does not hide subscription low-score alerts.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'settings page updates remote low-score alert default with apply_to_existing',
+    (tester) async {
+      final notificationSettingsRepository =
+          _FakeNotificationSettingsRepository(subscriptionNotifyDefault: true);
+
+      await tester.pumpWidget(
+        _wrap(
+          const SettingsPage(),
+          notificationSettingsRepository: notificationSettingsRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('SUBSCRIPTION LOW-SCORE ALERTS'));
+      await tester.tap(find.text('SUBSCRIPTION LOW-SCORE ALERTS'));
+      await tester.pumpAndSettle();
+
+      expect(notificationSettingsRepository.updateCalls, 1);
+      expect(
+        notificationSettingsRepository.lastSubscriptionNotifyDefault,
+        isFalse,
+      );
+      expect(notificationSettingsRepository.lastApplyToExisting, isTrue);
+
+      final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
+      expect(switches.last.value, isFalse);
+    },
+  );
+
+  testWidgets(
+    'settings page blocks unsupported Android cleartext server url',
+    (tester) async {
+      final repository = _FakeSettingsRepository();
+      await repository.setBaseUrl('http://custom.example:9000');
+      final initialBaseUrl = await repository.getBaseUrl();
+
+      await tester.pumpWidget(
+        _wrap(
+          const SettingsPage(),
+          repository: repository,
+          initialBaseUrl: initialBaseUrl,
+          baseUrlTargetPlatform: TargetPlatform.android,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        'http://api.example.com:8000',
+      );
+      await tester.tap(find.byIcon(Icons.save_outlined));
+      await tester.pumpAndSettle();
+
+      expect(await repository.getBaseUrl(), 'http://custom.example:9000');
+      expect(find.textContaining('10.0.2.2'), findsOneWidget);
+      expect(find.text('SERVER URL SAVED'), findsNothing);
+    },
+    variant: const TargetPlatformVariant(<TargetPlatform>{
+      TargetPlatform.android,
+    }),
+  );
 }
