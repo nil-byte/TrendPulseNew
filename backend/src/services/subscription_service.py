@@ -17,7 +17,12 @@ from src.models.schemas import (
     TaskResponse,
     UpdateSubscriptionRequest,
 )
-from src.services.task_service import TaskService
+from src.services.app_settings_service import AppSettingsService
+from src.services.task_service import (
+    TaskService,
+    build_task_query,
+    row_to_task_response,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +32,45 @@ _INTERVAL_DELTAS: dict[str, timedelta] = {
     "daily": timedelta(days=1),
     "weekly": timedelta(days=7),
 }
+
+_SUBSCRIPTION_SELECT_WITH_ALERT_SUMMARY = """
+SELECT
+    subscriptions.id,
+    subscriptions.keyword,
+    subscriptions.language,
+    subscriptions.max_items,
+    subscriptions.sources,
+    subscriptions.interval,
+    subscriptions.is_active,
+    subscriptions.notify,
+    subscriptions.created_at,
+    subscriptions.updated_at,
+    subscriptions.last_run_at,
+    subscriptions.next_run_at,
+    (
+        SELECT COUNT(*)
+        FROM subscription_alerts
+        WHERE subscription_alerts.subscription_id = subscriptions.id
+          AND subscription_alerts.is_read = 0
+    ) AS unread_alert_count,
+    (
+        SELECT task_id
+        FROM subscription_alerts
+        WHERE subscription_alerts.subscription_id = subscriptions.id
+          AND subscription_alerts.is_read = 0
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    ) AS latest_unread_alert_task_id,
+    (
+        SELECT sentiment_score
+        FROM subscription_alerts
+        WHERE subscription_alerts.subscription_id = subscriptions.id
+          AND subscription_alerts.is_read = 0
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    ) AS latest_unread_alert_score
+FROM subscriptions
+"""
 
 
 def _now_iso() -> str:
@@ -48,10 +92,21 @@ def _calc_next_run(interval: str, from_dt: datetime | None = None) -> str:
     return (base + delta).isoformat()
 
 
+def build_subscription_query(*, where_clause: str = "", order_clause: str = "") -> str:
+    """Build a subscription query that includes unread alert summary fields."""
+    parts = [_SUBSCRIPTION_SELECT_WITH_ALERT_SUMMARY.strip()]
+    if where_clause:
+        parts.append(where_clause)
+    if order_clause:
+        parts.append(order_clause)
+    return "\n".join(parts)
+
+
 class SubscriptionService:
     """Manages subscription CRUD operations."""
 
     def __init__(self) -> None:
+        self._app_settings_service = AppSettingsService()
         self._task_service = TaskService()
 
     async def create_subscription(
@@ -68,9 +123,14 @@ class SubscriptionService:
         sub_id = str(uuid.uuid4())
         now = _now_iso()
         next_run = _calc_next_run(request.interval)
-
         db = await get_db()
         try:
+            await db.execute("BEGIN IMMEDIATE")
+            notify_value = request.notify
+            if notify_value is None:
+                notify_value = (
+                    await self._app_settings_service.get_default_subscription_notify(db)
+                )
             await db.execute(
                 """
                 INSERT INTO subscriptions
@@ -86,13 +146,16 @@ class SubscriptionService:
                     json.dumps(request.sources),
                     request.interval,
                     1,
-                    int(request.notify),
+                    int(notify_value),
                     now,
                     now,
                     next_run,
                 ),
             )
             await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
         finally:
             await db.close()
 
@@ -104,7 +167,7 @@ class SubscriptionService:
             sources=request.sources,
             interval=request.interval,
             is_active=True,
-            notify=request.notify,
+            notify=notify_value,
             created_at=now,
             updated_at=now,
             next_run_at=next_run,
@@ -122,7 +185,8 @@ class SubscriptionService:
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT * FROM subscriptions WHERE id = ?", (sub_id,)
+                build_subscription_query(where_clause="WHERE subscriptions.id = ?"),
+                (sub_id,),
             )
             row = await cursor.fetchone()
             if row is None:
@@ -140,7 +204,9 @@ class SubscriptionService:
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT * FROM subscriptions ORDER BY created_at DESC"
+                build_subscription_query(
+                    order_clause="ORDER BY subscriptions.created_at DESC"
+                )
             )
             rows = await cursor.fetchall()
             subs = [self._row_to_subscription(r) for r in rows]
@@ -197,10 +263,35 @@ class SubscriptionService:
                 await db.commit()
 
             cursor = await db.execute(
-                "SELECT * FROM subscriptions WHERE id = ?", (sub_id,)
+                build_subscription_query(where_clause="WHERE subscriptions.id = ?"),
+                (sub_id,),
             )
             row = await cursor.fetchone()
             return self._row_to_subscription(row)  # type: ignore[arg-type]
+        finally:
+            await db.close()
+
+    async def mark_alerts_read(self, sub_id: str) -> bool:
+        """Mark all unread alerts for a subscription as read."""
+        db = await get_db()
+        try:
+            cursor = await db.execute(
+                "SELECT id FROM subscriptions WHERE id = ?",
+                (sub_id,),
+            )
+            if await cursor.fetchone() is None:
+                return False
+
+            await db.execute(
+                """
+                UPDATE subscription_alerts
+                SET is_read = 1
+                WHERE subscription_id = ? AND is_read = 0
+                """,
+                (sub_id,),
+            )
+            await db.commit()
+            return True
         finally:
             await db.close()
 
@@ -246,9 +337,10 @@ class SubscriptionService:
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT * FROM tasks "
-                "WHERE subscription_id = ? "
-                "ORDER BY created_at DESC",
+                build_task_query(
+                    where_clause="WHERE tasks.subscription_id = ?",
+                    order_clause="ORDER BY tasks.created_at DESC",
+                ),
                 (sub_id,),
             )
             rows = await cursor.fetchall()
@@ -297,6 +389,7 @@ class SubscriptionService:
 
     @staticmethod
     def _row_to_subscription(row: object) -> SubscriptionResponse:
+        latest_unread_alert_score = row["latest_unread_alert_score"]  # type: ignore[index]
         return SubscriptionResponse(
             id=row["id"],  # type: ignore[index]
             keyword=row["keyword"],  # type: ignore[index]
@@ -310,19 +403,15 @@ class SubscriptionService:
             updated_at=row["updated_at"],  # type: ignore[index]
             last_run_at=row["last_run_at"],  # type: ignore[index]
             next_run_at=row["next_run_at"],  # type: ignore[index]
+            unread_alert_count=int(row["unread_alert_count"] or 0),  # type: ignore[index]
+            latest_unread_alert_task_id=row["latest_unread_alert_task_id"],  # type: ignore[index]
+            latest_unread_alert_score=(
+                float(latest_unread_alert_score)
+                if latest_unread_alert_score is not None
+                else None
+            ),
         )
 
     @staticmethod
     def _row_to_task(row: object) -> TaskResponse:
-        return TaskResponse(
-            id=row["id"],  # type: ignore[index]
-            keyword=row["keyword"],  # type: ignore[index]
-            language=row["language"],  # type: ignore[index]
-            max_items=row["max_items"],  # type: ignore[index]
-            status=row["status"],  # type: ignore[index]
-            sources=json.loads(row["sources"]),  # type: ignore[index]
-            created_at=row["created_at"],  # type: ignore[index]
-            updated_at=row["updated_at"],  # type: ignore[index]
-            error_message=row["error_message"],  # type: ignore[index]
-            subscription_id=row["subscription_id"],  # type: ignore[index]
-        )
+        return row_to_task_response(row)

@@ -12,20 +12,88 @@ from src.models.database import get_db
 from src.models.schemas import (
     AnalysisReportResponse,
     CreateTaskRequest,
+    KeyInsight,
     PostListResponse,
     RawPost,
     RawPostResponse,
     TaskListResponse,
     TaskResponse,
 )
-from src.services.analyzer_service import AnalysisResult, AnalyzerService
-from src.services.collector_service import CollectorService
+from src.services.analyzer_service import (
+    AnalysisResult,
+    AnalyzerService,
+    build_mermaid_mindmap,
+)
+from src.services.collector_service import CollectionResult, CollectorService
 
 logger = logging.getLogger(__name__)
+
+_FAILED_STATUS = "failed"
+_PARTIAL_STATUS = "partial"
+_COMPLETED_STATUS = "completed"
+_LOW_SENTIMENT_ALERT_THRESHOLD = 30.0
+_EMPTY_COLLECTION_ERROR = "No posts were collected from the requested sources."
+_EMPTY_ANALYSIS_ERROR = (
+    "Collected posts did not contain analyzable content after cleaning."
+)
+_TASK_SELECT_WITH_METRICS = """
+SELECT
+    tasks.id,
+    tasks.keyword,
+    tasks.language,
+    tasks.max_items,
+    tasks.status,
+    tasks.sources,
+    tasks.created_at,
+    tasks.updated_at,
+    tasks.error_message,
+    tasks.subscription_id,
+    analysis_reports.sentiment_score AS sentiment_score,
+    post_counts.post_count AS post_count
+FROM tasks
+LEFT JOIN analysis_reports
+    ON analysis_reports.task_id = tasks.id
+LEFT JOIN (
+    SELECT task_id, COUNT(*) AS post_count
+    FROM raw_posts
+    GROUP BY task_id
+) AS post_counts
+    ON post_counts.task_id = tasks.id
+"""
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def build_task_query(*, where_clause: str = "", order_clause: str = "") -> str:
+    """Build a task query that includes derived list/detail metrics."""
+    parts = [_TASK_SELECT_WITH_METRICS.strip()]
+    if where_clause:
+        parts.append(where_clause)
+    if order_clause:
+        parts.append(order_clause)
+    return "\n".join(parts)
+
+
+def row_to_task_response(row: object) -> TaskResponse:
+    """Convert a task query row with optional metrics into a response model."""
+    sentiment_score = row["sentiment_score"]  # type: ignore[index]
+    post_count = row["post_count"]  # type: ignore[index]
+    return TaskResponse(
+        id=row["id"],  # type: ignore[index]
+        keyword=row["keyword"],  # type: ignore[index]
+        language=row["language"],  # type: ignore[index]
+        max_items=row["max_items"],  # type: ignore[index]
+        status=row["status"],  # type: ignore[index]
+        sources=json.loads(row["sources"]),  # type: ignore[index]
+        created_at=row["created_at"],  # type: ignore[index]
+        updated_at=row["updated_at"],  # type: ignore[index]
+        error_message=row["error_message"],  # type: ignore[index]
+        subscription_id=row["subscription_id"],  # type: ignore[index]
+        sentiment_score=float(sentiment_score) if sentiment_score is not None else None,
+        post_count=int(post_count) if post_count is not None else None,
+    )
 
 
 class TaskService:
@@ -101,6 +169,8 @@ class TaskService:
             created_at=now,
             updated_at=now,
             subscription_id=subscription_id,
+            sentiment_score=None,
+            post_count=None,
         )
 
     async def get_task(self, task_id: str) -> TaskResponse | None:
@@ -114,7 +184,10 @@ class TaskService:
         """
         db = await get_db()
         try:
-            cursor = await db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+            cursor = await db.execute(
+                build_task_query(where_clause="WHERE tasks.id = ?"),
+                (task_id,),
+            )
             row = await cursor.fetchone()
             if row is None:
                 return None
@@ -130,7 +203,9 @@ class TaskService:
         """
         db = await get_db()
         try:
-            cursor = await db.execute("SELECT * FROM tasks ORDER BY created_at DESC")
+            cursor = await db.execute(
+                build_task_query(order_clause="ORDER BY tasks.created_at DESC")
+            )
             rows = await cursor.fetchall()
             tasks = [self._row_to_task(r) for r in rows]
             return TaskListResponse(tasks=tasks, total=len(tasks))
@@ -149,11 +224,40 @@ class TaskService:
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT * FROM analysis_reports WHERE task_id = ?", (task_id,)
+                """
+                SELECT
+                    analysis_reports.*,
+                    tasks.keyword AS keyword,
+                    tasks.language AS language
+                FROM analysis_reports
+                JOIN tasks
+                    ON tasks.id = analysis_reports.task_id
+                WHERE analysis_reports.task_id = ?
+                """,
+                (task_id,),
             )
             row = await cursor.fetchone()
             if row is None:
                 return None
+            key_insights = [
+                KeyInsight.model_validate(item)
+                for item in json.loads(row["key_insights"])
+            ]
+            raw_analysis_raw = row["raw_analysis_json"]
+            loaded_raw_analysis = (
+                json.loads(raw_analysis_raw) if raw_analysis_raw else None
+            )
+            raw_analysis = (
+                loaded_raw_analysis if isinstance(loaded_raw_analysis, dict) else {}
+            )
+            mermaid_mindmap = raw_analysis.get("mermaid_mindmap")
+            if not mermaid_mindmap:
+                mermaid_mindmap = build_mermaid_mindmap(
+                    keyword=row["keyword"],
+                    summary=row["summary"],
+                    insights=key_insights,
+                    language=row["language"],
+                )
             return AnalysisReportResponse(
                 id=row["id"],
                 task_id=row["task_id"],
@@ -162,8 +266,9 @@ class TaskService:
                 negative_ratio=row["negative_ratio"],
                 neutral_ratio=row["neutral_ratio"],
                 heat_index=row["heat_index"],
-                key_insights=json.loads(row["key_insights"]),
+                key_insights=key_insights,
                 summary=row["summary"],
+                mermaid_mindmap=mermaid_mindmap,
                 created_at=row["created_at"],
             )
         finally:
@@ -243,27 +348,73 @@ class TaskService:
         try:
             await self._update_status(task_id, "collecting")
 
-            posts = await self._collector.collect(
+            collection_result = await self._collector.collect(
                 keyword=request.keyword,
                 language=request.language,
                 limit=request.max_items,
                 sources=request.sources,
             )
 
-            await self._save_raw_posts(task_id, posts)
+            if not collection_result.posts:
+                error_message = self._build_empty_collection_error(collection_result)
+                await self._update_status(
+                    task_id,
+                    _FAILED_STATUS,
+                    error_message=error_message,
+                )
+                logger.warning("Task %s failed: %s", task_id, error_message)
+                return
+
+            await self._save_raw_posts(task_id, collection_result.posts)
 
             await self._update_status(task_id, "analyzing")
 
-            result = await self._analyzer.analyze(posts, request.keyword)
+            result = await self._analyzer.analyze(
+                collection_result.posts,
+                request.keyword,
+                language=request.language,
+            )
+
+            if not result.has_analyzable_content():
+                error_message = self._build_empty_analysis_error(collection_result)
+                await self._update_status(
+                    task_id,
+                    _FAILED_STATUS,
+                    error_message=error_message,
+                )
+                logger.warning("Task %s failed: %s", task_id, error_message)
+                return
 
             await self._save_analysis_report(task_id, result)
 
-            await self._update_status(task_id, "completed")
+            if collection_result.source_errors:
+                error_message = self._build_partial_error(collection_result)
+                await self._update_status(
+                    task_id,
+                    _PARTIAL_STATUS,
+                    error_message=error_message,
+                )
+                await self._create_subscription_alert_if_needed(
+                    task_id,
+                    result.sentiment_score,
+                )
+                logger.warning(
+                    "Task %s completed partially: %s",
+                    task_id,
+                    error_message,
+                )
+                return
+
+            await self._update_status(task_id, _COMPLETED_STATUS)
+            await self._create_subscription_alert_if_needed(
+                task_id,
+                result.sentiment_score,
+            )
             logger.info("Task %s completed successfully", task_id)
 
         except Exception as e:
             logger.error("Task %s failed: %s", task_id, e, exc_info=True)
-            await self._update_status(task_id, "failed", error_message=str(e))
+            await self._update_status(task_id, _FAILED_STATUS, error_message=str(e))
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -291,9 +442,7 @@ class TaskService:
             for post in posts:
                 post_id = str(uuid.uuid4())
                 metadata = (
-                    json.dumps(post.metadata_extra)
-                    if post.metadata_extra
-                    else None
+                    json.dumps(post.metadata_extra) if post.metadata_extra else None
                 )
                 await db.execute(
                     """
@@ -324,9 +473,7 @@ class TaskService:
     async def _save_analysis_report(self, task_id: str, result: AnalysisResult) -> None:
         report_id = str(uuid.uuid4())
         now = _now_iso()
-        insights_json = json.dumps(
-            [ins.model_dump() for ins in result.key_insights]
-        )
+        insights_json = json.dumps([ins.model_dump() for ins in result.key_insights])
         raw_json = json.dumps(result.raw_analysis) if result.raw_analysis else None
 
         db = await get_db()
@@ -358,20 +505,89 @@ class TaskService:
         finally:
             await db.close()
 
+    async def _create_subscription_alert_if_needed(
+        self,
+        task_id: str,
+        sentiment_score: float,
+    ) -> None:
+        """Create a subscription alert when a completed run is below threshold."""
+        if sentiment_score >= _LOW_SENTIMENT_ALERT_THRESHOLD:
+            return
+
+        db = await get_db()
+        try:
+            await db.execute(
+                """
+                INSERT INTO subscription_alerts
+                    (
+                        id,
+                        subscription_id,
+                        task_id,
+                        sentiment_score,
+                        is_read,
+                        created_at
+                    )
+                SELECT
+                    ?,
+                    tasks.subscription_id,
+                    tasks.id,
+                    ?,
+                    0,
+                    ?
+                FROM tasks
+                JOIN subscriptions
+                    ON subscriptions.id = tasks.subscription_id
+                WHERE tasks.id = ?
+                  AND tasks.status IN (?, ?)
+                  AND subscriptions.notify = 1
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM subscription_alerts
+                      WHERE subscription_alerts.task_id = tasks.id
+                  )
+                """,
+                (
+                    str(uuid.uuid4()),
+                    sentiment_score,
+                    _now_iso(),
+                    task_id,
+                    _COMPLETED_STATUS,
+                    _PARTIAL_STATUS,
+                ),
+            )
+            await db.commit()
+        finally:
+            await db.close()
+
+    @staticmethod
+    def _format_source_failures(source_errors: dict[str, str]) -> str:
+        """Render source failures into a stable, readable summary."""
+        return "; ".join(
+            f"{source} ({message})" for source, message in sorted(source_errors.items())
+        )
+
+    def _build_empty_collection_error(self, result: CollectionResult) -> str:
+        """Create the task error message for empty collection outcomes."""
+        source_summary = self._format_source_failures(result.source_errors)
+        if not source_summary:
+            return _EMPTY_COLLECTION_ERROR
+        return f"{_EMPTY_COLLECTION_ERROR} Source failures: {source_summary}."
+
+    def _build_partial_error(self, result: CollectionResult) -> str:
+        """Create the task error message for partial collection success."""
+        source_summary = self._format_source_failures(result.source_errors)
+        return f"Completed with source failures: {source_summary}."
+
+    def _build_empty_analysis_error(self, result: CollectionResult) -> str:
+        """Create the task error message for empty analysis outcomes."""
+        source_summary = self._format_source_failures(result.source_errors)
+        if not source_summary:
+            return _EMPTY_ANALYSIS_ERROR
+        return f"{_EMPTY_ANALYSIS_ERROR} Source failures: {source_summary}."
+
     @staticmethod
     def _row_to_task(row: object) -> TaskResponse:
-        return TaskResponse(
-            id=row["id"],  # type: ignore[index]
-            keyword=row["keyword"],  # type: ignore[index]
-            language=row["language"],  # type: ignore[index]
-            max_items=row["max_items"],  # type: ignore[index]
-            status=row["status"],  # type: ignore[index]
-            sources=json.loads(row["sources"]),  # type: ignore[index]
-            created_at=row["created_at"],  # type: ignore[index]
-            updated_at=row["updated_at"],  # type: ignore[index]
-            error_message=row["error_message"],  # type: ignore[index]
-            subscription_id=row["subscription_id"],  # type: ignore[index]
-        )
+        return row_to_task_response(row)
 
     @staticmethod
     def _row_to_post(row: object) -> RawPostResponse:

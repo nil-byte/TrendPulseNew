@@ -66,6 +66,14 @@ async def get_subscription_tasks(sub_id: str) -> TaskListResponse:
     return await subscription_service.get_subscription_tasks(sub_id)
 
 
+@router.post("/{sub_id}/alerts/read", status_code=204)
+async def mark_subscription_alerts_read(sub_id: str) -> None:
+    """Mark all alerts for a subscription as read."""
+    updated = await subscription_service.mark_alerts_read(sub_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+
 @router.post("/{sub_id}/tasks", response_model=TaskResponse, status_code=201)
 async def run_subscription_now(sub_id: str) -> TaskResponse:
     """Create a task immediately from an existing subscription."""
