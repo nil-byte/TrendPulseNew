@@ -12,12 +12,14 @@ FLUTTER_PID_FILE="$RUN_DIR/flutter.pid"
 EMULATOR_SERIAL_FILE="$RUN_DIR/emulator.serial"
 BACKEND_LOG_FILE="$RUN_DIR/backend.log"
 FLUTTER_LOG_FILE="$RUN_DIR/flutter.log"
+BACKEND_PORT="8000"
 
 EMULATOR_ID="${EMULATOR_ID:-Pixel_8_M4}"
 APP_PACKAGE="${APP_PACKAGE:-}"
 PURGE_DATA=0
 CLEANUP_DONE=0
 EMULATOR_STARTED_BY_SCRIPT=0
+BACKEND_REVERSE_ENABLED=0
 BACKEND_PID=""
 FLUTTER_PID=""
 EMULATOR_SERIAL=""
@@ -128,6 +130,26 @@ stop_pid() {
   if pid_is_running "$pid"; then
     log "$name 未优雅退出，执行强制终止"
     kill -9 "$pid" >/dev/null 2>&1 || true
+  fi
+}
+
+configure_android_bridges() {
+  if adb -s "$EMULATOR_SERIAL" reverse \
+      "tcp:$BACKEND_PORT" "tcp:$BACKEND_PORT" >/dev/null 2>&1; then
+    BACKEND_REVERSE_ENABLED=1
+  fi
+
+  if [[ "$BACKEND_REVERSE_ENABLED" -ne 1 ]]; then
+    fail "无法建立 Android localhost:$BACKEND_PORT 到宿主机后端的 adb reverse 映射"
+  fi
+
+  local reverse_list=""
+  reverse_list="$(
+    adb -s "$EMULATOR_SERIAL" reverse --list 2>/dev/null | tr '\n' ';'
+  )"
+
+  if [[ "$reverse_list" != *"tcp:$BACKEND_PORT tcp:$BACKEND_PORT"* ]]; then
+    fail "adb reverse 状态异常：未找到 localhost:$BACKEND_PORT 的映射"
   fi
 }
 
@@ -305,6 +327,11 @@ cleanup() {
   stop_pid "${FLUTTER_PID:-}" "Flutter"
   stop_pid "${BACKEND_PID:-}" "后端"
 
+  if [[ "$BACKEND_REVERSE_ENABLED" -eq 1 ]] && [[ -n "$EMULATOR_SERIAL" ]]; then
+    adb -s "$EMULATOR_SERIAL" reverse --remove "tcp:$BACKEND_PORT" \
+      >/dev/null 2>&1 || true
+  fi
+
   if [[ "$EMULATOR_STARTED_BY_SCRIPT" -eq 1 ]] && [[ -n "$EMULATOR_SERIAL" ]]; then
     log "关闭本次启动的模拟器 $EMULATOR_SERIAL"
     adb -s "$EMULATOR_SERIAL" emu kill >/dev/null 2>&1 || true
@@ -366,6 +393,7 @@ main() {
   stop_stale_processes
   clean_caches
   ensure_emulator
+  configure_android_bridges
   stop_android_app
   start_backend
   start_flutter
