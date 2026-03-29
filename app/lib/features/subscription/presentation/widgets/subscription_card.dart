@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/press_feedback.dart';
 import 'package:trendpulse/core/l10n/source_platform_labels.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -33,7 +36,7 @@ class SubscriptionCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: colors.onSurface, width: 2.0),
+          border: Border.all(color: colors.outline, width: AppBorders.medium),
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -55,7 +58,9 @@ class SubscriptionCard extends StatelessWidget {
                             letterSpacing: 1.0,
                             color: item.isActive
                                 ? colors.onSurface
-                                : colors.onSurface.withValues(alpha: 0.5),
+                                : colors.onSurface.withValues(
+                                    alpha: AppOpacity.mutedSoft,
+                                  ),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -66,13 +71,17 @@ class SubscriptionCard extends StatelessWidget {
                             Icon(
                               Icons.schedule_rounded,
                               size: 14,
-                              color: colors.onSurface.withValues(alpha: 0.6),
+                              color: colors.onSurface.withValues(
+                                alpha: AppOpacity.body,
+                              ),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               _intervalLabel(item.interval, l10n).toUpperCase(),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.onSurface.withValues(alpha: 0.6),
+                              style: AppTypography.caption(theme.textTheme).copyWith(
+                                color: colors.onSurface.withValues(
+                                  alpha: AppOpacity.body,
+                                ),
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -86,13 +95,6 @@ class SubscriptionCard extends StatelessWidget {
                     child: Switch(
                       value: item.isActive,
                       onChanged: onToggleActive,
-                      activeThumbColor: colors.surface,
-                      activeTrackColor: colors.onSurface,
-                      inactiveThumbColor: colors.onSurface,
-                      inactiveTrackColor: colors.surface,
-                      trackOutlineColor: WidgetStateProperty.all(
-                        colors.onSurface,
-                      ),
                     ),
                   ),
                 ],

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/theme/app_motion.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
+
 class PressFeedback extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -28,9 +31,13 @@ class _PressFeedbackState extends State<PressFeedback> {
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeInOut,
-        child: widget.child,
+        duration: AppMotion.fast,
+        curve: AppMotion.gentle,
+        child: AnimatedOpacity(
+          opacity: _pressed ? AppOpacity.pressedContent : AppOpacity.full,
+          duration: AppMotion.fast,
+          child: widget.child,
+        ),
       ),
     );
   }

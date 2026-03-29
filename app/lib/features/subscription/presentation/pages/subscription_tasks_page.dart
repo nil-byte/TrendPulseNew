@@ -6,6 +6,7 @@ import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/features/subscription/presentation/widgets/task_timeline_item.dart';
@@ -63,11 +64,12 @@ class SubscriptionTasksPage extends ConsumerWidget {
       ),
       body: tasksAsync.when(
         loading: () => const ShimmerLoading(
+          cardSkeleton: true,
           itemCount: 5,
           itemHeight: 80,
           borderRadius: 0,
           padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
+            horizontal: AppSpacing.pageHorizontal,
             vertical: AppSpacing.sm,
           ),
         ),
@@ -129,23 +131,13 @@ class SubscriptionTasksPage extends ConsumerWidget {
       ref.invalidate(subscriptionListProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.statusCollecting.toUpperCase()),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.onSurface,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          ),
+          SnackBar(content: Text(l10n.statusCollecting.toUpperCase())),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.subscriptionRunNowError),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.onSurface,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          ),
+          SnackBar(content: Text(l10n.subscriptionRunNowError)),
         );
       }
     }
@@ -159,32 +151,9 @@ class _EmptyTasksView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.timeline_rounded,
-              size: 64,
-              color: colorScheme.onSurface.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.noExecutions.toUpperCase(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyWidget(
+      title: l10n.noExecutions,
+      message: l10n.noRecordsFoundMessage,
     );
   }
 }

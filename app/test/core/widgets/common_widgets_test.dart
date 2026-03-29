@@ -56,6 +56,76 @@ void main() {
 
       expect(decoration.borderRadius, BorderRadius.circular(0));
     });
+
+    testWidgets('supports editorial card skeleton placeholders', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: ShimmerLoading(itemCount: 1, cardSkeleton: true)),
+        ),
+      );
+
+      final shimmer = tester.widget<ShimmerLoading>(find.byType(ShimmerLoading));
+      final containers = tester.widgetList<Container>(
+        find.descendant(
+          of: find.byType(ShimmerLoading),
+          matching: find.byType(Container),
+        ),
+      );
+
+      expect(shimmer.cardSkeleton, isTrue);
+      expect(
+        containers.any(
+          (container) =>
+              container.constraints?.minWidth == 24 &&
+              container.constraints?.maxWidth == 24 &&
+              container.constraints?.minHeight == 24 &&
+              container.constraints?.maxHeight == 24,
+        ),
+        isTrue,
+      );
+      expect(
+        containers.any(
+          (container) =>
+              container.constraints?.minWidth == 48 &&
+              container.constraints?.maxWidth == 48 &&
+              container.constraints?.minHeight == 18 &&
+              container.constraints?.maxHeight == 18,
+        ),
+        isTrue,
+      );
+    });
+
+    testWidgets('card skeleton honors height, outline, and radius parameters', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ShimmerLoading(
+              itemCount: 1,
+              itemHeight: 160,
+              borderRadius: 12,
+              showOutline: false,
+              cardSkeleton: true,
+            ),
+          ),
+        ),
+      );
+
+      final containers = tester.widgetList<Container>(
+        find.descendant(
+          of: find.byType(ShimmerLoading),
+          matching: find.byType(Container),
+        ),
+      );
+      final skeleton = containers.firstWhere(
+        (container) => container.constraints?.minHeight == 160,
+      );
+      final decoration = skeleton.decoration! as BoxDecoration;
+
+      expect(decoration.borderRadius, BorderRadius.circular(12));
+      expect(decoration.border, isNull);
+    });
   });
 
   group('AppErrorWidget', () {
@@ -110,21 +180,26 @@ void main() {
   });
 
   group('EmptyWidget', () {
-    testWidgets('displays message and icon', (tester) async {
+    testWidgets('displays message with editorial ornament', (tester) async {
       await tester.pumpWidget(
         _wrapLocalized(const EmptyWidget(message: 'No data available')),
       );
       expect(find.text('No data available'), findsOneWidget);
-      expect(find.byIcon(Icons.inbox_outlined), findsOneWidget);
+      expect(find.text('•  •  •'), findsOneWidget);
+      expect(find.text('———  ·  ———'), findsOneWidget);
+      expect(find.byIcon(Icons.inbox_outlined), findsNothing);
     });
 
-    testWidgets('uses custom icon', (tester) async {
+    testWidgets('keeps editorial ornament even when a legacy icon is provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrapLocalized(
           const EmptyWidget(message: 'Empty', icon: Icons.search_off),
         ),
       );
-      expect(find.byIcon(Icons.search_off), findsOneWidget);
+      expect(find.text('•  •  •'), findsOneWidget);
+      expect(find.byIcon(Icons.search_off), findsNothing);
     });
 
     testWidgets('localizes the default empty title in Chinese', (tester) async {

@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/features/subscription/presentation/pages/subscription_form_page.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
-Widget _wrap(Widget child, {Locale locale = const Locale('en')}) {
+Widget _wrap(
+  Widget child, {
+  Locale locale = const Locale('en'),
+  ThemeData? theme,
+}) {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: locale,
-      theme: AppTheme.light,
+      theme: theme ?? AppTheme.light,
       home: child,
     ),
   );
@@ -35,6 +40,8 @@ void main() {
 
       await tester.drag(find.byType(ListView), const Offset(0, -600));
       await tester.pumpAndSettle();
+
+      expect(find.byType(SwitchListTile), findsNothing);
 
       final toggle = tester.widget<Switch>(find.byType(Switch));
       expect(toggle.thumbColor, isNull);
@@ -70,18 +77,36 @@ void main() {
     expect(chip.labelStyle?.fontFamily, AppTypography.editorialSansFamily);
   });
 
-  testWidgets('subscription keyword field uses softened filled borders', (
+  testWidgets(
+    'subscription X source chip uses a readable dark foreground in dark theme',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(const SubscriptionFormPage(), theme: AppTheme.dark),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('X'));
+      await tester.pumpAndSettle();
+
+      final xChip = tester.widgetList<FilterChip>(find.byType(FilterChip)).last;
+
+      expect(xChip.selected, isTrue);
+      expect(xChip.labelStyle?.color, AppColors.lightInk);
+    },
+  );
+
+  testWidgets('subscription keyword field uses editorial square borders', (
     tester,
   ) async {
     await tester.pumpWidget(_wrap(const SubscriptionFormPage()));
     await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byType(TextField).first);
-    final decoration = field.decoration!;
+    final context = tester.element(find.byType(SubscriptionFormPage));
+    final decoration = Theme.of(context).inputDecorationTheme;
     final border = decoration.enabledBorder! as OutlineInputBorder;
 
     expect(decoration.filled, isTrue);
-    expect(border.borderRadius, isNot(BorderRadius.zero));
+    expect(border.borderRadius, BorderRadius.zero);
   });
 
   testWidgets('subscription form localizes editorial labels in Chinese', (

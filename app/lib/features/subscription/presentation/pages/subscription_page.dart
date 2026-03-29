@@ -3,11 +3,12 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:trendpulse/core/animations/breathe_animation.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
+import 'package:trendpulse/core/theme/app_motion.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
@@ -48,13 +49,13 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/subscription/new'),
         icon: const Icon(Icons.add_rounded),
-        backgroundColor: theme.colorScheme.onSurface,
-        foregroundColor: theme.colorScheme.surface,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         label: AnimatedCrossFade(
-          duration: const Duration(milliseconds: 200),
-          firstCurve: Curves.easeOutCubic,
-          secondCurve: Curves.easeOutCubic,
-          sizeCurve: Curves.easeOutCubic,
+          duration: AppMotion.normal,
+          firstCurve: AppMotion.enter,
+          secondCurve: AppMotion.enter,
+          sizeCurve: AppMotion.enter,
           crossFadeState: _isFabExtended
               ? CrossFadeState.showFirst
               : CrossFadeState.showSecond,
@@ -77,11 +78,12 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
         },
         child: subsAsync.when(
           loading: () => const ShimmerLoading(
+            cardSkeleton: true,
             itemCount: 4,
             itemHeight: 110,
             borderRadius: 0,
             padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
+              horizontal: AppSpacing.pageHorizontal,
               vertical: AppSpacing.sm,
             ),
           ),
@@ -147,9 +149,6 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.subscriptionToggleError),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.onSurface,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
         );
       }
@@ -209,9 +208,6 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
               content: Text(
                 AppLocalizations.of(context)!.subscriptionDeleteError,
               ),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Theme.of(context).colorScheme.onSurface,
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
             ),
           );
         }
@@ -227,46 +223,12 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BreatheAnimation(
-              child: Icon(
-                Icons.article_outlined,
-                size: 64,
-                color: colorScheme.onSurface.withValues(alpha: 0.2),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.catalogEmptyTitle.toUpperCase(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.sm),
-            Text(
-              l10n.addFirstSubscription,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            OutlinedButton(
-              onPressed: () => context.push('/subscription/new'),
-              child: Text(l10n.createEntry.toUpperCase()),
-            ),
-          ],
-        ),
+    return EmptyWidget(
+      title: l10n.catalogEmptyTitle,
+      message: l10n.addFirstSubscription,
+      action: OutlinedButton(
+        onPressed: () => context.push('/subscription/new'),
+        child: Text(l10n.createEntry.toUpperCase()),
       ),
     );
   }

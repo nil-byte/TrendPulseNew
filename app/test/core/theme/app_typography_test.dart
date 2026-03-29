@@ -7,11 +7,11 @@ void main() {
     testWidgets('body styles favor readable long-form sizing', (tester) async {
       final textTheme = AppTypography.textTheme;
 
-      expect(textTheme.bodyLarge?.fontSize, 17);
+      expect(textTheme.bodyLarge?.fontSize, 16);
       expect(textTheme.bodyLarge?.height, 1.65);
       expect(textTheme.bodyMedium?.fontSize, 15);
       expect(textTheme.bodyMedium?.height, 1.55);
-      expect(textTheme.bodySmall?.fontSize, 13);
+      expect(textTheme.bodySmall?.fontSize, 13.5);
       expect(textTheme.bodySmall?.height, 1.5);
     });
 
@@ -20,9 +20,9 @@ void main() {
     ) async {
       final textTheme = AppTypography.textTheme;
 
-      expect(textTheme.labelLarge?.fontSize, 14);
-      expect(textTheme.labelMedium?.fontSize, 13);
-      expect(textTheme.labelSmall?.fontSize, 12.5);
+      expect(textTheme.labelLarge?.fontSize, 15);
+      expect(textTheme.labelMedium?.fontSize, 13.5);
+      expect(textTheme.labelSmall?.fontSize, 13);
       expect(textTheme.labelSmall?.letterSpacing, 0.35);
     });
 
@@ -34,7 +34,7 @@ void main() {
       expect(textTheme.displayLarge?.fontSize, 57);
       expect(textTheme.headlineSmall?.fontSize, 24);
       expect(textTheme.titleLarge?.fontSize, 22);
-      expect(textTheme.titleMedium?.fontSize, 17);
+      expect(textTheme.titleMedium?.fontSize, 18);
       expect(textTheme.titleSmall?.fontSize, 15);
       expect(
         textTheme.displayLarge?.fontFamily,
@@ -73,6 +73,22 @@ void main() {
       expect(
         textTheme.titleLarge?.fontFamily,
         AppTypography.editorialSerifFamily,
+      );
+    });
+
+    testWidgets('caption style supports dense metadata and CJK fallbacks', (
+      tester,
+    ) async {
+      final style = AppTypography.caption(AppTypography.textTheme);
+
+      expect(style.fontFamily, AppTypography.editorialSansFamily);
+      expect(style.fontSize, 11.5);
+      expect(style.fontWeight, FontWeight.w500);
+      expect(style.letterSpacing, 0.4);
+      expect(style.height, 1.35);
+      expect(
+        style.fontFamilyFallback,
+        containsAll(['PingFang SC', 'Noto Sans SC', 'Microsoft YaHei']),
       );
     });
 

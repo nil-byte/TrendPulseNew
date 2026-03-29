@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/press_feedback.dart';
 import 'package:trendpulse/core/l10n/source_platform_labels.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/features/feed/data/feed_model.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,7 +29,10 @@ class PostCard extends StatelessWidget {
         onTap: hasSourceUrl ? () => _openUrl(post.url!) : null,
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.outline, width: 1.0),
+            border: Border.all(
+              color: theme.colorScheme.outline,
+              width: AppBorders.thin,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -41,14 +47,14 @@ class PostCard extends StatelessWidget {
                         color: _sourceColor(
                           post.source,
                           tpColors,
-                        ).withValues(alpha: 0.08),
+                        ).withValues(alpha: AppOpacity.soft),
                         border: Border.all(
                           color: _sourceColor(post.source, tpColors).withValues(
-                            alpha: 0.72,
+                            alpha: AppOpacity.strokeStrong,
                           ),
                         ),
                         borderRadius: BorderRadius.circular(
-                          AppSpacing.borderRadiusMd + 4,
+                          AppSpacing.radiusMd,
                         ),
                       ),
                       child: Icon(
@@ -73,7 +79,7 @@ class PostCard extends StatelessWidget {
                           post.author!.toUpperCase(),
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
+                              alpha: AppOpacity.body,
                             ),
                             fontWeight: FontWeight.w700,
                           ),
@@ -91,7 +97,7 @@ class PostCard extends StatelessWidget {
                         color: theme.colorScheme.surfaceContainerLow,
                         border: Border.all(color: theme.colorScheme.outline),
                         borderRadius: BorderRadius.circular(
-                          AppSpacing.borderRadiusFull,
+                          AppSpacing.radiusPill,
                         ),
                       ),
                       child: Row(
@@ -108,7 +114,8 @@ class PostCard extends StatelessWidget {
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w700,
-                              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                              fontFamily: AppTypography.editorialSansFamily,
+                              fontFeatures: const [FontFeature.tabularFigures()],
                             ),
                           ),
                         ],
@@ -132,9 +139,9 @@ class PostCard extends StatelessWidget {
                     if (post.publishedAt != null)
                       Text(
                         _formatDate(context, post.publishedAt!).toUpperCase(),
-                        style: theme.textTheme.labelSmall?.copyWith(
+                        style: AppTypography.caption(theme.textTheme).copyWith(
                           color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.5,
+                            alpha: AppOpacity.mutedSoft,
                           ),
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.0,
@@ -148,7 +155,9 @@ class PostCard extends StatelessWidget {
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: hasSourceUrl
                             ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: AppOpacity.hint,
+                              ),
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.45,
                       ),

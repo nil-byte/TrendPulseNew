@@ -25,13 +25,21 @@ abstract final class AppColors {
   static const Color lightOutline = Color(0xFFD6C5B4);
   static const Color lightOutlineVariant = Color(0xFFE7DBCF);
 
-  static const Color darkEspresso = Color(0xFF181310);
-  static const Color darkWalnut = Color(0xFF241D1A);
-  static const Color darkSurfaceRaised = Color(0xFF332924);
-  static const Color darkIvory = Color(0xFFF3E8DA);
-  static const Color darkIvoryMuted = Color(0xFFCDBFAF);
-  static const Color darkOutline = Color(0xFF655548);
-  static const Color darkOutlineVariant = Color(0xFF4C4037);
+  static const Color darkEspresso = Color(0xFF2B2826);
+  static const Color darkWalnut = Color(0xFF343130);
+  static const Color darkSurfaceRaised = Color(0xFF423D38);
+  static const Color darkIvory = Color(0xFFF5F0E8);
+  static const Color darkIvoryMuted = Color(0xFFC8B9A6);
+  static const Color darkOutline = Color(0xFF6B6058);
+  static const Color darkOutlineVariant = Color(0xFF504B46);
+
+  static const Color cream = Color(0xFFFFF8F4);
+
+  static Color onBrandFill(Color background) {
+    return ThemeData.estimateBrightnessForColor(background) == Brightness.dark
+        ? cream
+        : lightInk;
+  }
 }
 
 @immutable
@@ -56,26 +64,24 @@ class TrendPulseColors extends ThemeExtension<TrendPulseColors> {
   final Color surfaceHighlight;
   final Color subtleBackground;
 
-  // Warm editorial light
   static const light = TrendPulseColors(
     positive: AppColors.moss,
     negative: Color(0xFFB85C42),
     neutral: Color(0xFF8D7B6A),
-    reddit: Color(0xFFCC784C),
-    youtube: Color(0xFFC96B62),
-    xPlatform: Color(0xFF5F534A),
+    reddit: Color(0xFFFF4500),
+    youtube: Color(0xFFFF0033),
+    xPlatform: Color(0xFF14171A),
     surfaceHighlight: AppColors.lightSurfaceRaised,
     subtleBackground: AppColors.lightLinen,
   );
 
-  // Warm editorial dark
   static const dark = TrendPulseColors(
     positive: AppColors.mossDark,
-    negative: Color(0xFFE39A7C),
-    neutral: Color(0xFFBCAA9B),
-    reddit: Color(0xFFE0A06E),
-    youtube: Color(0xFFD98C84),
-    xPlatform: Color(0xFFE3D7C9),
+    negative: Color(0xFFD4917A),
+    neutral: Color(0xFFB8A99A),
+    reddit: Color(0xFFFF6D3A),
+    youtube: Color(0xFFFF4D5E),
+    xPlatform: Color(0xFFE7E0D8),
     surfaceHighlight: AppColors.darkSurfaceRaised,
     subtleBackground: AppColors.darkEspresso,
   );

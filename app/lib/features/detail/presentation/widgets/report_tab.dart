@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/detail/presentation/providers/detail_provider.dart';
@@ -22,7 +25,11 @@ class ReportTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return taskAsync.when(
-      loading: () => const ShimmerLoading(itemCount: 4, itemHeight: 100),
+      loading: () => const ShimmerLoading(
+        itemCount: 4,
+        itemHeight: 100,
+        cardSkeleton: true,
+      ),
       error: (e, _) => _ErrorContent(
         message: l10n.errorGeneric,
         onRetry: () => ref.invalidate(taskDetailProvider(taskId)),
@@ -62,6 +69,7 @@ class _InProgressContent extends StatelessWidget {
           itemCount: 3,
           itemHeight: 100,
           padding: EdgeInsets.zero,
+          cardSkeleton: true,
         ),
       ],
     );
@@ -79,14 +87,22 @@ class _CompletedContent extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return reportAsync.when(
-      loading: () => const ShimmerLoading(itemCount: 4, itemHeight: 100),
+      loading: () => const ShimmerLoading(
+        itemCount: 4,
+        itemHeight: 100,
+        cardSkeleton: true,
+      ),
       error: (e, _) => _ErrorContent(
         message: l10n.errorGeneric,
         onRetry: () => ref.invalidate(taskReportProvider(taskId)),
       ),
       data: (report) {
         if (report == null) {
-          return const ShimmerLoading(itemCount: 3, itemHeight: 100);
+          return const ShimmerLoading(
+            itemCount: 3,
+            itemHeight: 100,
+            cardSkeleton: true,
+          );
         }
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -198,7 +214,7 @@ class _EditorialInsightBlock extends StatelessWidget {
             style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: 1.5,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: AppOpacity.body),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -313,7 +329,9 @@ class _EditorialMetric extends StatelessWidget {
                 suffix!,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: theme.colorScheme.onSurface.withValues(
+                    alpha: AppOpacity.mutedSoft,
+                  ),
                 ),
               ),
           ],
@@ -356,7 +374,10 @@ class _SentimentDistributionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outline, width: 1.0),
+        border: Border.all(
+          color: theme.colorScheme.outline,
+          width: AppBorders.thin,
+        ),
       ),
       child: Column(
         children: [
@@ -373,12 +394,17 @@ class _SentimentDistributionBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     border: Border.symmetric(
-                      horizontal: BorderSide(color: theme.colorScheme.outline, width: 1.0),
+                      horizontal: BorderSide(
+                        color: theme.colorScheme.outline,
+                        width: AppBorders.thin,
+                      ),
                     ),
                   ),
                   child: CustomPaint(
                     painter: _NeutralStripePainter(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.16),
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: AppOpacity.decorative,
+                      ),
                     ),
                   ),
                 ),
@@ -390,8 +416,10 @@ class _SentimentDistributionBar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
             children: [
               _LegendItem(
                 color: tpColors.positive,
@@ -475,9 +503,10 @@ class _LegendItem extends StatelessWidget {
         ),
         Text(
           value,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontFamily: theme.textTheme.displayLarge?.fontFamily,
-            fontWeight: FontWeight.w900,
+          style: AppTypography.dataNumber(
+            theme.textTheme,
+            fontSize: 26,
+            weight: FontWeight.w900,
           ),
         ),
       ],

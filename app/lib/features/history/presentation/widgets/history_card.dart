@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/press_feedback.dart';
 import 'package:trendpulse/core/l10n/source_platform_labels.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/features/history/data/history_item.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -30,7 +33,7 @@ class HistoryCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: colorScheme.outline, width: 1.0),
+          border: Border.all(color: colorScheme.outline, width: AppBorders.thin),
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -72,13 +75,13 @@ class HistoryCard extends StatelessWidget {
                   Icon(
                     Icons.schedule_rounded,
                     size: 14,
-                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
                     _formatRelativeTime(context, item.createdAt).toUpperCase(),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    style: AppTypography.caption(theme.textTheme).copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.0,
                     ),
@@ -198,8 +201,11 @@ class _OverflowBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        border: Border.all(color: theme.colorScheme.outline, width: 1),
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+        border: Border.all(
+          color: theme.colorScheme.outline,
+          width: AppBorders.thin,
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
       ),
       child: Text(
         '+$count',
@@ -239,20 +245,18 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
-        vertical: 4,
+        vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        border: Border.all(color: color.withValues(alpha: 0.72)),
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+        border: Border.all(color: color),
       ),
       child: Text(
         label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
           color: color,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.45,
-          fontSize: 12.5,
+          letterSpacing: 1.0,
+          fontSize: 10,
         ),
       ),
     );
@@ -308,7 +312,9 @@ class _SentimentIndicator extends StatelessWidget {
           Text(
             toneLabel.toUpperCase(),
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: AppOpacity.emphasis,
+              ),
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
             ),

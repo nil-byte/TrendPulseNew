@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/theme/app_borders.dart';
+import 'package:trendpulse/core/theme/app_motion.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -22,7 +25,7 @@ class _StatusCardState extends State<StatusCard>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: AppMotion.pulse,
     )..repeat(reverse: true);
   }
 
@@ -43,7 +46,7 @@ class _StatusCardState extends State<StatusCard>
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.onSurface, width: 1.5),
+        border: Border.all(color: colorScheme.onSurface, width: AppBorders.medium),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -61,12 +64,17 @@ class _StatusCardState extends State<StatusCard>
             Row(
               children: [
                 FadeTransition(
-                  opacity: _pulseController.drive(Tween(begin: 0.4, end: 1.0)),
+                  opacity: _pulseController.drive(
+                    Tween(begin: AppOpacity.loadingBase, end: AppOpacity.full),
+                  ),
                   child: Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      border: Border.all(color: colorScheme.onSurface, width: 1.5),
+                      border: Border.all(
+                        color: colorScheme.onSurface,
+                        width: AppBorders.medium,
+                      ),
                     ),
                     child: Icon(icon, color: colorScheme.onSurface, size: 20),
                   ),
@@ -90,7 +98,9 @@ class _StatusCardState extends State<StatusCard>
               minHeight: 3,
               borderRadius: BorderRadius.zero,
               color: colorScheme.onSurface,
-              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
+              backgroundColor: colorScheme.onSurface.withValues(
+                alpha: AppOpacity.overlay,
+              ),
             ),
           ],
         ),

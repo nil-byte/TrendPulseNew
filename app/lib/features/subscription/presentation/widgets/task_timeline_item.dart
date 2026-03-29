@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/press_feedback.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -126,7 +127,9 @@ class TaskTimelineItem extends StatelessWidget {
                           borderRadius: BorderRadius.zero,
                           minHeight: 2,
                           color: colorScheme.onSurface,
-                          backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
+                          backgroundColor: colorScheme.onSurface.withValues(
+                            alpha: AppOpacity.quiet,
+                          ),
                         ),
                       ],
                     ],

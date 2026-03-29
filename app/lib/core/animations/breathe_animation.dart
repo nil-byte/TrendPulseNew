@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/theme/app_motion.dart';
+
 class BreatheAnimation extends StatefulWidget {
   final Widget child;
   final Duration duration;
@@ -8,7 +10,7 @@ class BreatheAnimation extends StatefulWidget {
   const BreatheAnimation({
     super.key,
     required this.child,
-    this.duration = const Duration(milliseconds: 2000),
+    this.duration = AppMotion.breathe,
     this.maxScale = 1.03,
   });
 
@@ -30,7 +32,7 @@ class _BreatheAnimationState extends State<BreatheAnimation>
     _scale = Tween<double>(
       begin: 1.0,
       end: widget.maxScale,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.gentle));
   }
 
   @override

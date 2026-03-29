@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'app_borders.dart';
 import 'app_colors.dart';
+import 'app_elevations.dart';
+import 'app_opacity.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 
@@ -22,11 +25,11 @@ abstract final class AppTheme {
     brightness: Brightness.light,
   ).copyWith(
     primary: AppColors.copper,
-    onPrimary: const Color(0xFFFFF8F4),
+    onPrimary: AppColors.cream,
     primaryContainer: AppColors.copperContainer,
     onPrimaryContainer: const Color(0xFF4B2C21),
     secondary: AppColors.brass,
-    onSecondary: const Color(0xFFFFF8F4),
+    onSecondary: AppColors.cream,
     secondaryContainer: AppColors.brassContainer,
     onSecondaryContainer: const Color(0xFF3C2F24),
     tertiary: AppColors.moss,
@@ -51,11 +54,11 @@ abstract final class AppTheme {
     brightness: Brightness.dark,
   ).copyWith(
     primary: AppColors.copperLight,
-    onPrimary: const Color(0xFF2C1810),
+    onPrimary: AppColors.cream,
     primaryContainer: AppColors.copperContainerDark,
     onPrimaryContainer: const Color(0xFFF9DDCF),
     secondary: AppColors.brassDark,
-    onSecondary: const Color(0xFF2A2016),
+    onSecondary: AppColors.cream,
     secondaryContainer: AppColors.brassContainerDark,
     onSecondaryContainer: const Color(0xFFEAD9BF),
     tertiary: AppColors.mossDark,
@@ -63,12 +66,12 @@ abstract final class AppTheme {
     surface: AppColors.darkWalnut,
     onSurface: AppColors.darkIvory,
     surfaceContainerLowest: AppColors.darkEspresso,
-    surfaceContainerLow: const Color(0xFF201917),
-    surfaceContainer: const Color(0xFF2A221E),
-    surfaceContainerHigh: const Color(0xFF312825),
-    surfaceContainerHighest: const Color(0xFF3B302C),
-    surfaceDim: const Color(0xFF16100E),
-    surfaceBright: const Color(0xFF382F2B),
+    surfaceContainerLow: const Color(0xFF302D2A),
+    surfaceContainer: const Color(0xFF3A3633),
+    surfaceContainerHigh: AppColors.darkSurfaceRaised,
+    surfaceContainerHighest: const Color(0xFF524D47),
+    surfaceDim: const Color(0xFF252220),
+    surfaceBright: const Color(0xFF504B46),
     outline: AppColors.darkOutline,
     outlineVariant: AppColors.darkOutlineVariant,
     shadow: const Color(0x33000000),
@@ -84,11 +87,9 @@ abstract final class AppTheme {
       bodyColor: colorScheme.onSurface,
       displayColor: colorScheme.onSurface,
     );
-    final controlRadius = BorderRadius.circular(AppSpacing.borderRadiusXl + 4);
-    final fieldRadius = BorderRadius.circular(AppSpacing.borderRadiusXl);
-    final cardRadius = BorderRadius.circular(AppSpacing.borderRadiusXl + 2);
+    const editorialRadius = BorderRadius.zero;
     final chipShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
       side: BorderSide(color: colorScheme.outline),
     );
     final baseLabelStyle =
@@ -108,12 +109,12 @@ abstract final class AppTheme {
         color: colorScheme.outline,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: AppElevations.flat,
         shape: RoundedRectangleBorder(
-          borderRadius: cardRadius,
-          side: BorderSide(color: colorScheme.outline, width: 1),
+          borderRadius: editorialRadius,
+          side: BorderSide(color: colorScheme.outline, width: AppBorders.thin),
         ),
-        color: colorScheme.surface,
+        color: AppElevations.level1(colorScheme, isDark),
         margin: EdgeInsets.zero,
       ),
       appBarTheme: AppBarThemeData(
@@ -135,7 +136,7 @@ abstract final class AppTheme {
         indicatorColor: colorScheme.primaryContainer.withValues(
           alpha: isDark ? 0.92 : 1,
         ),
-        indicatorShape: RoundedRectangleBorder(borderRadius: controlRadius),
+        indicatorShape: const RoundedRectangleBorder(borderRadius: editorialRadius),
         surfaceTintColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 68,
@@ -144,7 +145,7 @@ abstract final class AppTheme {
           return textTheme.labelMedium?.copyWith(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.onSurface.withValues(alpha: 0.68),
+                : colorScheme.onSurface.withValues(alpha: AppOpacity.secondary),
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             letterSpacing: isSelected ? 0.45 : 0.25,
           );
@@ -154,23 +155,23 @@ abstract final class AppTheme {
         filled: true,
         fillColor: colorScheme.surface,
         hintStyle: textTheme.bodyMedium?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.52),
+          color: colorScheme.onSurface.withValues(alpha: AppOpacity.muted),
         ),
         border: OutlineInputBorder(
-          borderRadius: fieldRadius,
-          borderSide: BorderSide(color: colorScheme.outline, width: 1),
+          borderRadius: editorialRadius,
+          borderSide: BorderSide(color: colorScheme.outline, width: AppBorders.thin),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: fieldRadius,
-          borderSide: BorderSide(color: colorScheme.outline, width: 1),
+          borderRadius: editorialRadius,
+          borderSide: BorderSide(color: colorScheme.outline, width: AppBorders.thin),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: fieldRadius,
-          borderSide: BorderSide(color: colorScheme.primary, width: 1.4),
+          borderRadius: editorialRadius,
+          borderSide: BorderSide(color: colorScheme.primary, width: AppBorders.medium),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: 18,
+          vertical: AppSpacing.md,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -178,7 +179,7 @@ abstract final class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           disabledBackgroundColor: colorScheme.surfaceContainerHigh,
-          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
+          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: AppOpacity.disabled),
           minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
@@ -188,13 +189,13 @@ abstract final class AppTheme {
             fontWeight: FontWeight.w700,
             letterSpacing: 0.25,
           ),
-          shape: RoundedRectangleBorder(borderRadius: controlRadius),
+          shape: const RoundedRectangleBorder(borderRadius: editorialRadius),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.onSurface,
-          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
+          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: AppOpacity.disabled),
           minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
@@ -204,21 +205,21 @@ abstract final class AppTheme {
             fontWeight: FontWeight.w700,
             letterSpacing: 0.25,
           ),
-          shape: RoundedRectangleBorder(borderRadius: controlRadius),
-          side: BorderSide(color: colorScheme.outline, width: 1),
+          shape: const RoundedRectangleBorder(borderRadius: editorialRadius),
+          side: BorderSide(color: colorScheme.outline, width: AppBorders.thin),
         ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return colorScheme.primaryContainer;
+              return colorScheme.primary;
             }
             return colorScheme.surface;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return colorScheme.onPrimaryContainer;
+              return AppColors.cream;
             }
             return colorScheme.onSurface;
           }),
@@ -226,7 +227,7 @@ abstract final class AppTheme {
             final selected = states.contains(WidgetState.selected);
             return BorderSide(
               color: selected
-                  ? colorScheme.primary.withValues(alpha: isDark ? 0.7 : 0.45)
+                  ? colorScheme.primary
                   : colorScheme.outline,
               width: selected ? 1.2 : 1,
             );
@@ -242,40 +243,40 @@ abstract final class AppTheme {
           ),
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.pressed)) {
-              return colorScheme.primary.withValues(alpha: 0.08);
+              return colorScheme.primary.withValues(alpha: AppOpacity.soft);
             }
             if (states.contains(WidgetState.hovered)) {
-              return colorScheme.primary.withValues(alpha: 0.05);
+              return colorScheme.primary.withValues(alpha: AppOpacity.hover);
             }
             return null;
           }),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: controlRadius),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: editorialRadius),
           ),
         ),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
-            return colorScheme.onSurface.withValues(alpha: 0.24);
+            return colorScheme.onSurface.withValues(alpha: AppOpacity.disabled);
           }
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.primary;
+            return colorScheme.onPrimary;
           }
-          return colorScheme.surface;
+          return colorScheme.outline;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
-            return colorScheme.outlineVariant.withValues(alpha: 0.36);
+            return colorScheme.outlineVariant.withValues(alpha: AppOpacity.disabled);
           }
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.primaryContainer;
+            return colorScheme.primary;
           }
           return colorScheme.surfaceContainerHighest;
         }),
         trackOutlineColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.primary.withValues(alpha: isDark ? 0.72 : 0.42);
+            return colorScheme.primary;
           }
           return colorScheme.outline;
         }),
@@ -296,26 +297,23 @@ abstract final class AppTheme {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
-        side: BorderSide(color: colorScheme.outline, width: 1),
+        side: BorderSide(color: colorScheme.outline, width: AppBorders.thin),
         shape: chipShape,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: colorScheme.surfaceContainerHigh,
+        backgroundColor: colorScheme.onSurface,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
-          color: colorScheme.onSurface,
+          color: colorScheme.surface,
         ),
         actionTextColor: colorScheme.primary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: controlRadius,
-          side: BorderSide(color: colorScheme.outline),
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
       sliderTheme: SliderThemeData(
         activeTrackColor: colorScheme.primary,
         inactiveTrackColor: colorScheme.outlineVariant,
         thumbColor: colorScheme.primary,
-        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
+        overlayColor: colorScheme.primary.withValues(alpha: AppOpacity.overlay),
         trackHeight: 3,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(

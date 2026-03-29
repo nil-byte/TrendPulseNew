@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/l10n/source_platform_labels.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/features/detail/presentation/providers/detail_provider.dart';
 import 'package:trendpulse/features/detail/presentation/widgets/post_card.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -34,7 +37,7 @@ class RawDataTab extends ConsumerWidget {
             border: Border(
               bottom: BorderSide(
                 color: theme.colorScheme.outline,
-                width: 1.0,
+                width: AppBorders.thin,
               ),
             ),
           ),
@@ -112,7 +115,9 @@ class RawDataTab extends ConsumerWidget {
                 child: Text(
                   l10n.filterScrollHint,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: theme.colorScheme.onSurface.withValues(
+                      alpha: AppOpacity.mutedSoft,
+                    ),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -122,7 +127,11 @@ class RawDataTab extends ConsumerWidget {
         ),
         Expanded(
           child: postsAsync.when(
-            loading: () => const ShimmerLoading(itemCount: 5, itemHeight: 100),
+            loading: () => const ShimmerLoading(
+              itemCount: 5,
+              itemHeight: 100,
+              cardSkeleton: true,
+            ),
             error: (e, _) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -153,7 +162,11 @@ class RawDataTab extends ConsumerWidget {
             ),
             data: (posts) {
               if (currentFilter != null && posts.isEmpty && allPostsAsync.isLoading) {
-                return const ShimmerLoading(itemCount: 2, itemHeight: 100);
+                return const ShimmerLoading(
+                  itemCount: 2,
+                  itemHeight: 100,
+                  cardSkeleton: true,
+                );
               }
               final hasAnyPosts = allPostsAsync.valueOrNull?.isNotEmpty == true;
               if (posts.isEmpty) {
@@ -206,12 +219,10 @@ class _FilterChip extends StatelessWidget {
     final chipColor = color ?? theme.colorScheme.onSurface;
     final selectedFill = color == null
         ? theme.colorScheme.primaryContainer
-        : chipColor.withValues(
-            alpha: theme.brightness == Brightness.dark ? 0.26 : 0.16,
-          );
+        : chipColor;
     final selectedForeground = color == null
         ? theme.colorScheme.onPrimaryContainer
-        : chipColor;
+        : AppColors.onBrandFill(selectedFill);
 
     return FilterChip(
       label: Text(label),
@@ -229,13 +240,13 @@ class _FilterChip extends StatelessWidget {
       side: BorderSide(
         color: selected
             ? (color == null
-                ? theme.colorScheme.primary.withValues(alpha: 0.45)
-                : chipColor.withValues(alpha: 0.72))
+                ? theme.colorScheme.primary.withValues(alpha: AppOpacity.hint)
+                : chipColor.withValues(alpha: AppOpacity.strokeStrong))
             : chipColor,
         width: selected ? 1.2 : 1.0,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
       ),
     );
   }
@@ -249,44 +260,6 @@ class _EmptyPostsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inbox_rounded,
-              size: 56,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const EditorialDivider(
-              topSpace: AppSpacing.sm,
-              bottomSpace: AppSpacing.sm,
-            ),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return EmptyWidget(title: title, message: message);
   }
 }

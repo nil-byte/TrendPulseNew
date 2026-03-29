@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:trendpulse/core/animations/number_ticker.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
 class SentimentGauge extends StatelessWidget {
@@ -39,7 +40,9 @@ class SentimentGauge extends StatelessWidget {
               '/100',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurface.withValues(
+                  alpha: AppOpacity.mutedSoft,
+                ),
               ),
             ),
           ],

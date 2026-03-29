@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/theme/app_motion.dart';
+
 class NumberTicker extends StatefulWidget {
   final double targetValue;
   final TextStyle? style;
@@ -10,7 +12,7 @@ class NumberTicker extends StatefulWidget {
     super.key,
     required this.targetValue,
     this.style,
-    this.duration = const Duration(milliseconds: 800),
+    this.duration = AppMotion.ticker,
     this.decimalPlaces = 0,
   });
 
@@ -30,7 +32,7 @@ class _NumberTickerState extends State<NumberTicker>
     _animation = Tween<double>(
       begin: 0,
       end: widget.targetValue,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.enter));
     _controller.forward();
   }
 
@@ -43,7 +45,7 @@ class _NumberTickerState extends State<NumberTicker>
             begin: _animation.value,
             end: widget.targetValue,
           ).animate(
-            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+            CurvedAnimation(parent: _controller, curve: AppMotion.enter),
           );
       _controller
         ..reset()

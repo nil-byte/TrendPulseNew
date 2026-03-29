@@ -100,15 +100,14 @@ void main() {
     );
     expect(segmented.style, isNull);
 
-    final switches = tester.widgetList<SwitchListTile>(
-      find.byType(SwitchListTile),
-    );
-    for (final switchTile in switches) {
-      expect(switchTile.activeThumbColor, isNull);
-      expect(switchTile.activeTrackColor, isNull);
-      expect(switchTile.inactiveThumbColor, isNull);
-      expect(switchTile.inactiveTrackColor, isNull);
-      expect(switchTile.trackOutlineColor, isNull);
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    final switches = tester.widgetList<Switch>(find.byType(Switch));
+    expect(switches, isNotEmpty);
+    for (final toggle in switches) {
+      expect(toggle.thumbColor, isNull);
+      expect(toggle.trackColor, isNull);
+      expect(toggle.trackOutlineColor, isNull);
     }
   });
 
@@ -126,17 +125,17 @@ void main() {
     expect(snackBar.shape, isNull);
   });
 
-  testWidgets('settings page url field uses softened input borders', (
+  testWidgets('settings page url field uses editorial square input borders', (
     tester,
   ) async {
     await tester.pumpWidget(_wrap(const SettingsPage()));
     await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byType(TextField));
-    final decoration = field.decoration!;
+    final context = tester.element(find.byType(SettingsPage));
+    final decoration = Theme.of(context).inputDecorationTheme;
     final border = decoration.enabledBorder! as OutlineInputBorder;
 
-    expect(border.borderRadius, isNot(BorderRadius.zero));
+    expect(border.borderRadius, BorderRadius.zero);
   });
 
   testWidgets('settings page title localizes in Chinese', (tester) async {

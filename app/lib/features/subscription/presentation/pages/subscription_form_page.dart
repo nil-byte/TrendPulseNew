@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/editorial_switch_row.dart';
 import 'package:trendpulse/features/subscription/data/subscription_request.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -60,7 +62,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
           ),
           bottom: const PreferredSize(
             preferredSize: Size.fromHeight(1.0),
-            child: EditorialDivider(topSpace: 0, bottomSpace: 0),
+            child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
           ),
         ),
         body: detailAsync.when(
@@ -106,7 +108,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1.0),
-          child: EditorialDivider(topSpace: 0, bottomSpace: 0),
+          child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
         ),
       ),
       body: Form(
@@ -129,32 +131,8 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                 hintText: l10n.subscriptionKeywordHint,
                 hintStyle: theme.textTheme.titleLarge?.copyWith(
                   fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                  color: colorScheme.onSurface.withValues(alpha: 0.45),
+                  color: colorScheme.onSurface.withValues(alpha: AppOpacity.hint),
                   fontStyle: FontStyle.italic,
-                ),
-                filled: true,
-                fillColor: colorScheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusXl + 4,
-                  ),
-                  borderSide: BorderSide(color: colorScheme.outline),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusXl + 4,
-                  ),
-                  borderSide: BorderSide(color: colorScheme.outline),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppSpacing.borderRadiusXl + 4,
-                  ),
-                  borderSide: BorderSide(color: colorScheme.primary, width: 1.4),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: 18,
                 ),
               ),
               validator: (v) => (v == null || v.trim().isEmpty)
@@ -263,7 +241,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               theme: theme,
             ),
             const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: 0),
-            SwitchListTile.adaptive(
+            EditorialSwitchRow(
               title: Text(
                 l10n.subscriptionEnableAlerts.toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -272,7 +250,6 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               ),
               value: _notify,
               onChanged: (v) => setState(() => _notify = v),
-              contentPadding: EdgeInsets.zero,
             ),
             const EditorialDivider(topSpace: 0, bottomSpace: AppSpacing.xl),
             
@@ -292,8 +269,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                     : Text(
                         l10n.subscriptionSaveAction.toUpperCase(),
                         style: theme.textTheme.labelLarge?.copyWith(
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
+                          letterSpacing: 0.5,
+                          color: colorScheme.onPrimary,
                         ),
                       ),
               ),
@@ -385,29 +364,24 @@ class _SourceFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final selectedFill = color.withValues(
-      alpha: theme.brightness == Brightness.dark ? 0.26 : 0.16,
-    );
-    final selectedStroke = color.withValues(alpha: 0.72);
-    final baseLabelStyle = theme.textTheme.labelLarge ?? const TextStyle();
-
     return FilterChip(
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
       showCheckmark: false,
-      selectedColor: selectedFill,
-      labelStyle: baseLabelStyle.copyWith(
-        color: selected ? color : theme.colorScheme.onSurface,
+      selectedColor: color,
+      labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+        color: selected
+            ? AppColors.onBrandFill(color)
+            : theme.colorScheme.onSurface,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.4,
-        fontSize: 13,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
       ),
       side: BorderSide(
-        color: selected ? selectedStroke : theme.colorScheme.outline,
+        color: selected ? color : theme.colorScheme.outline,
         width: selected ? 1.2 : 1.0,
       ),
     );

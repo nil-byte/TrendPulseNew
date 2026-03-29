@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/theme/app_motion.dart';
+
 class StaggeredListItem extends StatefulWidget {
   final int index;
   final Widget child;
@@ -12,7 +14,7 @@ class StaggeredListItem extends StatefulWidget {
     super.key,
     required this.index,
     required this.child,
-    this.staggerDelay = const Duration(milliseconds: 50),
+    this.staggerDelay = AppMotion.micro,
     this.maxDelaySteps = 6,
   });
 
@@ -31,12 +33,12 @@ class _StaggeredListItemState extends State<StaggeredListItem>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: AppMotion.medium,
     );
 
     final curve = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeOutCubic,
+      curve: AppMotion.enter,
     );
     _opacity = Tween<double>(begin: 0, end: 1).animate(curve);
     _slide = Tween<Offset>(

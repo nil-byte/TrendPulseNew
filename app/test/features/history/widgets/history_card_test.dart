@@ -37,7 +37,7 @@ void main() {
     final completedLabel = tester.widget<Text>(find.text('COMPLETED'));
 
     expect(overflowBadge.style?.fontSize, 12.5);
-    expect(completedLabel.style?.fontSize, 12.5);
+    expect(completedLabel.style?.fontSize, 10);
   });
 }
 

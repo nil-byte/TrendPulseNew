@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:trendpulse/core/network/api_endpoints.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/editorial_switch_row.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -61,7 +64,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1.0),
-          child: EditorialDivider(topSpace: 0, bottomSpace: 0),
+          child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
         ),
       ),
       body: SingleChildScrollView(
@@ -168,33 +171,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     decoration: InputDecoration(
                       hintText: ApiEndpoints.defaultBaseUrl,
                       isDense: true,
-                      filled: true,
-                      fillColor: colorScheme.surface,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.md,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.borderRadiusXl + 4,
-                        ),
-                        borderSide: BorderSide(color: colorScheme.outline),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.borderRadiusXl + 4,
-                        ),
-                        borderSide: BorderSide(color: colorScheme.outline),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.borderRadiusXl + 4,
-                        ),
-                        borderSide: BorderSide(
-                          color: colorScheme.primary,
-                          width: 1.4,
-                        ),
-                      ),
                     ),
                     keyboardType: TextInputType.url,
                     textInputAction: TextInputAction.done,
@@ -205,9 +181,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 SizedBox(
                   height: 52,
                   width: 52,
-                  child: IconButton.filledTonal(
+                  child: IconButton.filled(
                     onPressed: _saveBaseUrl,
                     icon: const Icon(Icons.save_outlined),
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                    ),
                   ),
                 ),
               ],
@@ -250,23 +230,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             _SectionTitle(label: l10n.settingsNotifications),
             const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: 0),
             
-            SwitchListTile(
+            EditorialSwitchRow(
               title: Text(
                 l10n.settingsInAppNotify.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              contentPadding: EdgeInsets.zero,
               value: inAppNotify,
-              onChanged: (_) =>
-                  ref.read(inAppNotifyProvider.notifier).toggle(),
+              onChanged: (_) => ref.read(inAppNotifyProvider.notifier).toggle(),
             ),
             const EditorialDivider(topSpace: 0, bottomSpace: 0),
-            SwitchListTile(
+            EditorialSwitchRow(
               title: Text(
                 l10n.settingsSubscriptionNotify.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              contentPadding: EdgeInsets.zero,
               value: subscriptionNotify,
               onChanged: (_) =>
                   ref.read(subscriptionNotifyProvider.notifier).toggle(),
@@ -300,8 +281,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     Text(
                       l10n.settingsAboutMeta(appVersion, 'MIT').toUpperCase(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      style: AppTypography.caption(theme.textTheme).copyWith(
+                        color: colorScheme.onSurface.withValues(
+                          alpha: AppOpacity.body,
+                        ),
                         letterSpacing: 1.0,
                       ),
                     ),
@@ -313,7 +296,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             Text(
               l10n.settingsAboutDescription,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.8),
+                color: colorScheme.onSurface.withValues(alpha: AppOpacity.primary),
                 height: 1.6,
                 fontStyle: FontStyle.italic,
               ),
@@ -398,10 +381,10 @@ class _ThemePreviewCard extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? colorScheme.primary
-                : colorScheme.outline.withValues(alpha: 0.8),
+                : colorScheme.outline.withValues(alpha: AppOpacity.primary),
             width: selected ? 1.5 : 1.0,
           ),
-          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusXl + 4),
+          borderRadius: BorderRadius.zero,
         ),
         child: Column(
           children: [
@@ -414,20 +397,19 @@ class _ThemePreviewCard extends StatelessWidget {
               isSystem: mode == ThemeMode.system,
             ),
 
-            // Label area
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: selected ? colorScheme.primaryContainer : Colors.transparent,
+                color: selected
+                    ? colorScheme.primary.withValues(alpha: AppOpacity.focus)
+                    : Colors.transparent,
                 border: Border(top: BorderSide(
                   color: selected
-                      ? colorScheme.primary.withValues(alpha: 0.4)
-                      : colorScheme.outline.withValues(alpha: 0.8),
+                      ? colorScheme.primary.withValues(alpha: AppOpacity.mutedSoft)
+                      : colorScheme.outline.withValues(alpha: AppOpacity.primary),
                 )),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(AppSpacing.borderRadiusXl + 4),
-                ),
+                borderRadius: BorderRadius.zero,
               ),
               child: Text(
                 label,
@@ -436,7 +418,7 @@ class _ThemePreviewCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                   color: selected
-                      ? colorScheme.onPrimaryContainer
+                      ? colorScheme.primary
                       : colorScheme.onSurface,
                 ),
               ),

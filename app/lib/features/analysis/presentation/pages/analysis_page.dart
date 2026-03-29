@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/animations/staggered_list.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
+import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_motion.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
@@ -37,12 +41,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     final keyword = _keywordController.text.trim();
     if (keyword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.analysisKeywordRequiredMessage),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Theme.of(context).colorScheme.onSurface,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        ),
+        SnackBar(content: Text(l10n.analysisKeywordRequiredMessage)),
       );
       return;
     }
@@ -65,12 +64,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.analysisCreateTaskError),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.onSurface,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          ),
+          SnackBar(content: Text(l10n.analysisCreateTaskError)),
         );
       }
     } finally {
@@ -118,13 +112,16 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            Text(
-                              l10n.appTitle.toUpperCase(),
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.displayLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -2.0,
-                                height: 1.0,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                l10n.appTitle.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.displayLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -2.0,
+                                  height: 1.0,
+                                ),
                               ),
                             ),
                             const SizedBox(height: AppSpacing.xs),
@@ -244,7 +241,7 @@ class _EditorialSearchBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: colors.onSurface, width: 2.0),
+        border: Border.all(color: colors.onSurface, width: AppBorders.thick),
       ),
       child: Row(
         children: [
@@ -262,7 +259,7 @@ class _EditorialSearchBar extends StatelessWidget {
                 hintText: searchHint,
                 hintStyle: theme.textTheme.titleLarge?.copyWith(
                   fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                  color: colors.onSurface.withValues(alpha: 0.3),
+                  color: colors.onSurface.withValues(alpha: AppOpacity.divider),
                   fontStyle: FontStyle.italic,
                 ),
                 border: InputBorder.none,
@@ -277,7 +274,7 @@ class _EditorialSearchBar extends StatelessWidget {
             ),
           ),
           Container(
-            width: 2.0,
+            width: AppBorders.thick,
             height: 56.0,
             color: colors.onSurface,
           ),
@@ -292,7 +289,7 @@ class _EditorialSearchBar extends StatelessWidget {
             ),
           ),
           Container(
-            width: 2.0,
+            width: AppBorders.thick,
             height: 56.0,
             color: colors.onSurface,
           ),
@@ -301,9 +298,9 @@ class _EditorialSearchBar extends StatelessWidget {
             child: InkWell(
               onTap: isSearching ? null : onSearch,
               child: Container(
-                width: 80,
+                width: 56,
                 height: 56.0,
-                color: colors.onSurface,
+                color: colors.primary,
                 alignment: Alignment.center,
                 child: isSearching
                     ? SizedBox(
@@ -311,12 +308,12 @@ class _EditorialSearchBar extends StatelessWidget {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: colors.surface,
+                          color: colors.onPrimary,
                         ),
                       )
                     : Icon(
                         Icons.arrow_forward_rounded,
-                        color: colors.surface,
+                        color: colors.onPrimary,
                       ),
               ),
             ),
@@ -353,8 +350,8 @@ class _ConfigPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedSize(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOutCubic,
+      duration: AppMotion.slow,
+      curve: AppMotion.emphasized,
       alignment: Alignment.topCenter,
       child: expanded ? _buildPanel(context) : const SizedBox.shrink(),
     );
@@ -370,9 +367,9 @@ class _ConfigPanel extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         border: Border(
-          left: BorderSide(color: colors.onSurface, width: 2.0),
-          right: BorderSide(color: colors.onSurface, width: 2.0),
-          bottom: BorderSide(color: colors.onSurface, width: 2.0),
+          left: BorderSide(color: colors.onSurface, width: AppBorders.thick),
+          right: BorderSide(color: colors.onSurface, width: AppBorders.thick),
+          bottom: BorderSide(color: colors.onSurface, width: AppBorders.thick),
         ),
       ),
       child: Column(
@@ -401,10 +398,6 @@ class _ConfigPanel extends StatelessWidget {
             selected: {language},
             onSelectionChanged: (v) => onLanguageChanged(v.first),
             showSelectedIcon: false,
-            style: SegmentedButton.styleFrom(
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-              side: BorderSide(color: colors.onSurface),
-            ),
           ),
           const SizedBox(height: AppSpacing.lg),
 
@@ -414,27 +407,33 @@ class _ConfigPanel extends StatelessWidget {
             style: theme.textTheme.labelSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _SourceChip(
-                label: l10n.platformReddit,
-                selected: sources.contains('reddit'),
-                onSelected: (v) => _toggleSource('reddit', v),
-              ),
-              _SourceChip(
-                label: l10n.platformYouTube,
-                selected: sources.contains('youtube'),
-                onSelected: (v) => _toggleSource('youtube', v),
-              ),
-              _SourceChip(
-                label: l10n.platformX,
-                selected: sources.contains('x'),
-                onSelected: (v) => _toggleSource('x', v),
-              ),
-            ],
-          ),
+          Builder(builder: (context) {
+            final tpColors = Theme.of(context).trendPulseColors;
+            return Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _SourceChip(
+                  label: l10n.platformReddit,
+                  color: tpColors.reddit,
+                  selected: sources.contains('reddit'),
+                  onSelected: (v) => _toggleSource('reddit', v),
+                ),
+                _SourceChip(
+                  label: l10n.platformYouTube,
+                  color: tpColors.youtube,
+                  selected: sources.contains('youtube'),
+                  onSelected: (v) => _toggleSource('youtube', v),
+                ),
+                _SourceChip(
+                  label: l10n.platformX,
+                  color: tpColors.xPlatform,
+                  selected: sources.contains('x'),
+                  onSelected: (v) => _toggleSource('x', v),
+                ),
+              ],
+            );
+          }),
           const SizedBox(height: AppSpacing.lg),
 
           // Max Items
@@ -454,21 +453,12 @@ class _ConfigPanel extends StatelessWidget {
               ),
             ],
           ),
-          SliderTheme(
-            data: SliderThemeData(
-              activeTrackColor: colors.onSurface,
-              inactiveTrackColor: colors.onSurface.withValues(alpha: 0.2),
-              thumbColor: colors.onSurface,
-              overlayColor: colors.onSurface.withValues(alpha: 0.1),
-              trackHeight: 2.0,
-            ),
-            child: Slider(
-              value: maxItems,
-              min: 10,
-              max: 100,
-              divisions: 9,
-              onChanged: onMaxItemsChanged,
-            ),
+          Slider(
+            value: maxItems,
+            min: 10,
+            max: 100,
+            divisions: 9,
+            onChanged: onMaxItemsChanged,
           ),
         ],
       ),
@@ -488,30 +478,40 @@ class _ConfigPanel extends StatelessWidget {
 
 class _SourceChip extends StatelessWidget {
   final String label;
+  final Color color;
   final bool selected;
   final ValueChanged<bool> onSelected;
 
   const _SourceChip({
     required this.label,
+    required this.color,
     required this.selected,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return FilterChip(
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
       showCheckmark: false,
-      selectedColor: colors.onSurface,
-      labelStyle: TextStyle(
-        color: selected ? colors.surface : colors.onSurface,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+      selectedColor: color,
+      labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+        color: selected
+            ? AppColors.onBrandFill(color)
+            : theme.colorScheme.onSurface,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.4,
       ),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      side: BorderSide(color: colors.onSurface, width: 1.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+      side: BorderSide(
+        color: selected ? color : theme.colorScheme.outline,
+        width: selected ? 1.2 : 1.0,
+      ),
     );
   }
 }
@@ -551,7 +551,9 @@ class _TrendingTopicsSection extends StatelessWidget {
         Text(
           l10n.analysisStarterTopicsDescription,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+            color: theme.colorScheme.onSurface.withValues(
+              alpha: AppOpacity.secondaryStrong,
+            ),
             fontStyle: FontStyle.italic,
           ),
         ),

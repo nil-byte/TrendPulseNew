@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/core/animations/shimmer_loading.dart';
+import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/features/subscription/data/subscription_repository.dart';
@@ -58,6 +62,19 @@ class _FakeSubscriptionRepository extends SubscriptionRepository {
   }
 }
 
+class _PendingTasksRepository extends SubscriptionRepository {
+  final Completer<List<SubscriptionTask>> _never =
+      Completer<List<SubscriptionTask>>();
+
+  @override
+  Future<Subscription> getSubscription(String id) async {
+    return _FakeSubscriptionRepository._defaultSubscription;
+  }
+
+  @override
+  Future<List<SubscriptionTask>> getSubscriptionTasks(String id) => _never.future;
+}
+
 Widget _wrap(
   SubscriptionRepository repository, {
   Locale locale = const Locale('en'),
@@ -75,6 +92,24 @@ Widget _wrap(
 }
 
 void main() {
+  testWidgets('subscription tasks loading uses editorial card skeletons', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(_PendingTasksRepository()));
+    await tester.pump();
+
+    final shimmer = tester.widget<ShimmerLoading>(find.byType(ShimmerLoading));
+
+    expect(shimmer.cardSkeleton, isTrue);
+    expect(
+      shimmer.padding,
+      const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+        vertical: AppSpacing.sm,
+      ),
+    );
+  });
+
   testWidgets('subscription tasks page localizes fallback title and empty state in Chinese', (
     tester,
   ) async {

@@ -23,6 +23,13 @@ void main() {
       expect(AppTheme.dark.cardTheme.elevation, 0);
     });
 
+    testWidgets('dark cards use raised warm surfaces instead of base canvas', (
+      tester,
+    ) async {
+      expect(AppTheme.light.cardTheme.color, const Color(0xFFFFFBF6));
+      expect(AppTheme.dark.cardTheme.color, const Color(0xFF423D38));
+    });
+
     testWidgets('app bar has zero elevation', (tester) async {
       expect(AppTheme.light.appBarTheme.elevation, 0);
       expect(AppTheme.dark.appBarTheme.elevation, 0);
@@ -50,9 +57,9 @@ void main() {
       final colorScheme = AppTheme.dark.colorScheme;
 
       expect(colorScheme.primary, const Color(0xFFD89A78));
-      expect(colorScheme.surface, const Color(0xFF241D1A));
-      expect(colorScheme.surfaceContainerLowest, const Color(0xFF181310));
-      expect(colorScheme.outline, const Color(0xFF655548));
+      expect(colorScheme.surface, const Color(0xFF343130));
+      expect(colorScheme.surfaceContainerLowest, const Color(0xFF2B2826));
+      expect(colorScheme.outline, const Color(0xFF6B6058));
     });
 
     testWidgets('dark theme shadow stays softened instead of opaque black', (
@@ -74,6 +81,48 @@ void main() {
         const Color(0xFFD89A78),
       );
     });
+
+    testWidgets('filled buttons keep a readable light foreground in both themes', (
+      tester,
+    ) async {
+      final lightStyle = AppTheme.light.filledButtonTheme.style!;
+      final darkStyle = AppTheme.dark.filledButtonTheme.style!;
+
+      expect(
+        lightStyle.foregroundColor?.resolve(<WidgetState>{}),
+        const Color(0xFFFFF8F4),
+      );
+      expect(
+        darkStyle.foregroundColor?.resolve(<WidgetState>{}),
+        const Color(0xFFFFF8F4),
+      );
+    });
+
+    testWidgets(
+      'segmented buttons use primary fill and readable light foreground when selected',
+      (tester) async {
+        final lightStyle = AppTheme.light.segmentedButtonTheme.style!;
+        final darkStyle = AppTheme.dark.segmentedButtonTheme.style!;
+        const selectedState = <WidgetState>{WidgetState.selected};
+
+        expect(
+          lightStyle.backgroundColor?.resolve(selectedState),
+          AppTheme.light.colorScheme.primary,
+        );
+        expect(
+          darkStyle.backgroundColor?.resolve(selectedState),
+          AppTheme.dark.colorScheme.primary,
+        );
+        expect(
+          lightStyle.foregroundColor?.resolve(selectedState),
+          const Color(0xFFFFF8F4),
+        );
+        expect(
+          darkStyle.foregroundColor?.resolve(selectedState),
+          const Color(0xFFFFF8F4),
+        );
+      },
+    );
 
     testWidgets('chip theme uses tinted selected backgrounds', (tester) async {
       expect(
@@ -111,9 +160,9 @@ void main() {
 
     testWidgets('light TrendPulseColors provides expected source colors', (tester) async {
       const colors = TrendPulseColors.light;
-      expect(colors.reddit, const Color(0xFFCC784C));
-      expect(colors.youtube, const Color(0xFFC96B62));
-      expect(colors.xPlatform, const Color(0xFF5F534A));
+      expect(colors.reddit, const Color(0xFFFF4500));
+      expect(colors.youtube, const Color(0xFFFF0033));
+      expect(colors.xPlatform, const Color(0xFF14171A));
     });
 
     testWidgets(
@@ -122,13 +171,13 @@ void main() {
         const colors = TrendPulseColors.dark;
 
         expect(colors.positive, const Color(0xFFA1B38A));
-        expect(colors.negative, const Color(0xFFE39A7C));
-        expect(colors.neutral, const Color(0xFFBCAA9B));
-        expect(colors.reddit, const Color(0xFFE0A06E));
-        expect(colors.youtube, const Color(0xFFD98C84));
-        expect(colors.xPlatform, const Color(0xFFE3D7C9));
-        expect(colors.surfaceHighlight, const Color(0xFF332924));
-        expect(colors.subtleBackground, const Color(0xFF181310));
+        expect(colors.negative, const Color(0xFFD4917A));
+        expect(colors.neutral, const Color(0xFFB8A99A));
+        expect(colors.reddit, const Color(0xFFFF6D3A));
+        expect(colors.youtube, const Color(0xFFFF4D5E));
+        expect(colors.xPlatform, const Color(0xFFE7E0D8));
+        expect(colors.surfaceHighlight, const Color(0xFF423D38));
+        expect(colors.subtleBackground, const Color(0xFF2B2826));
     });
 
     testWidgets('trendPulseColors extension getter works', (tester) async {

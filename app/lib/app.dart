@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/animations/page_transitions.dart';
+import 'core/theme/app_borders.dart';
+import 'core/theme/app_motion.dart';
+import 'core/theme/app_opacity.dart';
 import 'core/theme/app_theme.dart';
 import 'features/analysis/presentation/pages/analysis_page.dart';
 import 'features/detail/presentation/pages/detail_page.dart';
@@ -150,46 +153,57 @@ class _ScaffoldWithNav extends StatelessWidget {
     final theme = Theme.of(context);
     
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: navigationShell,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: theme.colorScheme.onSurface, width: 2.0)),
-        ),
-        child: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: (index) => navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          ),
-          indicatorColor: Colors.transparent,
-          backgroundColor: theme.colorScheme.surface,
-          destinations: [
-            _EditorialNavDestination(
-              icon: Icons.analytics_outlined,
-              selectedIcon: Icons.analytics,
-              label: l10n.analysisTab.toUpperCase(),
-              isSelected: navigationShell.currentIndex == 0,
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          final isDark = theme.brightness == Brightness.dark;
+          return Container(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? theme.colorScheme.outline : theme.colorScheme.onSurface,
+                  width: isDark ? AppBorders.medium : AppBorders.thick,
+                ),
+              ),
             ),
-            _EditorialNavDestination(
-              icon: Icons.history_outlined,
-              selectedIcon: Icons.history,
-              label: l10n.historyTab.toUpperCase(),
-              isSelected: navigationShell.currentIndex == 1,
+            child: NavigationBar(
+              selectedIndex: navigationShell.currentIndex,
+              onDestinationSelected: (index) => navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              ),
+              indicatorColor: Colors.transparent,
+              backgroundColor: theme.colorScheme.surface,
+              destinations: [
+                _EditorialNavDestination(
+                  icon: Icons.analytics_outlined,
+                  selectedIcon: Icons.analytics,
+                  label: _editorialCase(context, l10n.analysisTab),
+                  isSelected: navigationShell.currentIndex == 0,
+                ),
+                _EditorialNavDestination(
+                  icon: Icons.history_outlined,
+                  selectedIcon: Icons.history,
+                  label: _editorialCase(context, l10n.historyTab),
+                  isSelected: navigationShell.currentIndex == 1,
+                ),
+                _EditorialNavDestination(
+                  icon: Icons.subscriptions_outlined,
+                  selectedIcon: Icons.subscriptions,
+                  label: _editorialCase(context, l10n.subscriptionTab),
+                  isSelected: navigationShell.currentIndex == 2,
+                ),
+                _EditorialNavDestination(
+                  icon: Icons.settings_outlined,
+                  selectedIcon: Icons.settings,
+                  label: _editorialCase(context, l10n.settingsTab),
+                  isSelected: navigationShell.currentIndex == 3,
+                ),
+              ],
             ),
-            _EditorialNavDestination(
-              icon: Icons.subscriptions_outlined,
-              selectedIcon: Icons.subscriptions,
-              label: l10n.subscriptionTab.toUpperCase(),
-              isSelected: navigationShell.currentIndex == 2,
-            ),
-            _EditorialNavDestination(
-              icon: Icons.settings_outlined,
-              selectedIcon: Icons.settings,
-              label: l10n.settingsTab.toUpperCase(),
-              isSelected: navigationShell.currentIndex == 3,
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -212,21 +226,21 @@ class _EditorialNavDestination extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = isSelected
-        ? theme.colorScheme.onSurface
-        : theme.colorScheme.onSurface.withValues(alpha: 0.5);
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurface.withValues(alpha: AppOpacity.hint);
     
     return NavigationDestination(
       icon: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
+        duration: AppMotion.quick,
+        curve: AppMotion.standard,
         padding: const EdgeInsets.only(top: 6),
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
               color: isSelected
-                  ? color
-                  : theme.colorScheme.onSurface.withValues(alpha: 0),
-              width: 2.0,
+                  ? theme.colorScheme.primary
+                  : Colors.transparent,
+              width: AppBorders.thick,
             ),
           ),
         ),
@@ -235,6 +249,12 @@ class _EditorialNavDestination extends StatelessWidget {
       label: label,
     );
   }
+}
+
+String _editorialCase(BuildContext context, String text) {
+  final locale = Localizations.localeOf(context);
+  if (locale.languageCode == 'zh') return text;
+  return text.toUpperCase();
 }
 
 class TrendPulseApp extends ConsumerWidget {

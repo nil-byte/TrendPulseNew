@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:trendpulse/core/animations/breathe_animation.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
+import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/history/data/history_item.dart';
 import 'package:trendpulse/features/history/presentation/providers/history_provider.dart';
@@ -62,11 +63,12 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       ),
       body: historyAsync.when(
         loading: () => const ShimmerLoading(
+          cardSkeleton: true,
           itemCount: 5,
           itemHeight: 110,
           borderRadius: 0,
           padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
+            horizontal: AppSpacing.pageHorizontal,
             vertical: AppSpacing.sm,
           ),
         ),
@@ -103,7 +105,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     hintText: l10n.searchArchivesHint,
                     hintStyle: theme.textTheme.titleMedium?.copyWith(
                       fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                      color: colorScheme.onSurface.withValues(alpha: 0.3),
+                      color: colorScheme.onSurface.withValues(
+                        alpha: AppOpacity.divider,
+                      ),
                       fontStyle: FontStyle.italic,
                     ),
                     prefixIcon: Icon(
@@ -226,9 +230,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.historyDeleteError),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.onSurface,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           ),
         );
         ref.invalidate(historyListProvider);
@@ -295,46 +296,12 @@ class _EmptyHistoryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BreatheAnimation(
-              child: Icon(
-                Icons.history_rounded,
-                size: 64,
-                color: colorScheme.onSurface.withValues(alpha: 0.2),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.archiveEmptyTitle.toUpperCase(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: AppSpacing.sm),
-            Text(
-              l10n.startFirstAnalysis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            OutlinedButton(
-              onPressed: () => context.go('/analysis'),
-              child: Text(l10n.newAnalysis.toUpperCase()),
-            ),
-          ],
-        ),
+    return EmptyWidget(
+      title: l10n.archiveEmptyTitle,
+      message: l10n.startFirstAnalysis,
+      action: OutlinedButton(
+        onPressed: () => context.go('/analysis'),
+        child: Text(l10n.newAnalysis.toUpperCase()),
       ),
     );
   }
@@ -348,44 +315,6 @@ class _SearchEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 56,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              title.toUpperCase(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const EditorialDivider(
-              topSpace: AppSpacing.sm,
-              bottomSpace: AppSpacing.sm,
-            ),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return EmptyWidget(title: title, message: message);
   }
 }
