@@ -33,7 +33,10 @@ class HistoryCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: colorScheme.outline, width: AppBorders.thin),
+          border: Border.all(
+            color: colorScheme.outline,
+            width: AppBorders.thin,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -75,26 +78,40 @@ class HistoryCard extends StatelessWidget {
                   Icon(
                     Icons.schedule_rounded,
                     size: 14,
-                    color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
+                    color: colorScheme.onSurface.withValues(
+                      alpha: AppOpacity.body,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
                     _formatRelativeTime(context, item.createdAt).toUpperCase(),
                     style: AppTypography.caption(theme.textTheme).copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
+                      color: colorScheme.onSurface.withValues(
+                        alpha: AppOpacity.body,
+                      ),
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.0,
                     ),
                   ),
                   const Spacer(),
-                  if (item.isCompleted && item.sentimentScore != null)
+                  if (item.canViewReport && item.sentimentScore != null)
                     _SentimentIndicator(
                       score: item.sentimentScore!,
                       tpColors: tpColors,
                       theme: theme,
                       l10n: l10n,
                     ),
-                  if (item.isRunning)
+                  if (item.canViewReport && item.postCount != null) ...[
+                    if (item.sentimentScore != null)
+                      const SizedBox(width: AppSpacing.md),
+                    _MetricLabel(
+                      icon: Icons.article_outlined,
+                      value: l10n.postCountLabel(item.postCount!).toUpperCase(),
+                      color: colorScheme.onSurface,
+                      theme: theme,
+                    ),
+                  ],
+                  if (item.isInProgress)
                     SizedBox(
                       width: 16,
                       height: 16,
@@ -178,9 +195,7 @@ class _SourceDot extends StatelessWidget {
     return Container(
       width: 24,
       height: 24,
-      decoration: BoxDecoration(
-        border: Border.all(color: color),
-      ),
+      decoration: BoxDecoration(border: Border.all(color: color)),
       child: Tooltip(
         message: sourcePlatformLabel(source, l10n),
         child: Icon(icon, size: 14, color: color),
@@ -219,6 +234,39 @@ class _OverflowBadge extends StatelessWidget {
   }
 }
 
+class _MetricLabel extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final Color color;
+  final ThemeData theme;
+
+  const _MetricLabel({
+    required this.icon,
+    required this.value,
+    required this.color,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StatusChip extends StatelessWidget {
   final String status;
   final ThemeData theme;
@@ -236,7 +284,8 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       'completed' => (l10n.statusCompleted, tpColors.positive),
-      'running' => (l10n.statusAnalyzing, theme.colorScheme.primary),
+      'partial' => (l10n.statusPartial, theme.colorScheme.secondary),
+      'analyzing' => (l10n.statusAnalyzing, theme.colorScheme.primary),
       'collecting' => (l10n.statusCollecting, theme.colorScheme.primary),
       'failed' => (l10n.statusFailed, tpColors.negative),
       _ => (l10n.statusPending, tpColors.neutral),
@@ -247,9 +296,7 @@ class _StatusChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: 2,
       ),
-      decoration: BoxDecoration(
-        border: Border.all(color: color),
-      ),
+      decoration: BoxDecoration(border: Border.all(color: color)),
       child: Text(
         label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
@@ -278,15 +325,15 @@ class _SentimentIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, toneLabel) = score > 0.6
+    final formattedScore = score.round().toString();
+    final (color, toneLabel) = score > 60
         ? (tpColors.positive, l10n.positive)
-        : score < 0.4
+        : score < 40
         ? (tpColors.negative, l10n.negative)
         : (tpColors.neutral, l10n.neutral);
 
     return Semantics(
-      label:
-          '${l10n.sentimentScore}: ${(score * 100).toStringAsFixed(0)}, $toneLabel',
+      label: '${l10n.sentimentScore}: $formattedScore, $toneLabel',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -300,7 +347,7 @@ class _SentimentIndicator extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            (score * 100).toStringAsFixed(0),
+            formattedScore,
             style: theme.textTheme.labelMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.w900,

@@ -6,6 +6,8 @@ class HistoryItem {
   final List<String> sources;
   final String createdAt;
   final double? sentimentScore;
+  final int? postCount;
+  final String? errorMessage;
 
   const HistoryItem({
     required this.id,
@@ -15,6 +17,8 @@ class HistoryItem {
     required this.sources,
     required this.createdAt,
     this.sentimentScore,
+    this.postCount,
+    this.errorMessage,
   });
 
   factory HistoryItem.fromJson(Map<String, dynamic> json) {
@@ -30,11 +34,18 @@ class HistoryItem {
           const [],
       createdAt: json['created_at'] as String? ?? '',
       sentimentScore: (json['sentiment_score'] as num?)?.toDouble(),
+      postCount: (json['post_count'] as num?)?.toInt(),
+      errorMessage: json['error_message'] as String?,
     );
   }
 
+  bool get isPartial => status == 'partial';
   bool get isCompleted => status == 'completed';
   bool get isPending => status == 'pending';
+  bool get isCollecting => status == 'collecting';
+  bool get isAnalyzing => status == 'analyzing';
   bool get isFailed => status == 'failed';
-  bool get isRunning => status == 'running';
+  bool get isInProgress => isPending || isCollecting || isAnalyzing;
+  bool get isRunning => isInProgress;
+  bool get canViewReport => isCompleted || isPartial;
 }

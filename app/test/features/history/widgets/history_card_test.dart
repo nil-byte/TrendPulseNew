@@ -26,7 +26,8 @@ void main() {
       language: 'en',
       sources: ['reddit', 'youtube', 'x', 'news', 'blogs'],
       createdAt: '2026-03-28T12:00:00Z',
-      sentimentScore: 0.72,
+      sentimentScore: 72,
+      postCount: 18,
     );
 
     await tester.pumpWidget(_wrap(HistoryCard(item: item, onTap: _noop)));
@@ -38,6 +39,30 @@ void main() {
 
     expect(overflowBadge.style?.fontSize, 12.5);
     expect(completedLabel.style?.fontSize, 10);
+    expect(find.text('18 POSTS'), findsOneWidget);
+  });
+
+  testWidgets('shows partial status with 0-100 sentiment score', (
+    tester,
+  ) async {
+    const item = HistoryItem(
+      id: 'task-2',
+      keyword: 'AI Outlook',
+      status: 'partial',
+      language: 'en',
+      sources: ['reddit'],
+      createdAt: '2026-03-28T12:00:00Z',
+      sentimentScore: 72,
+      postCount: 12,
+    );
+
+    await tester.pumpWidget(_wrap(HistoryCard(item: item, onTap: _noop)));
+
+    expect(find.text('PARTIAL'), findsOneWidget);
+    expect(find.text('72'), findsOneWidget);
+    expect(find.text('7200'), findsNothing);
+    expect(find.text('12 POSTS'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }
 
