@@ -7,6 +7,8 @@ import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/editorial_switch_row.dart';
+import 'package:trendpulse/core/widgets/error_widget.dart';
+import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/features/subscription/data/subscription_request.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -29,7 +31,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
   Set<String> _sources = {'reddit'};
   String _interval = 'daily';
   double _maxItems = 50;
-  bool _notify = false;
+  bool? _notify;
   bool _saving = false;
   bool _loaded = false;
 
@@ -48,7 +50,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
     final colorScheme = theme.colorScheme;
     final tpColors = theme.trendPulseColors;
 
-    if (_isEdit && !_loaded) {
+    if (!_loaded && _isEdit) {
       final detailAsync = ref.watch(subscriptionDetailProvider(widget.subId!));
       return Scaffold(
         appBar: AppBar(
@@ -96,6 +98,66 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
       );
     }
 
+    if (!_loaded) {
+      final subscriptionNotifyAsync = ref.watch(subscriptionNotifyProvider);
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            l10n.newEntry.toUpperCase(),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.0,
+            ),
+          ),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1.0),
+            child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
+          ),
+        ),
+        body: subscriptionNotifyAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => AppErrorWidget(
+            message: l10n.errorGeneric,
+            retryLabel: l10n.retry,
+            onRetry: () => ref.invalidate(notificationSettingsProvider),
+          ),
+          data: (notifyDefault) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!_loaded && mounted) {
+                setState(() {
+                  _notify = notifyDefault;
+                  _loaded = true;
+                });
+              }
+            });
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
+      );
+    }
+
+    final notify = _notify;
+    if (notify == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            (_isEdit ? l10n.editEntry : l10n.newEntry).toUpperCase(),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.0,
+            ),
+          ),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1.0),
+            child: EditorialDivider.thick(topSpace: 0, bottomSpace: 0),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -120,7 +182,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               label: l10n.subscriptionSubjectLabel.toUpperCase(),
               theme: theme,
             ),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
             TextFormField(
               controller: _keywordController,
               style: theme.textTheme.titleLarge?.copyWith(
@@ -131,7 +196,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                 hintText: l10n.subscriptionKeywordHint,
                 hintStyle: theme.textTheme.titleLarge?.copyWith(
                   fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                  color: colorScheme.onSurface.withValues(alpha: AppOpacity.hint),
+                  color: colorScheme.onSurface.withValues(
+                    alpha: AppOpacity.hint,
+                  ),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -142,11 +209,20 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
 
             const SizedBox(height: AppSpacing.xl),
             _SectionLabel(label: l10n.language.toUpperCase(), theme: theme),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish.toUpperCase())),
-                ButtonSegment(value: 'zh', label: Text(l10n.languageChinese.toUpperCase())),
+                ButtonSegment(
+                  value: 'en',
+                  label: Text(l10n.languageEnglish.toUpperCase()),
+                ),
+                ButtonSegment(
+                  value: 'zh',
+                  label: Text(l10n.languageChinese.toUpperCase()),
+                ),
               ],
               selected: {_language},
               onSelectionChanged: (v) => setState(() => _language = v.first),
@@ -155,7 +231,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
 
             const SizedBox(height: AppSpacing.xl),
             _SectionLabel(label: l10n.dataSources.toUpperCase(), theme: theme),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
@@ -187,7 +266,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               label: l10n.subscriptionInterval.toUpperCase(),
               theme: theme,
             ),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
             SegmentedButton<String>(
               segments: [
                 ButtonSegment(
@@ -213,10 +295,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _SectionLabel(
-                  label: l10n.maxItems.toUpperCase(),
-                  theme: theme,
-                ),
+                _SectionLabel(label: l10n.maxItems.toUpperCase(), theme: theme),
                 Text(
                   _maxItems.toInt().toString(),
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -226,7 +305,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                 ),
               ],
             ),
-            const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
+            const EditorialDivider(
+              topSpace: AppSpacing.xs,
+              bottomSpace: AppSpacing.md,
+            ),
             Slider(
               value: _maxItems,
               min: 10,
@@ -248,11 +330,11 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              value: _notify,
+              value: notify,
               onChanged: (v) => setState(() => _notify = v),
             ),
             const EditorialDivider(topSpace: 0, bottomSpace: AppSpacing.xl),
-            
+
             SizedBox(
               height: 56,
               child: FilledButton(
@@ -295,6 +377,8 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_sources.isEmpty) return;
+    final notify = _notify;
+    if (notify == null) return;
 
     setState(() => _saving = true);
 
@@ -304,7 +388,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
       sources: _sources.toList(),
       interval: _interval,
       maxItems: _maxItems.toInt(),
-      notify: _notify,
+      notify: notify,
     );
 
     try {

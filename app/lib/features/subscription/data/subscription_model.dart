@@ -11,6 +11,9 @@ class Subscription {
   final String updatedAt;
   final String? lastRunAt;
   final String? nextRunAt;
+  final int unreadAlertCount;
+  final String? latestUnreadAlertTaskId;
+  final double? latestUnreadAlertScore;
 
   const Subscription({
     required this.id,
@@ -25,6 +28,9 @@ class Subscription {
     required this.updatedAt,
     this.lastRunAt,
     this.nextRunAt,
+    this.unreadAlertCount = 0,
+    this.latestUnreadAlertTaskId,
+    this.latestUnreadAlertScore,
   });
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
@@ -45,6 +51,10 @@ class Subscription {
       updatedAt: json['updated_at'] as String? ?? '',
       lastRunAt: json['last_run_at'] as String?,
       nextRunAt: json['next_run_at'] as String?,
+      unreadAlertCount: (json['unread_alert_count'] as num?)?.toInt() ?? 0,
+      latestUnreadAlertTaskId: json['latest_unread_alert_task_id'] as String?,
+      latestUnreadAlertScore:
+          (json['latest_unread_alert_score'] as num?)?.toDouble(),
     );
   }
 
@@ -65,6 +75,11 @@ class Subscription {
     'weekly' => 'intervalWeekly',
     _ => 'intervalDaily',
   };
+
+  bool get hasUnreadAlertSummary =>
+      unreadAlertCount > 0 &&
+      latestUnreadAlertTaskId != null &&
+      latestUnreadAlertScore != null;
 }
 
 class SubscriptionTask {
@@ -74,6 +89,7 @@ class SubscriptionTask {
   final String createdAt;
   final double? sentimentScore;
   final int? postCount;
+  final String? errorMessage;
 
   const SubscriptionTask({
     required this.id,
@@ -82,6 +98,7 @@ class SubscriptionTask {
     required this.createdAt,
     this.sentimentScore,
     this.postCount,
+    this.errorMessage,
   });
 
   factory SubscriptionTask.fromJson(Map<String, dynamic> json) {
@@ -92,10 +109,17 @@ class SubscriptionTask {
       createdAt: json['created_at'] as String? ?? '',
       sentimentScore: (json['sentiment_score'] as num?)?.toDouble(),
       postCount: (json['post_count'] as num?)?.toInt(),
+      errorMessage: json['error_message'] as String?,
     );
   }
 
+  bool get isPartial => status == 'partial';
   bool get isCompleted => status == 'completed';
+  bool get isPending => status == 'pending';
+  bool get isCollecting => status == 'collecting';
+  bool get isAnalyzing => status == 'analyzing';
   bool get isFailed => status == 'failed';
-  bool get isRunning => status == 'running' || status == 'collecting';
+  bool get isInProgress => isPending || isCollecting || isAnalyzing;
+  bool get isRunning => isInProgress;
+  bool get canViewReport => isCompleted || isPartial;
 }

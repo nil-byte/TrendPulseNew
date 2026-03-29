@@ -110,7 +110,10 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
                   vertical: AppSpacing.lg,
                 ),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const EditorialDivider(topSpace: AppSpacing.md, bottomSpace: AppSpacing.md),
+                separatorBuilder: (_, __) => const EditorialDivider(
+                  topSpace: AppSpacing.md,
+                  bottomSpace: AppSpacing.md,
+                ),
                 itemBuilder: (context, index) {
                   final sub = items[index];
                   return StaggeredListItem(
@@ -148,7 +151,9 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.subscriptionToggleError),
+            content: Text(
+              AppLocalizations.of(context)!.subscriptionToggleError,
+            ),
           ),
         );
       }

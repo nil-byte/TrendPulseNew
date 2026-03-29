@@ -1,24 +1,62 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
+import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
+import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
 import 'package:trendpulse/features/subscription/presentation/widgets/task_timeline_item.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
-class SubscriptionTasksPage extends ConsumerWidget {
+class SubscriptionTasksPage extends ConsumerStatefulWidget {
   final String subId;
 
   const SubscriptionTasksPage({super.key, required this.subId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SubscriptionTasksPage> createState() =>
+      _SubscriptionTasksPageState();
+}
+
+class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
+  bool _isRunningNow = false;
+  _PinnedSubscriptionAlert? _pinnedAlert;
+  String? _lastRequestedAlertTaskId;
+  late final ProviderSubscription<AsyncValue<Subscription>>
+  _subscriptionDetailSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final subId = widget.subId;
+
+    _subscriptionDetailSubscription = ref
+        .listenManual<AsyncValue<Subscription>>(
+          subscriptionDetailProvider(subId),
+          (_, next) {
+            next.whenData(_handleSubscriptionDetailLoaded);
+          },
+          fireImmediately: true,
+        );
+  }
+
+  @override
+  void dispose() {
+    _subscriptionDetailSubscription.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subId = widget.subId;
     final tasksAsync = ref.watch(subscriptionTasksProvider(subId));
     final detailAsync = ref.watch(subscriptionDetailProvider(subId));
     final l10n = AppLocalizations.of(context)!;
@@ -28,6 +66,10 @@ class SubscriptionTasksPage extends ConsumerWidget {
     final title =
         detailAsync.whenOrNull(data: (s) => s.keyword.toUpperCase()) ??
         l10n.executionHistory.toUpperCase();
+    final alertBanner = _pinnedAlert;
+    final alertBannerRoute = alertBanner == null
+        ? null
+        : '/subscription/$subId/tasks/detail/${alertBanner.taskId}';
 
     return Scaffold(
       appBar: AppBar(
@@ -47,7 +89,7 @@ class SubscriptionTasksPage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: OutlinedButton.icon(
-              onPressed: () => _runNow(ref, context, l10n),
+              onPressed: _isRunningNow ? null : _runNow,
               icon: Icon(
                 Icons.play_arrow_rounded,
                 size: 20,
@@ -56,91 +98,170 @@ class SubscriptionTasksPage extends ConsumerWidget {
               label: Text(l10n.runNow.toUpperCase()),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
-                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                ),
               ),
             ),
           ),
         ],
       ),
-      body: tasksAsync.when(
-        loading: () => const ShimmerLoading(
-          cardSkeleton: true,
-          itemCount: 5,
-          itemHeight: 80,
-          borderRadius: 0,
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.pageHorizontal,
-            vertical: AppSpacing.sm,
-          ),
-        ),
-        error: (error, _) => AppErrorWidget(
-          message: l10n.errorGeneric,
-          retryLabel: l10n.retry,
-          onRetry: () => ref.invalidate(subscriptionTasksProvider(subId)),
-        ),
-        data: (tasks) {
-          if (tasks.isEmpty) {
-            return _EmptyTasksView(l10n: l10n);
-          }
-
-          return RefreshIndicator(
-            color: theme.colorScheme.onSurface,
-            backgroundColor: theme.colorScheme.surface,
-            onRefresh: () async {
-              ref.invalidate(subscriptionTasksProvider(subId));
-              await ref.read(subscriptionTasksProvider(subId).future);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.xl,
+      body: Column(
+        children: [
+          if (alertBanner != null)
+            _SubscriptionAlertBanner(
+              alert: alertBanner,
+              onTap: alertBannerRoute == null
+                  ? null
+                  : () => context.push(alertBannerRoute),
+            ),
+          Expanded(
+            child: tasksAsync.when(
+              loading: () => const ShimmerLoading(
+                cardSkeleton: true,
+                itemCount: 5,
+                itemHeight: 80,
+                borderRadius: 0,
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pageHorizontal,
+                  vertical: AppSpacing.sm,
+                ),
               ),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return StaggeredListItem(
-                  index: index,
-                  child: TaskTimelineItem(
-                    task: task,
-                    isLast: index == tasks.length - 1,
-                    onTap: () => context.push(
-                      '/subscription/$subId/tasks/detail/${task.id}',
+              error: (error, _) => AppErrorWidget(
+                message: l10n.errorGeneric,
+                retryLabel: l10n.retry,
+                onRetry: () => unawaited(_refreshPageData(subId)),
+              ),
+              data: (tasks) {
+                if (tasks.isEmpty) {
+                  return _EmptyTasksView(l10n: l10n);
+                }
+
+                return RefreshIndicator(
+                  color: theme.colorScheme.onSurface,
+                  backgroundColor: theme.colorScheme.surface,
+                  onRefresh: () => _refreshPageData(subId),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.xl,
                     ),
+                    itemCount: tasks.length,
+                    itemBuilder: (context, index) {
+                      final task = tasks[index];
+                      return StaggeredListItem(
+                        index: index,
+                        child: TaskTimelineItem(
+                          task: task,
+                          isLast: index == tasks.length - 1,
+                          onTap: () => context.push(
+                            '/subscription/$subId/tasks/detail/${task.id}',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _runNow(
-    WidgetRef ref,
-    BuildContext context,
-    AppLocalizations l10n,
-  ) async {
+  void _handleSubscriptionDetailLoaded(
+    Subscription subscription,
+  ) {
+    final latestAlertTaskId = subscription.latestUnreadAlertTaskId;
+    final latestAlertScore = subscription.latestUnreadAlertScore;
+
+    if (subscription.hasUnreadAlertSummary &&
+        latestAlertTaskId != null &&
+        latestAlertScore != null &&
+        _pinnedAlert?.taskId != latestAlertTaskId) {
+      setState(() {
+        _pinnedAlert = _PinnedSubscriptionAlert(
+          taskId: latestAlertTaskId,
+          score: latestAlertScore,
+        );
+      });
+    }
+
+    if (!subscription.hasUnreadAlertSummary || latestAlertTaskId == null) {
+      return;
+    }
+
+    if (_lastRequestedAlertTaskId == latestAlertTaskId) {
+      return;
+    }
+
+    _lastRequestedAlertTaskId = latestAlertTaskId;
+    unawaited(_markAlertsRead(latestAlertTaskId));
+  }
+
+  Future<void> _runNow() async {
+    if (_isRunningNow) {
+      return;
+    }
+
+    setState(() {
+      _isRunningNow = true;
+    });
+
+    final context = this.context;
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
-      await repo.runSubscriptionNow(subId);
-      ref.invalidate(subscriptionTasksProvider(subId));
-      ref.invalidate(subscriptionDetailProvider(subId));
+      final task = await repo.runSubscriptionNow(widget.subId);
+      ref.invalidate(subscriptionTasksProvider(widget.subId));
+      ref.invalidate(subscriptionDetailProvider(widget.subId));
       ref.invalidate(subscriptionListProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.statusCollecting.toUpperCase())),
-        );
+        context.push('/subscription/${widget.subId}/tasks/detail/${task.id}');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.subscriptionRunNowError)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.subscriptionRunNowError)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRunningNow = false;
+        });
       }
     }
+  }
+
+  Future<void> _markAlertsRead(String alertTaskId) async {
+    final subId = widget.subId;
+    final repo = ref.read(subscriptionRepositoryProvider);
+    final container = ProviderScope.containerOf(context, listen: false);
+
+    try {
+      await repo.markAlertsRead(subId);
+      container.invalidate(subscriptionListProvider);
+      unawaited(container.read(subscriptionListProvider.future));
+      container.invalidate(subscriptionDetailProvider(subId));
+    } catch (_) {
+      if (_lastRequestedAlertTaskId == alertTaskId) {
+        _lastRequestedAlertTaskId = null;
+      }
+    }
+  }
+
+  Future<void> _refreshPageData(String subId) async {
+    ref.invalidate(subscriptionTasksProvider(subId));
+    ref.invalidate(subscriptionDetailProvider(subId));
+    await Future.wait([
+      ref.read(subscriptionTasksProvider(subId).future),
+      ref.read(subscriptionDetailProvider(subId).future),
+    ]);
   }
 }
 
@@ -156,4 +277,100 @@ class _EmptyTasksView extends StatelessWidget {
       message: l10n.noRecordsFoundMessage,
     );
   }
+}
+
+class _SubscriptionAlertBanner extends StatelessWidget {
+  final _PinnedSubscriptionAlert alert;
+  final VoidCallback? onTap;
+
+  const _SubscriptionAlertBanner({required this.alert, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Semantics(
+      button: onTap != null,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const ValueKey('subscription-alert-banner'),
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              0,
+            ),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colorScheme.errorContainer,
+              border: Border.all(
+                color: colorScheme.error,
+                width: AppBorders.medium,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: colorScheme.onErrorContainer,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.subscriptionNegativeAlertTitle,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        l10n.subscriptionNegativeAlertMessage(
+                          _formatAlertScore(alert.score),
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (onTap != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: colorScheme.onErrorContainer,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatAlertScore(double score) {
+    final truncatedScore = (score * 100).truncateToDouble() / 100;
+    return truncatedScore
+        .toStringAsFixed(2)
+        .replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+}
+
+class _PinnedSubscriptionAlert {
+  final String taskId;
+  final double score;
+
+  const _PinnedSubscriptionAlert({required this.taskId, required this.score});
 }

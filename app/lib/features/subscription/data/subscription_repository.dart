@@ -61,8 +61,14 @@ class SubscriptionRepository {
         .toList();
   }
 
-  Future<void> runSubscriptionNow(String id) async {
-    await _apiClient.post(ApiEndpoints.subscriptionRunNow(id));
+  Future<SubscriptionTask> runSubscriptionNow(String id) async {
+    final response = await _apiClient.post(ApiEndpoints.subscriptionRunNow(id));
+    final data = response.data as Map<String, dynamic>;
+    return SubscriptionTask.fromJson(data);
+  }
+
+  Future<void> markAlertsRead(String id) async {
+    await _apiClient.post(ApiEndpoints.subscriptionAlertsRead(id));
   }
 
   Future<void> toggleActive(String id, {required bool isActive}) async {

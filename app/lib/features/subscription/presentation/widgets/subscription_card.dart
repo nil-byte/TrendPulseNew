@@ -12,6 +12,7 @@ import 'package:trendpulse/l10n/app_localizations.dart';
 
 class SubscriptionCard extends StatelessWidget {
   final Subscription item;
+  final bool showUnreadAlertBadge;
   final VoidCallback onTap;
   final ValueChanged<bool> onToggleActive;
   final VoidCallback onEdit;
@@ -20,6 +21,7 @@ class SubscriptionCard extends StatelessWidget {
   const SubscriptionCard({
     super.key,
     required this.item,
+    this.showUnreadAlertBadge = true,
     required this.onTap,
     required this.onToggleActive,
     required this.onEdit,
@@ -53,7 +55,8 @@ class SubscriptionCard extends StatelessWidget {
                         Text(
                           item.keyword.toUpperCase(),
                           style: theme.textTheme.titleLarge?.copyWith(
-                            fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                            fontFamily:
+                                theme.textTheme.displayLarge?.fontFamily,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.0,
                             color: item.isActive
@@ -78,18 +81,43 @@ class SubscriptionCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               _intervalLabel(item.interval, l10n).toUpperCase(),
-                              style: AppTypography.caption(theme.textTheme).copyWith(
-                                color: colors.onSurface.withValues(
-                                  alpha: AppOpacity.body,
-                                ),
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTypography.caption(theme.textTheme)
+                                  .copyWith(
+                                    color: colors.onSurface.withValues(
+                                      alpha: AppOpacity.body,
+                                    ),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
+                  if (showUnreadAlertBadge && item.unreadAlertCount > 0) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      key: ValueKey('subscription-alert-badge-${item.id}'),
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(color: colors.error),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${item.unreadAlertCount}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.onError,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
                   Tooltip(
                     message: item.isActive ? l10n.active : l10n.paused,
                     child: Switch(

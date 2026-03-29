@@ -45,7 +45,10 @@ class TaskTimelineItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: dotColor,
                       shape: BoxShape.rectangle,
-                      border: Border.all(color: colorScheme.onSurface, width: 1.5),
+                      border: Border.all(
+                        color: colorScheme.onSurface,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                   if (!isLast)
@@ -92,15 +95,14 @@ class TaskTimelineItem extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (task.isCompleted) ...[
+                      if (task.canViewReport) ...[
                         const SizedBox(height: AppSpacing.md),
                         Row(
                           children: [
                             if (task.sentimentScore != null) ...[
                               _MetricLabel(
                                 icon: Icons.sentiment_satisfied_rounded,
-                                value: (task.sentimentScore! * 100)
-                                    .toStringAsFixed(1),
+                                value: task.sentimentScore!.round().toString(),
                                 color: _sentimentColor(
                                   task.sentimentScore!,
                                   tpColors,
@@ -121,7 +123,7 @@ class TaskTimelineItem extends StatelessWidget {
                           ],
                         ),
                       ],
-                      if (task.isRunning) ...[
+                      if (task.isInProgress) ...[
                         const SizedBox(height: AppSpacing.md),
                         LinearProgressIndicator(
                           borderRadius: BorderRadius.zero,
@@ -150,15 +152,16 @@ class TaskTimelineItem extends StatelessWidget {
   ) {
     return switch (status) {
       'completed' => tpColors.positive,
+      'partial' => colorScheme.secondary,
       'failed' => tpColors.negative,
-      'running' || 'collecting' => colorScheme.onSurface,
+      'collecting' || 'analyzing' => colorScheme.onSurface,
       _ => tpColors.neutral,
     };
   }
 
   static Color _sentimentColor(double score, TrendPulseColors tpColors) {
-    if (score > 0.6) return tpColors.positive;
-    if (score < 0.4) return tpColors.negative;
+    if (score > 60) return tpColors.positive;
+    if (score < 40) return tpColors.negative;
     return tpColors.neutral;
   }
 
@@ -194,7 +197,8 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       'completed' => (l10n.statusCompleted, tpColors.positive),
-      'running' => (l10n.statusAnalyzing, theme.colorScheme.onSurface),
+      'partial' => (l10n.statusPartial, theme.colorScheme.secondary),
+      'analyzing' => (l10n.statusAnalyzing, theme.colorScheme.onSurface),
       'collecting' => (l10n.statusCollecting, theme.colorScheme.onSurface),
       'failed' => (l10n.statusFailed, tpColors.negative),
       _ => (l10n.statusPending, tpColors.neutral),
@@ -205,9 +209,7 @@ class _StatusChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: 2,
       ),
-      decoration: BoxDecoration(
-        border: Border.all(color: color),
-      ),
+      decoration: BoxDecoration(border: Border.all(color: color)),
       child: Text(
         label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
