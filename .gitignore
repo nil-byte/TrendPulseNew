@@ -46,3 +46,5 @@ app/*.iml
 # OS
 .DS_Store
 Thumbs.db
+Objective.md
+docs/demo-acceptance-runbook.md

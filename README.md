@@ -9,6 +9,8 @@
 - **实时仪表盘**: 情感得分、热度指数、核心观点卡片、情感分布
 - **历史记录**: 查看过往分析任务，支持删除
 - **订阅监控**: 按关键词与周期创建订阅，自动拉取并生成任务
+- **负面告警**: 订阅任务低于阈值（`sentiment_score < 30`）时生成未读告警，并在 App 内展示提醒
+- **Mermaid 思维导图**: 分析报告接口返回 Mermaid 字符串；当前支持后端生成的 `mindmap` 子集，解析失败时会显示降级提示并保留原始文本
 - **源数据浏览**: 在任务详情中按平台筛选原始帖子，点击跳转原文
 - **主题切换**: 支持浅色/深色主题，Neo-Minimal 设计风格
 
@@ -125,6 +127,8 @@ TrendPulseNew/
 │   │       ├── feed/          # 原始帖子数据访问（供详情等使用，非独立 Tab）
 │   │       └── settings/      # 设置
 │   └── test/                  # 前端测试
+├── docs/                      # 演示 / 验收 / 补充文档
+├── scripts/                   # 常用开发与验证脚本
 └── README.md
 ```
 
@@ -139,12 +143,23 @@ TrendPulseNew/
 
 后端与前端均包含自动化测试；具体用例数以仓库内 `backend/tests/` 与 `app/test/` 为准。
 
+演示/验收步骤见 `docs/demo-acceptance-runbook.md`。真实数据抓取演示通常需要在本机私有 `backend/.env` 中填写真实密钥；关键链路自动验证大多基于 mock / fake 测试，通常不依赖真实密钥。
+
 ```bash
 # 后端测试
 cd backend && python -m pytest tests/ -v
 
 # 前端测试
 cd app && flutter test
+
+# 关键链路验收
+scripts/verify-critical-paths.sh
+
+# 仅验证后端
+scripts/verify-critical-paths.sh --backend-only
+
+# 仅验证 Flutter
+scripts/verify-critical-paths.sh --flutter-only
 ```
 
 ## 许可证
