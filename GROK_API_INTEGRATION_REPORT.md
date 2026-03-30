@@ -81,16 +81,27 @@ Generate the JSON array of 15 objects now.
 ## 5. 调用配置与 SDK 实战
 
 ### 基础信息
+*   **Provider Mode**: `official_xai`（默认） / `openai_compatible`（显式开启第三方 OpenAI SDK 兼容端点）
 *   **Base URL**: `https://api.x.ai/v1`
 *   **API Key**: 仅通过环境变量 `GROK_API_KEY` 注入；仓库文档与示例文件只保留占位符或空值，禁止提交真实值
 *   **Model**: `grok-4.20-reasoning` (当前规范默认值)
 
+### 推荐配置策略
+*   **默认官方模式**：`GROK_PROVIDER_MODE=official_xai`，沿用官方 `https://api.x.ai/v1` 与默认模型。
+*   **兼容端点模式**：仅当需要切换第三方 OpenAI SDK 兼容 Grok 端点时，显式设置 `GROK_PROVIDER_MODE=openai_compatible`，并同步覆盖 `GROK_BASE_URL` / `GROK_MODEL`。
+*   **显式优于隐式**：不要只改 `GROK_BASE_URL` 而不声明模式，否则容易让“官方默认”和“兼容覆盖”语义混淆。
+
 ### 最佳实践代码模式
 ```python
 # 1. 使用 OpenAI 兼容 SDK，并从环境变量读取配置
+provider_mode = os.environ.get("GROK_PROVIDER_MODE", "official_xai")
+base_url = "https://api.x.ai/v1"
+if provider_mode == "openai_compatible":
+    base_url = os.environ["GROK_BASE_URL"]
+
 client = AsyncOpenAI(
     api_key=os.environ["GROK_API_KEY"],
-    base_url=os.environ.get("GROK_BASE_URL", "https://api.x.ai/v1"),
+    base_url=base_url,
 )
 
 # 2. 剥离推理标签 (Handling <think> tags)

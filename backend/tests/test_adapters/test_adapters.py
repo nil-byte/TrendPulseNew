@@ -171,7 +171,8 @@ class TestXAdapter:
     async def test_x_collect_uses_settings_base_url_for_client(
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
-        """`collect()` must construct the OpenAI client with `settings.grok_base_url`."""
+        """`collect()` must construct the client with `settings.grok_base_url`."""
+        mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://configured.example/v1"
         mock_settings.grok_model = "test-model"
@@ -189,10 +190,42 @@ class TestXAdapter:
         )
 
     @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    def test_x_build_grok_client_uses_compatible_endpoint(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Compatible mode should build the client from the configured endpoint."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://compatible.example/v1"
+
+        adapter = XAdapter()
+        client = adapter._build_grok_client()
+
+        assert client is mock_openai_cls.return_value
+        mock_openai_cls.assert_called_once_with(
+            api_key=mock_settings.grok_api_key,
+            base_url=mock_settings.grok_base_url,
+        )
+
+    @patch("src.adapters.x_adapter.settings")
+    def test_x_resolve_grok_model_returns_configured_model(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Model resolution should centralize the configured Grok model."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "grok-compat"
+
+        adapter = XAdapter()
+
+        assert adapter._resolve_grok_model() == "grok-compat"
+
+    @patch("src.adapters.x_adapter.settings")
     async def test_x_query_shard_uses_settings_model(
         self, mock_settings: MagicMock
     ) -> None:
         """`_query_shard()` must send `settings.grok_model` to Grok completions."""
+        mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_model = "configured-model"
 
         mock_response = MagicMock()
@@ -224,6 +257,7 @@ class TestXAdapter:
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
         """Mock AsyncOpenAI to return fake JSON, verify deduplicated posts."""
+        mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
@@ -272,6 +306,7 @@ class TestXAdapter:
         self, mock_settings: MagicMock
     ) -> None:
         """Missing Grok API key must raise instead of silently returning []."""
+        mock_settings.grok_provider_mode = "official_xai"
         mock_settings.grok_api_key = ""
 
         adapter = XAdapter()
@@ -284,6 +319,7 @@ class TestXAdapter:
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
         """Whole-source X failures must not silently collapse into an empty list."""
+        mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
@@ -302,7 +338,7 @@ class TestXAdapter:
         """Verify <think> tag stripping works in _parse_response."""
         adapter = XAdapter()
         raw_text = (
-            '<think>Let me analyze this...</think>'
+            "<think>Let me analyze this...</think>"
             '[{"id": "t1", "username": "u1", "content": "hello world", '
             '"perspective": "Neutral", "created_at": "2024-01-01T00:00:00Z", '
             '"engagement": 10, "url": "https://x.com/u1/status/t1"}]'

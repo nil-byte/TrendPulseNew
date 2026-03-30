@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
+from urllib.parse import urlparse
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -21,6 +25,7 @@ class Settings(BaseSettings):
     youtube_api_key: str = ""
 
     # Grok API (X data collection)
+    grok_provider_mode: Literal["official_xai", "openai_compatible"] = "official_xai"
     grok_api_key: str = ""
     grok_base_url: str = "https://api.x.ai/v1"
     grok_model: str = "grok-4.20-reasoning"
@@ -40,6 +45,36 @@ class Settings(BaseSettings):
 
     # Background jobs (tests set ``SCHEDULER_ENABLED=false`` to avoid real scheduler)
     scheduler_enabled: bool = True
+
+    @model_validator(mode="after")
+    def validate_grok_provider_configuration(self) -> Settings:
+        """Ensure Grok provider mode and endpoint settings remain consistent."""
+        base_url = self.grok_base_url.strip().rstrip("/")
+        model = self.grok_model.strip()
+
+        if not model:
+            raise ValueError("GROK_MODEL must not be blank")
+
+        if self.grok_provider_mode == "official_xai":
+            if base_url != "https://api.x.ai/v1":
+                raise ValueError(
+                    "GROK_PROVIDER_MODE must be 'openai_compatible' when "
+                    "GROK_BASE_URL is not the official xAI endpoint"
+                )
+            self.grok_base_url = base_url
+            self.grok_model = model
+            return self
+
+        parsed = urlparse(base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError(
+                "GROK_BASE_URL must be a valid http:// or https:// URL when "
+                "GROK_PROVIDER_MODE='openai_compatible'"
+            )
+
+        self.grok_base_url = base_url
+        self.grok_model = model
+        return self
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -97,9 +97,7 @@ class XAdapter(BaseAdapter):
     def source_name(self) -> str:
         return "x"
 
-    async def collect(
-        self, keyword: str, language: str, limit: int
-    ) -> list[RawPost]:
+    async def collect(self, keyword: str, language: str, limit: int) -> list[RawPost]:
         """Run three parallel Grok shards and deduplicate results.
 
         Args:
@@ -114,10 +112,7 @@ class XAdapter(BaseAdapter):
             logger.warning(self._MISSING_API_KEY_MESSAGE)
             raise RuntimeError(self._MISSING_API_KEY_MESSAGE)
 
-        client = AsyncOpenAI(
-            api_key=settings.grok_api_key,
-            base_url=settings.grok_base_url,
-        )
+        client = self._build_grok_client()
 
         shard_limit = max(1, limit // len(_SHARDS))
 
@@ -169,6 +164,17 @@ class XAdapter(BaseAdapter):
     # Private helpers
     # ------------------------------------------------------------------
 
+    def _build_grok_client(self) -> AsyncOpenAI:
+        """Create the OpenAI-compatible client for the active Grok endpoint."""
+        return AsyncOpenAI(
+            api_key=settings.grok_api_key,
+            base_url=settings.grok_base_url,
+        )
+
+    def _resolve_grok_model(self) -> str:
+        """Return the configured model name for Grok shard requests."""
+        return settings.grok_model
+
     async def _query_shard(
         self,
         client: AsyncOpenAI,
@@ -187,7 +193,7 @@ class XAdapter(BaseAdapter):
         )
 
         response = await client.chat.completions.create(
-            model=settings.grok_model,
+            model=self._resolve_grok_model(),
             temperature=0.2,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
@@ -198,9 +204,7 @@ class XAdapter(BaseAdapter):
         raw_text = response.choices[0].message.content or ""
         return self._parse_response(raw_text, dimension_name)
 
-    def _parse_response(
-        self, raw_text: str, dimension_name: str
-    ) -> list[RawPost]:
+    def _parse_response(self, raw_text: str, dimension_name: str) -> list[RawPost]:
         """Strip <think> tags and parse JSON array into RawPost objects."""
         text = raw_text
         if "</think>" in text:

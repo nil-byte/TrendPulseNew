@@ -47,5 +47,4 @@ app/*.iml
 .DS_Store
 Thumbs.db
 Objective.md
-docs/demo-acceptance-runbook.md
 .superpowers/

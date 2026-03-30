@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from src.config.settings import Settings
 
@@ -60,14 +61,24 @@ def _collect_public_text_artifacts() -> tuple[Path, ...]:
         for path in REPO_ROOT.glob(pattern)
         if path.is_file()
         and all(
-            not part.startswith(".")
-            for part in path.relative_to(REPO_ROOT).parts[:-1]
+            not part.startswith(".") for part in path.relative_to(REPO_ROOT).parts[:-1]
         )
     }
     return tuple(sorted(collected, key=lambda path: str(path.relative_to(REPO_ROOT))))
 
 
 PUBLIC_TEXT_ARTIFACTS_WITHOUT_SECRETS = _collect_public_text_artifacts()
+
+
+def _clear_grok_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remove Grok-related environment variables for deterministic settings tests."""
+    for key in (
+        "GROK_PROVIDER_MODE",
+        "GROK_API_KEY",
+        "GROK_BASE_URL",
+        "GROK_MODEL",
+    ):
+        monkeypatch.delenv(key, raising=False)
 
 
 def _read_text(path: Path) -> str:
@@ -152,9 +163,9 @@ def test_guardrail_targets_visible_grok_artifacts_only() -> None:
 def test_target_files_do_not_contain_real_looking_api_keys() -> None:
     """Visible repository artifacts must never ship real-looking API keys."""
     for path in VISIBLE_GROK_ARTIFACTS:
-        assert REAL_LOOKING_API_KEY_PATTERN.search(_read_text(path)) is None, (
-            f"{path} contains a real-looking API key."
-        )
+        assert (
+            REAL_LOOKING_API_KEY_PATTERN.search(_read_text(path)) is None
+        ), f"{path} contains a real-looking API key."
 
 
 def test_public_artifact_inventory_covers_docs_scripts_and_examples() -> None:
@@ -167,9 +178,9 @@ def test_public_artifact_inventory_covers_docs_scripts_and_examples() -> None:
 def test_public_text_artifacts_do_not_contain_real_looking_api_keys() -> None:
     """Public-facing docs, scripts, and examples must never expose provider keys."""
     for path in PUBLIC_TEXT_ARTIFACTS_WITHOUT_SECRETS:
-        assert REAL_LOOKING_API_KEY_PATTERN.search(_read_text(path)) is None, (
-            f"{path} contains a real-looking API key."
-        )
+        assert (
+            REAL_LOOKING_API_KEY_PATTERN.search(_read_text(path)) is None
+        ), f"{path} contains a real-looking API key."
 
 
 def test_documented_grok_config_files_only_use_official_base_url() -> None:
@@ -185,9 +196,10 @@ def test_documented_grok_config_files_only_use_official_model() -> None:
 
 
 def test_env_example_uses_official_grok_placeholder_and_defaults() -> None:
-    """`.env.example` should document the official xAI endpoint, model, and key placeholder."""
+    """`.env.example` should document the default official Grok settings."""
     env_example = _read_text(BACKEND_DIR / ".env.example")
 
+    assert "GROK_PROVIDER_MODE=official_xai" in env_example
     assert f"GROK_API_KEY={OFFICIAL_GROK_API_KEY_PLACEHOLDER}" in env_example
     assert f"GROK_BASE_URL={OFFICIAL_GROK_BASE_URL}" in env_example
     assert f"GROK_MODEL={OFFICIAL_GROK_MODEL}" in env_example
@@ -197,10 +209,75 @@ def test_settings_defaults_use_official_grok_defaults(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`Settings` defaults should align with the documented official Grok config."""
-    monkeypatch.delenv("GROK_BASE_URL", raising=False)
-    monkeypatch.delenv("GROK_MODEL", raising=False)
+    _clear_grok_env(monkeypatch)
 
     settings = Settings(_env_file=None)
 
     assert settings.grok_base_url == OFFICIAL_GROK_BASE_URL
     assert settings.grok_model == OFFICIAL_GROK_MODEL
+
+
+def test_settings_default_mode_is_official_xai(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Grok should default to the official xAI provider mode."""
+    _clear_grok_env(monkeypatch)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.grok_provider_mode == "official_xai"
+
+
+def test_settings_rejects_custom_base_url_without_compatible_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Custom Grok endpoints must require explicit compatible-mode opt-in."""
+    _clear_grok_env(monkeypatch)
+    monkeypatch.setenv("GROK_BASE_URL", "https://compatible.example/v1")
+
+    with pytest.raises(ValidationError, match="GROK_PROVIDER_MODE"):
+        Settings(_env_file=None)
+
+
+def test_settings_allows_custom_endpoint_in_compatible_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Explicit compatible mode should allow a custom endpoint and model."""
+    _clear_grok_env(monkeypatch)
+    monkeypatch.setenv("GROK_PROVIDER_MODE", "openai_compatible")
+    monkeypatch.setenv("GROK_BASE_URL", "https://compatible.example/v1")
+    monkeypatch.setenv("GROK_MODEL", "grok-compat")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.grok_provider_mode == "openai_compatible"
+    assert settings.grok_base_url == "https://compatible.example/v1"
+    assert settings.grok_model == "grok-compat"
+
+
+def test_settings_official_mode_allows_official_endpoint_with_custom_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Official mode should still allow an official xAI endpoint with another model."""
+    _clear_grok_env(monkeypatch)
+    monkeypatch.setenv("GROK_PROVIDER_MODE", "official_xai")
+    monkeypatch.setenv("GROK_BASE_URL", "https://api.x.ai/v1/")
+    monkeypatch.setenv("GROK_MODEL", "grok-4.20-fast")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.grok_provider_mode == "official_xai"
+    assert settings.grok_base_url == OFFICIAL_GROK_BASE_URL
+    assert settings.grok_model == "grok-4.20-fast"
+
+
+def test_settings_rejects_invalid_compatible_base_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Compatible mode should validate the configured endpoint URL."""
+    _clear_grok_env(monkeypatch)
+    monkeypatch.setenv("GROK_PROVIDER_MODE", "openai_compatible")
+    monkeypatch.setenv("GROK_BASE_URL", "not-a-url")
+
+    with pytest.raises(ValidationError, match="GROK_BASE_URL"):
+        Settings(_env_file=None)

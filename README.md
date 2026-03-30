@@ -47,7 +47,7 @@
 - Flutter 3.x
 - Reddit API 凭证 ([申请地址](https://www.reddit.com/prefs/apps))
 - YouTube Data API Key ([申请地址](https://console.cloud.google.com/))
-- Grok API Key (用于 X 数据采集)
+- Grok API Key (用于 X 数据采集；默认官方 xAI，可显式切换到第三方 OpenAI SDK 兼容端点)
 - LLM API Key (OpenAI SDK 兼容，用于 AI 分析)
 
 ### 后端启动
@@ -57,6 +57,8 @@ cd backend
 pip install -e ".[dev]"
 cp .env.example .env
 # 编辑 .env 填入 API Keys
+# 官方 xAI: 保持 GROK_PROVIDER_MODE=official_xai
+# 第三方兼容端点: 设置 GROK_PROVIDER_MODE=openai_compatible，并改写 GROK_BASE_URL / GROK_MODEL
 uvicorn src.main:app --reload
 ```
 
