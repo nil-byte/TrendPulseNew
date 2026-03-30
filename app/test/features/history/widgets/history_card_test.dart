@@ -39,7 +39,8 @@ void main() {
 
     expect(overflowBadge.style?.fontSize, 12.5);
     expect(completedLabel.style?.fontSize, 10);
-    expect(find.text('18 POSTS'), findsOneWidget);
+    expect(find.text('18'), findsOneWidget);
+    expect(find.text('POSTS'), findsOneWidget);
   });
 
   testWidgets('shows partial status with 0-100 sentiment score', (
@@ -61,7 +62,8 @@ void main() {
     expect(find.text('PARTIAL'), findsOneWidget);
     expect(find.text('72'), findsOneWidget);
     expect(find.text('7200'), findsNothing);
-    expect(find.text('12 POSTS'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.text('POSTS'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/editorial_switch_row.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
@@ -299,7 +300,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                 Text(
                   _maxItems.toInt().toString(),
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                    fontFamily: AppTypography.editorialSansFamily,
                     fontWeight: FontWeight.w900,
                   ),
                 ),

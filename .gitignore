@@ -48,3 +48,4 @@ app/*.iml
 Thumbs.db
 Objective.md
 docs/demo-acceptance-runbook.md
+.superpowers/

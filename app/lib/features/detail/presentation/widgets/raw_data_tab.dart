@@ -53,7 +53,7 @@ class RawDataTab extends ConsumerWidget {
                 child: Row(
                   children: [
                     _FilterChip(
-                      label: l10n.allSources.toUpperCase(),
+                      label: l10n.allSources,
                       selected: currentFilter == null,
                       onSelected: () =>
                           ref
@@ -65,7 +65,7 @@ class RawDataTab extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _FilterChip(
-                      label: sourcePlatformLabel('reddit', l10n).toUpperCase(),
+                      label: sourcePlatformLabel('reddit', l10n),
                       selected: currentFilter == 'reddit',
                       color: tpColors.reddit,
                       onSelected: () =>
@@ -78,7 +78,7 @@ class RawDataTab extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _FilterChip(
-                      label: sourcePlatformLabel('youtube', l10n).toUpperCase(),
+                      label: sourcePlatformLabel('youtube', l10n),
                       selected: currentFilter == 'youtube',
                       color: tpColors.youtube,
                       onSelected: () =>
@@ -91,7 +91,7 @@ class RawDataTab extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _FilterChip(
-                      label: sourcePlatformLabel('x', l10n).toUpperCase(),
+                      label: sourcePlatformLabel('x', l10n),
                       selected: currentFilter == 'x',
                       color: tpColors.xPlatform,
                       onSelected: () =>
@@ -216,37 +216,27 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chipColor = color ?? theme.colorScheme.onSurface;
-    final selectedFill = color == null
-        ? theme.colorScheme.primaryContainer
-        : chipColor;
-    final selectedForeground = color == null
-        ? theme.colorScheme.onPrimaryContainer
-        : AppColors.onBrandFill(selectedFill);
+    final chipColor = color ?? theme.colorScheme.primary;
 
     return FilterChip(
       label: Text(label),
       selected: selected,
       onSelected: (_) => onSelected(),
-      selectedColor: selectedFill,
-      checkmarkColor: theme.colorScheme.onPrimaryContainer,
       showCheckmark: false,
-      labelStyle: TextStyle(
-        color: selected ? selectedForeground : chipColor,
+      selectedColor: chipColor,
+      labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+        color: selected
+            ? AppColors.onBrandFill(chipColor)
+            : theme.colorScheme.onSurface,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.4,
-        fontSize: 13,
-      ),
-      side: BorderSide(
-        color: selected
-            ? (color == null
-                ? theme.colorScheme.primary.withValues(alpha: AppOpacity.hint)
-                : chipColor.withValues(alpha: AppOpacity.strokeStrong))
-            : chipColor,
-        width: selected ? 1.2 : 1.0,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+      side: BorderSide(
+        color: selected ? chipColor : theme.colorScheme.outline,
+        width: selected ? 1.2 : 1.0,
       ),
     );
   }

@@ -654,3 +654,4 @@ class _NeutralStripePainter extends CustomPainter {
     return oldDelegate.color != color;
   }
 }
+

@@ -186,7 +186,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   child: TextField(
                     controller: _urlController,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                      fontFamily: AppTypography.editorialSansFamily,
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: InputDecoration(
@@ -244,7 +244,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 Text(
                   '$maxItems',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                    fontFamily: AppTypography.editorialSansFamily,
                     fontWeight: FontWeight.w900,
                   ),
                 ),

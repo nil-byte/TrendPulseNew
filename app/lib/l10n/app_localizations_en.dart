@@ -18,7 +18,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyTab => 'History';
 
   @override
-  String get subscriptionTab => 'Subscription';
+  String get subscriptionTab => 'Subscribe';
 
   @override
   String get settingsTab => 'Settings';

@@ -48,3 +48,4 @@ class HeatIndexCard extends StatelessWidget {
     );
   }
 }
+

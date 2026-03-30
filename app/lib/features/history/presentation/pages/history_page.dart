@@ -266,16 +266,16 @@ class _DismissibleCard extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppSpacing.lg),
-        color: colorScheme.onSurface,
+        color: colorScheme.primary,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.delete_outline_rounded, color: colorScheme.surface),
+            Icon(Icons.delete_outline_rounded, color: colorScheme.onPrimary),
             const SizedBox(height: AppSpacing.xs),
             Text(
               '${l10n.confirm.toUpperCase()} ${l10n.delete.toUpperCase()}',
               style: TextStyle(
-                color: colorScheme.surface,
+                color: colorScheme.onPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,

@@ -8,6 +8,7 @@ import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_motion.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -447,7 +448,7 @@ class _ConfigPanel extends StatelessWidget {
               Text(
                 maxItems.round().toString(),
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                  fontFamily: AppTypography.editorialSansFamily,
                   fontWeight: FontWeight.w700,
                 ),
               ),

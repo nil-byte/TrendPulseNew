@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionTab.
   ///
   /// In en, this message translates to:
-  /// **'Subscription'**
+  /// **'Subscribe'**
   String get subscriptionTab;
 
   /// No description provided for @settingsTab.

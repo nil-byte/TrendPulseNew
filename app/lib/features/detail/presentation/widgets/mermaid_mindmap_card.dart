@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
 class MermaidMindmapCard extends StatelessWidget {
@@ -27,68 +28,53 @@ class MermaidMindmapCard extends StatelessWidget {
 
     return Container(
       key: const ValueKey('report-mermaid-mindmap'),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border.all(
-          color: colorScheme.outline,
-          width: AppBorders.thin,
-        ),
-      ),
+      color: colorScheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.account_tree_outlined,
-                size: 20,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  rootNode.label,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(
-                    alpha: AppOpacity.selectedWash,
-                  ),
-                  border: Border.all(
-                    color: colorScheme.primary.withValues(
-                      alpha: AppOpacity.hint,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  'MERMAID',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (rootNode.children.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            ...rootNode.children.map(
-              (child) => _MindmapNodeCard(node: child, depth: 0),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.sm,
             ),
-          ],
+            child: Text(
+              rootNode.label,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontFamily: theme.textTheme.displayLarge?.fontFamily,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+              ),
+            ),
+          ),
+          Divider(
+            height: 1,
+            thickness: AppBorders.thin,
+            color: colorScheme.outline,
+            indent: AppSpacing.md,
+            endIndent: AppSpacing.md,
+          ),
+          if (rootNode.children.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < rootNode.children.length; i++)
+                    _MindmapNodeCard(
+                      node: rootNode.children[i],
+                      depth: 0,
+                      sectionIndex: i,
+                    ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -113,53 +99,42 @@ class _MermaidMindmapFallbackCard extends StatelessWidget {
 
     return Container(
       key: const ValueKey('report-mermaid-mindmap-fallback'),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border.all(
-          color: colorScheme.outline,
-          width: AppBorders.thin,
-        ),
-      ),
+      color: colorScheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                size: 20,
-                color: colorScheme.onSurface,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
+          Container(height: AppBorders.thick, color: colorScheme.outline),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   title,
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     height: 1.2,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            message,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SelectableText(
-            mermaidMindmap,
-            key: const ValueKey('report-mermaid-mindmap-raw'),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface,
-              height: 1.5,
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  message,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SelectableText(
+                  mermaidMindmap,
+                  key: const ValueKey('report-mermaid-mindmap-raw'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -171,66 +146,152 @@ class _MermaidMindmapFallbackCard extends StatelessWidget {
 class _MindmapNodeCard extends StatelessWidget {
   final _MindmapNode node;
   final int depth;
+  final int sectionIndex;
 
-  const _MindmapNodeCard({required this.node, required this.depth});
+  const _MindmapNodeCard({
+    required this.node,
+    required this.depth,
+    this.sectionIndex = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final backgroundColor = depth == 0
-        ? colorScheme.primaryContainer.withValues(alpha: AppOpacity.selectedWash)
-        : colorScheme.surface;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: depth * AppSpacing.lg,
-        bottom: AppSpacing.sm,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          border: Border(
-            left: BorderSide(
-              color: depth == 0 ? colorScheme.primary : colorScheme.outline,
-              width: AppBorders.medium,
-            ),
-            top: BorderSide(
-              color: colorScheme.outline.withValues(alpha: AppOpacity.divider),
-              width: AppBorders.thin,
-            ),
-            right: BorderSide(
-              color: colorScheme.outline.withValues(alpha: AppOpacity.divider),
-              width: AppBorders.thin,
-            ),
-            bottom: BorderSide(
-              color: colorScheme.outline.withValues(alpha: AppOpacity.divider),
-              width: AppBorders.thin,
-            ),
-          ),
-        ),
+    if (depth == 0) {
+      final ordinal = (sectionIndex + 1).toString().padLeft(2, '0');
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              node.label,
-              style: (depth == 0
-                      ? theme.textTheme.titleSmall
-                      : theme.textTheme.bodyLarge)
-                  ?.copyWith(
-                    fontWeight: depth == 0 ? FontWeight.w800 : FontWeight.w600,
-                    height: 1.4,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  ordinal,
+                  style: AppTypography.dataNumber(
+                    theme.textTheme,
+                    fontSize: 11,
+                    weight: FontWeight.w700,
+                  ).copyWith(
+                    color: colorScheme.primary.withValues(alpha: AppOpacity.secondary),
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    node.label.toUpperCase(),
+                    style: AppTypography.editorialEyebrow(theme.textTheme).copyWith(
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Divider(
+              height: 1,
+              thickness: AppBorders.thin,
+              color: colorScheme.outline.withValues(alpha: AppOpacity.subtle),
             ),
             if (node.children.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               ...node.children.map(
                 (child) => _MindmapNodeCard(node: child, depth: depth + 1),
               ),
             ],
           ],
         ),
+      );
+    }
+
+    if (depth == 1) {
+      return Padding(
+        padding: const EdgeInsets.only(
+          left: AppSpacing.lg,
+          top: AppSpacing.xs,
+          bottom: AppSpacing.xs,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, right: AppSpacing.sm),
+                  child: Text(
+                    '\u2013',
+                    style: TextStyle(
+                      color: colorScheme.primary.withValues(alpha: AppOpacity.hint),
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    node.label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: AppOpacity.body),
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (node.children.isNotEmpty)
+              ...node.children.map(
+                (child) => _MindmapNodeCard(node: child, depth: depth + 1),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: AppSpacing.xl,
+        top: AppSpacing.xxs,
+        bottom: AppSpacing.xxs,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 1, right: AppSpacing.xs),
+                child: Text(
+                  '\u2014',
+                  style: TextStyle(
+                    color: colorScheme.outline.withValues(alpha: AppOpacity.muted),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  node.label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: AppOpacity.mutedSoft),
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (node.children.isNotEmpty)
+            ...node.children.map(
+              (child) => _MindmapNodeCard(node: child, depth: depth + 1),
+            ),
+        ],
       ),
     );
   }

@@ -74,12 +74,13 @@ class HistoryCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.schedule_rounded,
-                    size: 14,
+                    size: 13,
                     color: colorScheme.onSurface.withValues(
-                      alpha: AppOpacity.body,
+                      alpha: AppOpacity.muted,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
@@ -87,10 +88,10 @@ class HistoryCard extends StatelessWidget {
                     _formatRelativeTime(context, item.createdAt).toUpperCase(),
                     style: AppTypography.caption(theme.textTheme).copyWith(
                       color: colorScheme.onSurface.withValues(
-                        alpha: AppOpacity.body,
+                        alpha: AppOpacity.muted,
                       ),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.0,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.6,
                     ),
                   ),
                   const Spacer(),
@@ -103,7 +104,7 @@ class HistoryCard extends StatelessWidget {
                     ),
                   if (item.canViewReport && item.postCount != null) ...[
                     if (item.sentimentScore != null)
-                      const SizedBox(width: AppSpacing.md),
+                      const SizedBox(width: AppSpacing.mld),
                     _MetricLabel(
                       icon: Icons.article_outlined,
                       value: l10n.postCountLabel(item.postCount!).toUpperCase(),
@@ -249,21 +250,53 @@ class _MetricLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final parts = _splitNumberAndLabel(value);
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(
-          value,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w800,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+        Icon(
+          icon,
+          size: 13,
+          color: color.withValues(alpha: AppOpacity.muted),
         ),
+        const SizedBox(width: 4),
+        if (parts != null) ...[
+          Text(
+            parts.$1,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontFamily: AppTypography.editorialSansFamily,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            parts.$2,
+            style: AppTypography.caption(theme.textTheme).copyWith(
+              color: color.withValues(alpha: AppOpacity.muted),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ] else
+          Text(
+            value,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
       ],
     );
+  }
+
+  static (String, String)? _splitNumberAndLabel(String text) {
+    final match = RegExp(r'^(\d+)\s*(.+)$').firstMatch(text);
+    if (match == null) return null;
+    return (match.group(1)!, match.group(2)!);
   }
 }
 
@@ -336,34 +369,32 @@ class _SentimentIndicator extends StatelessWidget {
       label: '${l10n.sentimentScore}: $formattedScore, $toneLabel',
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              border: Border.all(color: theme.colorScheme.onSurface, width: 1),
-            ),
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color),
           ),
-          const SizedBox(width: AppSpacing.xs),
+          const SizedBox(width: 5),
           Text(
             formattedScore,
             style: theme.textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-              fontFamily: theme.textTheme.displayLarge?.fontFamily,
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w800,
+              fontFamily: AppTypography.editorialSansFamily,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-          const SizedBox(width: AppSpacing.xs),
+          const SizedBox(width: 3),
           Text(
             toneLabel.toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: AppTypography.caption(theme.textTheme).copyWith(
               color: theme.colorScheme.onSurface.withValues(
-                alpha: AppOpacity.emphasis,
+                alpha: AppOpacity.muted,
               ),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
         ],

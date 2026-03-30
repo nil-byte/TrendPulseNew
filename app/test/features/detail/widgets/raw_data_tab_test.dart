@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/data/analysis_repository.dart';
@@ -400,7 +401,7 @@ void main() {
     },
   );
 
-  testWidgets('raw data filters avoid harsh onSurface fills and tiny labels', (
+  testWidgets('raw data filters use full-fill source chip styling', (
     tester,
   ) async {
     await tester.pumpWidget(_wrap(const RawDataTab(taskId: 'task-1')));
@@ -408,11 +409,52 @@ void main() {
 
     final pageContext = tester.element(find.byType(RawDataTab));
     final theme = Theme.of(pageContext);
-    final chip = tester.widget<FilterChip>(find.byType(FilterChip).first);
-    final shape = chip.shape as RoundedRectangleBorder;
+    final allSourcesChip = tester.widget<FilterChip>(find.byType(FilterChip).at(0));
 
-    expect(chip.selectedColor, isNot(theme.colorScheme.onSurface));
-    expect(chip.labelStyle?.fontSize, 13);
-    expect(shape.borderRadius, isNot(BorderRadius.zero));
+    expect(allSourcesChip.selected, isTrue);
+    expect(allSourcesChip.selectedColor, theme.colorScheme.primary);
+    expect(
+      allSourcesChip.labelStyle?.color,
+      AppColors.onBrandFill(theme.colorScheme.primary),
+    );
+    expect(allSourcesChip.labelStyle?.fontWeight, FontWeight.w700);
+    expect(allSourcesChip.labelStyle?.letterSpacing, 0.4);
+    expect(allSourcesChip.side?.color, theme.colorScheme.primary);
+
+    await tester.tap(find.text('Reddit'));
+    await tester.pumpAndSettle();
+
+    final redditChip = tester.widget<FilterChip>(find.byType(FilterChip).at(1));
+    expect(redditChip.selected, isTrue);
+    expect(redditChip.selectedColor, theme.trendPulseColors.reddit);
+    expect(
+      redditChip.labelStyle?.color,
+      AppColors.onBrandFill(theme.trendPulseColors.reddit),
+    );
+    expect(redditChip.side?.color, theme.trendPulseColors.reddit);
+
+    await tester.tap(find.text('YouTube'));
+    await tester.pumpAndSettle();
+
+    final youtubeChip = tester.widget<FilterChip>(find.byType(FilterChip).at(2));
+    expect(youtubeChip.selected, isTrue);
+    expect(youtubeChip.selectedColor, theme.trendPulseColors.youtube);
+    expect(
+      youtubeChip.labelStyle?.color,
+      AppColors.onBrandFill(theme.trendPulseColors.youtube),
+    );
+    expect(youtubeChip.side?.color, theme.trendPulseColors.youtube);
+
+    await tester.tap(find.text('X'));
+    await tester.pumpAndSettle();
+
+    final xChip = tester.widget<FilterChip>(find.byType(FilterChip).at(3));
+    expect(xChip.selected, isTrue);
+    expect(xChip.selectedColor, theme.trendPulseColors.xPlatform);
+    expect(
+      xChip.labelStyle?.color,
+      AppColors.onBrandFill(theme.trendPulseColors.xPlatform),
+    );
+    expect(xChip.side?.color, theme.trendPulseColors.xPlatform);
   });
 }

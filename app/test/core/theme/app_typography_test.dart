@@ -43,6 +43,27 @@ void main() {
       expect(textTheme.titleLarge?.fontFamily, AppTypography.editorialSerifFamily);
     });
 
+    testWidgets('serif display styles enable lining figures for mixed titles', (
+      tester,
+    ) async {
+      final textTheme = AppTypography.textTheme;
+      final serifStyles = [
+        textTheme.displayLarge,
+        textTheme.displayMedium,
+        textTheme.displaySmall,
+        textTheme.headlineLarge,
+        textTheme.headlineMedium,
+        textTheme.headlineSmall,
+        textTheme.titleLarge,
+      ];
+
+      for (final style in serifStyles) {
+        final features = style?.fontFeatures;
+        expect(features, isNotNull);
+        expect(features!.map((feature) => feature.feature), contains('lnum'));
+      }
+    });
+
     testWidgets('text theme uses bundled editorial font families', (tester) async {
       final textTheme = AppTypography.textTheme;
 

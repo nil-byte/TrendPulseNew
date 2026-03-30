@@ -124,6 +124,8 @@ void main() {
     expect(find.text('思维导图'), findsOneWidget);
     expect(find.byKey(const ValueKey('report-mermaid-mindmap')), findsOneWidget);
     expect(find.text('人工智能'), findsOneWidget);
+    expect(find.text('01'), findsOneWidget);
+    expect(find.text('02'), findsOneWidget);
     expect(find.text('观点脉络'), findsOneWidget);
     expect(find.text('正面观点'), findsOneWidget);
     expect(find.text('12 条来源'), findsOneWidget);
