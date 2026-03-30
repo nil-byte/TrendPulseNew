@@ -274,6 +274,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openOriginal => '查看原文';
 
   @override
+  String get openLinkFailed => '无法打开链接';
+
+  @override
   String get newLabel => '新建';
 
   @override
@@ -347,10 +350,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analysisDataSourcesList => 'Reddit • YouTube • X';
 
   @override
+  String get analysisSourceStatusHint => '源状态反映最近一次配置检查或采集运行结果。';
+
+  @override
+  String get analysisSourceUnavailableLabel => '不可用';
+
+  @override
+  String get analysisSourceDegradedLabel => '可重试';
+
+  @override
+  String get analysisMaxItemsPerSource => '每个数据源最大条数';
+
+  @override
+  String get analysisPerSourceLimitHint => '该上限会分别应用到每个已选数据源。';
+
+  @override
   String get analysisKeywordRequiredMessage => '请先输入一个要分析的话题。';
 
   @override
   String get analysisCreateTaskError => '暂时无法发起这次分析，请稍后再试。';
+
+  @override
+  String get analysisNoAvailableSourcesMessage => '当前没有可用的数据源，请检查源配置或稍后再试。';
 
   @override
   String get reportOn => '报告主题';

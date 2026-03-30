@@ -620,6 +620,12 @@ abstract class AppLocalizations {
   /// **'Open original'**
   String get openOriginal;
 
+  /// No description provided for @openLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open link'**
+  String get openLinkFailed;
+
   /// No description provided for @newLabel.
   ///
   /// In en, this message translates to:
@@ -758,6 +764,36 @@ abstract class AppLocalizations {
   /// **'Reddit • YouTube • X'**
   String get analysisDataSourcesList;
 
+  /// No description provided for @analysisSourceStatusHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Source status reflects the latest configuration check or collection run.'**
+  String get analysisSourceStatusHint;
+
+  /// No description provided for @analysisSourceUnavailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get analysisSourceUnavailableLabel;
+
+  /// No description provided for @analysisSourceDegradedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Retryable'**
+  String get analysisSourceDegradedLabel;
+
+  /// No description provided for @analysisMaxItemsPerSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Items Per Source'**
+  String get analysisMaxItemsPerSource;
+
+  /// No description provided for @analysisPerSourceLimitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This limit is applied separately to each selected data source.'**
+  String get analysisPerSourceLimitHint;
+
   /// No description provided for @analysisKeywordRequiredMessage.
   ///
   /// In en, this message translates to:
@@ -769,6 +805,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to start this analysis right now. Please try again.'**
   String get analysisCreateTaskError;
+
+  /// No description provided for @analysisNoAvailableSourcesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No data sources are currently available. Check source configuration or try again later.'**
+  String get analysisNoAvailableSourcesMessage;
 
   /// No description provided for @reportOn.
   ///

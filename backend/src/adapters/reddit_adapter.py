@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
+import ssl
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
+import aiohttp  # type: ignore[import-untyped]
 import asyncpraw  # type: ignore[import-untyped]
+from asyncprawcore.exceptions import RequestException as PrawRequestException
 
-from src.adapters.base import BaseAdapter
+from src.adapters.base import BaseAdapter, SourceCollectionError
 from src.config.settings import settings
 from src.models.schemas import RawPost
 
@@ -17,6 +22,7 @@ logger = logging.getLogger(__name__)
 class RedditAdapter(BaseAdapter):
     """Collect posts from Reddit via the official API (asyncpraw)."""
 
+    _MISSING_CREDENTIALS_CODE = "reddit_credentials_missing"
     _MISSING_CREDENTIALS_MESSAGE = "Reddit credentials are not configured"
 
     @property
@@ -38,14 +44,28 @@ class RedditAdapter(BaseAdapter):
         """
         if not settings.reddit_client_id or not settings.reddit_client_secret:
             logger.warning(self._MISSING_CREDENTIALS_MESSAGE)
-            raise RuntimeError(self._MISSING_CREDENTIALS_MESSAGE)
+            raise SourceCollectionError(
+                self._MISSING_CREDENTIALS_CODE,
+                self._MISSING_CREDENTIALS_MESSAGE,
+            )
 
         posts: list[RawPost] = []
+        session: aiohttp.ClientSession | None = None
         try:
+            session = self._build_client_session()
             reddit = asyncpraw.Reddit(
                 client_id=settings.reddit_client_id,
                 client_secret=settings.reddit_client_secret,
                 user_agent=settings.reddit_user_agent,
+                requestor_kwargs={"session": session},
+            )
+            logger.info(
+                "Reddit collection starting keyword=%r limit=%d "
+                "trust_env=true custom_ca=%s proxy_configured=%s",
+                keyword,
+                limit,
+                bool(settings.reddit_ssl_ca_file),
+                bool(settings.reddit_https_proxy),
             )
 
             async with reddit:
@@ -82,9 +102,129 @@ class RedditAdapter(BaseAdapter):
                         )
                     )
 
+        except SourceCollectionError:
+            raise
         except Exception as exc:
             logger.exception("Reddit collection failed for keyword=%r", keyword)
-            raise RuntimeError(f"Reddit collection failed: {exc}") from exc
+            raise self._map_collection_error(exc) from exc
+        finally:
+            if session is not None:
+                await session.close()
 
         logger.info("Reddit collected %d posts for keyword=%r", len(posts), keyword)
         return posts
+
+    def _build_client_session(self) -> aiohttp.ClientSession:
+        """Create a Reddit HTTP session with isolated proxy/timeout/CA settings."""
+        proxy = None
+        if settings.reddit_https_proxy.strip():
+            proxy = self._validate_https_proxy(settings.reddit_https_proxy)
+        if proxy:
+            parsed = urlparse(proxy)
+            if parsed.hostname:
+                port = parsed.port
+                port_s = str(port) if port else ""
+                host_port = parsed.hostname + (f":{port_s}" if port_s else "")
+                logger.info(
+                    "Reddit aiohttp session: proxy applied (%s://%s)",
+                    parsed.scheme or "http",
+                    host_port,
+                )
+            else:
+                logger.info("Reddit aiohttp session: proxy URL applied")
+        connector: aiohttp.TCPConnector | None = None
+        if settings.reddit_ssl_ca_file:
+            validated_ca_file = self._validate_ssl_ca_file(settings.reddit_ssl_ca_file)
+            ssl_context = ssl.create_default_context(cafile=validated_ca_file)
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+        return aiohttp.ClientSession(
+            trust_env=False,
+            proxy=proxy,
+            connector=connector,
+            timeout=aiohttp.ClientTimeout(total=settings.reddit_http_timeout_seconds),
+        )
+
+    @staticmethod
+    def _validate_ssl_ca_file(ca_file: str) -> str:
+        """Return a CA file path only when it exists and can be loaded by ssl."""
+        ca_path = Path(ca_file).expanduser()
+        if not ca_path.is_file():
+            raise SourceCollectionError(
+                "reddit_ssl_error",
+                "Reddit SSL CA file is missing or unreadable",
+            )
+        try:
+            ssl.create_default_context(cafile=str(ca_path))
+        except (OSError, ssl.SSLError) as exc:
+            raise SourceCollectionError(
+                "reddit_ssl_error",
+                "Reddit SSL CA file is missing or unreadable",
+            ) from exc
+        return str(ca_path)
+
+    @staticmethod
+    def _validate_https_proxy(proxy_url: str) -> str:
+        """Return a proxy URL only when it is syntactically valid for aiohttp."""
+        normalized = proxy_url.strip()
+        parsed = urlparse(normalized)
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise SourceCollectionError(
+                "reddit_proxy_required",
+                "Reddit proxy URL is invalid",
+            ) from exc
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise SourceCollectionError(
+                "reddit_proxy_required",
+                "Reddit proxy URL is invalid",
+            )
+        if port is not None and port <= 0:
+            raise SourceCollectionError(
+                "reddit_proxy_required",
+                "Reddit proxy URL is invalid",
+            )
+        return normalized
+
+    @staticmethod
+    def _exception_chain_message(exc: BaseException) -> str:
+        """Short message with nested causes (asyncpraw often masks aiohttp)."""
+        parts: list[str] = []
+        current: BaseException | None = exc
+        seen: set[int] = set()
+        while current is not None and len(parts) < 5:
+            ident = id(current)
+            if ident in seen:
+                break
+            seen.add(ident)
+            part = str(current).strip() or current.__class__.__name__
+            if part:
+                parts.append(part)
+            current = current.__cause__ or current.__context__
+        return "; ".join(parts)
+
+    @staticmethod
+    def _map_collection_error(exc: Exception) -> SourceCollectionError:
+        """Convert asyncpraw/aiohttp failures into stable source error codes."""
+        root: BaseException = exc
+        if isinstance(exc, PrawRequestException):
+            root = exc.original_exception
+        message = RedditAdapter._exception_chain_message(root)
+        lowered = message.lower()
+        proxy_host = urlparse(settings.reddit_https_proxy).hostname
+        if proxy_host and proxy_host.lower() in lowered:
+            reason_code = "reddit_proxy_required"
+        elif "proxy" in lowered:
+            reason_code = "reddit_proxy_required"
+        elif "cannot connect to host" in lowered:
+            reason_code = "reddit_network_unreachable"
+        elif "timeout" in lowered or "timed out" in lowered:
+            reason_code = "reddit_timeout"
+        elif "ssl" in lowered or "certificate" in lowered:
+            reason_code = "reddit_ssl_error"
+        else:
+            reason_code = "reddit_collection_failed"
+        return SourceCollectionError(
+            reason_code,
+            f"Reddit collection failed: {message}",
+        )

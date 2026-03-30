@@ -9,8 +9,10 @@ from unittest.mock import AsyncMock, patch
 
 from httpx import AsyncClient
 
+from src.config.settings import settings
 from src.models.database import get_db
 from src.services.scheduler_service import SchedulerService
+from src.services.source_availability_service import source_availability_service
 
 
 async def _insert_subscription_alert(
@@ -129,6 +131,116 @@ class TestHealthCheck:
         assert response.json() == {"status": "ok"}
 
 
+class TestSourceAvailabilityEndpoints:
+    """Tests for source availability reporting."""
+
+    async def test_get_source_availability_reports_config_and_runtime_state(
+        self,
+        client: AsyncClient,
+        monkeypatch,
+    ) -> None:
+        """Settings endpoint should expose unavailable sources before task creation."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "reddit-id")
+        monkeypatch.setattr(settings, "reddit_client_secret", "reddit-secret")
+        monkeypatch.setattr(settings, "youtube_api_key", "youtube-key")
+        monkeypatch.setattr(settings, "grok_api_key", "")
+        source_availability_service.record_failure(
+            "reddit",
+            "reddit_network_unreachable",
+            "Reddit collection failed: error with request Cannot connect to host www.reddit.com:443 ssl:default [None]",
+        )
+
+        response = await client.get("/api/v1/settings/sources")
+
+        assert response.status_code == 200
+        payload = response.json()
+        availability_by_source = {
+            item["source"]: item for item in payload["sources"]
+        }
+
+        assert availability_by_source["reddit"]["status"] == "degraded"
+        assert availability_by_source["reddit"]["is_available"] is True
+        assert (
+            availability_by_source["reddit"]["reason"]
+            == "Reddit is temporarily unreachable. Check network or proxy settings."
+        )
+        assert (
+            availability_by_source["reddit"]["reason_code"]
+            == "reddit_network_unreachable"
+        )
+        assert availability_by_source["reddit"]["checked_at"]
+
+        assert availability_by_source["youtube"] == {
+            "source": "youtube",
+            "status": "available",
+            "is_available": True,
+            "reason": None,
+            "reason_code": None,
+            "checked_at": None,
+        }
+        assert availability_by_source["x"] == {
+            "source": "x",
+            "status": "unconfigured",
+            "is_available": False,
+            "reason": "Grok API key is not configured",
+            "reason_code": "grok_api_key_missing",
+            "checked_at": None,
+        }
+
+    async def test_get_source_availability_marks_invalid_reddit_ca_as_unavailable(
+        self,
+        client: AsyncClient,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """Settings endpoint should fail preflight when Reddit CA path is invalid."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "reddit-id")
+        monkeypatch.setattr(settings, "reddit_client_secret", "reddit-secret")
+        invalid_ca = tmp_path / "invalid-reddit-ca.pem"
+        invalid_ca.write_text("not a valid certificate bundle", encoding="utf-8")
+        monkeypatch.setattr(
+            settings,
+            "reddit_ssl_ca_file",
+            str(invalid_ca),
+        )
+
+        response = await client.get("/api/v1/settings/sources")
+
+        assert response.status_code == 200
+        availability_by_source = {
+            item["source"]: item for item in response.json()["sources"]
+        }
+        assert availability_by_source["reddit"]["is_available"] is False
+        assert availability_by_source["reddit"]["reason_code"] == "reddit_ssl_error"
+        assert (
+            availability_by_source["reddit"]["reason"]
+            == "Reddit SSL CA file is missing or unreadable"
+        )
+
+    async def test_get_source_availability_marks_invalid_reddit_proxy_as_unavailable(
+        self,
+        client: AsyncClient,
+        monkeypatch,
+    ) -> None:
+        """Settings endpoint should fail preflight when Reddit proxy URL is malformed."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "reddit-id")
+        monkeypatch.setattr(settings, "reddit_client_secret", "reddit-secret")
+        monkeypatch.setattr(settings, "reddit_https_proxy", "http://proxy.internal:badport")
+
+        response = await client.get("/api/v1/settings/sources")
+
+        assert response.status_code == 200
+        availability_by_source = {
+            item["source"]: item for item in response.json()["sources"]
+        }
+        assert availability_by_source["reddit"]["is_available"] is False
+        assert availability_by_source["reddit"]["reason_code"] == "reddit_proxy_required"
+        assert availability_by_source["reddit"]["reason"] == "Reddit proxy URL is invalid"
+
+
 class TestTaskEndpoints:
     """Tests for task CRUD endpoints."""
 
@@ -168,6 +280,151 @@ class TestTaskEndpoints:
         }
 
         response = await client.post("/api/v1/tasks", json=body)
+
+        assert response.status_code == 422
+
+    async def test_create_task_rejects_duplicate_sources(
+        self, client: AsyncClient
+    ) -> None:
+        """POST should reject duplicated sources to avoid duplicate collection."""
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "language": "en",
+                "max_items": 20,
+                "sources": ["reddit", "reddit"],
+            },
+        )
+
+        assert response.status_code == 422
+
+    @patch("src.api.endpoints.tasks.task_service._process_task", new_callable=AsyncMock)
+    async def test_create_task_filters_unavailable_sources(
+        self,
+        mock_process: AsyncMock,
+        client: AsyncClient,
+        monkeypatch,
+    ) -> None:
+        """Task response should preserve requested sources while processing only runnable ones."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "reddit-id")
+        monkeypatch.setattr(settings, "reddit_client_secret", "reddit-secret")
+        monkeypatch.setattr(settings, "youtube_api_key", "youtube-key")
+        monkeypatch.setattr(settings, "grok_api_key", "")
+
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "language": "zh",
+                "max_items": 20,
+                "sources": ["youtube", "x"],
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["sources"] == ["youtube", "x"]
+        await asyncio.sleep(0)
+        mock_process.assert_awaited_once()
+        await_args = mock_process.await_args
+        assert await_args.args[1].sources == ["youtube"]
+        assert (
+            await_args.kwargs["initial_source_errors"]["x"].reason_code
+            == "grok_api_key_missing"
+        )
+
+    @patch("src.api.endpoints.tasks.task_service._process_task", new_callable=AsyncMock)
+    async def test_create_task_keeps_degraded_sources_runnable(
+        self,
+        mock_process: AsyncMock,
+        client: AsyncClient,
+        monkeypatch,
+    ) -> None:
+        """Runtime failures should warn, but still allow users to retry the source."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "reddit-id")
+        monkeypatch.setattr(settings, "reddit_client_secret", "reddit-secret")
+        monkeypatch.setattr(settings, "youtube_api_key", "youtube-key")
+        monkeypatch.setattr(settings, "grok_api_key", "grok-key")
+        source_availability_service.record_failure(
+            "reddit",
+            "reddit_network_unreachable",
+            "Reddit collection failed: error with request Cannot connect to host oauth.reddit.com:443 ssl:default [None]",
+        )
+
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "language": "zh",
+                "max_items": 20,
+                "sources": ["reddit", "youtube"],
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["sources"] == ["reddit", "youtube"]
+        await asyncio.sleep(0)
+        mock_process.assert_awaited_once()
+        await_args = mock_process.await_args
+        assert await_args.args[1].sources == ["reddit", "youtube"]
+        assert await_args.kwargs["initial_source_errors"] == {}
+
+    async def test_create_task_rejects_when_all_requested_sources_are_unavailable(
+        self,
+        client: AsyncClient,
+        monkeypatch,
+    ) -> None:
+        """Task creation should fail fast when no requested source can run."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "")
+        monkeypatch.setattr(settings, "reddit_client_secret", "")
+        monkeypatch.setattr(settings, "youtube_api_key", "")
+        monkeypatch.setattr(settings, "grok_api_key", "")
+
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "language": "zh",
+                "max_items": 20,
+                "sources": ["reddit", "x"],
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json() == {
+            "detail": "No requested sources are currently available. Unavailable sources: reddit (Reddit credentials are not configured); x (Grok API key is not configured)."
+        }
+
+    async def test_create_task_rejects_invalid_reddit_ca_before_collection(
+        self,
+        client: AsyncClient,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """Task creation should fail fast when the configured Reddit CA file is invalid."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "reddit_client_id", "reddit-id")
+        monkeypatch.setattr(settings, "reddit_client_secret", "reddit-secret")
+        invalid_ca = tmp_path / "invalid-reddit-ca.pem"
+        invalid_ca.write_text("not a valid certificate bundle", encoding="utf-8")
+        monkeypatch.setattr(
+            settings,
+            "reddit_ssl_ca_file",
+            str(invalid_ca),
+        )
+
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "language": "zh",
+                "max_items": 20,
+                "sources": ["reddit"],
+            },
+        )
 
         assert response.status_code == 422
 
@@ -699,6 +956,23 @@ class TestNotificationSettingsEndpoints:
 
         assert response.status_code == 422
 
+    async def test_create_subscription_rejects_duplicate_sources(
+        self, client: AsyncClient
+    ) -> None:
+        """Subscriptions should reject duplicated sources up front."""
+        response = await client.post(
+            "/api/v1/subscriptions",
+            json={
+                "keyword": "openai",
+                "language": "en",
+                "max_items": 25,
+                "sources": ["reddit", "reddit"],
+                "interval": "daily",
+            },
+        )
+
+        assert response.status_code == 422
+
 
 class TestSubscriptionEndpoints:
     """Tests for subscription CRUD and execution endpoints."""
@@ -708,9 +982,13 @@ class TestSubscriptionEndpoints:
         new_callable=AsyncMock,
     )
     async def test_run_subscription_now_creates_linked_task(
-        self, mock_process: AsyncMock, client: AsyncClient
+        self,
+        mock_process: AsyncMock,
+        client: AsyncClient,
+        monkeypatch,
     ) -> None:
         """POST /api/v1/subscriptions/{id}/tasks creates a linked task."""
+        monkeypatch.setattr(settings, "grok_api_key", "grok-key")
         create_subscription_body = {
             "keyword": "openai",
             "language": "en",
@@ -760,6 +1038,55 @@ class TestSubscriptionEndpoints:
         response = await client.post("/api/v1/subscriptions/missing-subscription/tasks")
 
         assert response.status_code == 404
+
+    async def test_run_subscription_now_returns_422_when_all_sources_unavailable(
+        self,
+        client: AsyncClient,
+        monkeypatch,
+    ) -> None:
+        """Manual runs should fail fast when the subscription has no runnable sources."""
+        monkeypatch.setattr(settings, "reddit_client_id", "")
+        monkeypatch.setattr(settings, "reddit_client_secret", "")
+        create_subscription_response = await client.post(
+            "/api/v1/subscriptions",
+            json={
+                "keyword": "openai",
+                "language": "en",
+                "max_items": 25,
+                "sources": ["reddit"],
+                "interval": "daily",
+                "notify": True,
+            },
+        )
+        subscription_id = create_subscription_response.json()["id"]
+
+        response = await client.post(f"/api/v1/subscriptions/{subscription_id}/tasks")
+
+        assert response.status_code == 422
+
+    async def test_update_subscription_rejects_duplicate_sources(
+        self, client: AsyncClient
+    ) -> None:
+        """PUT should reject duplicated sources instead of storing them."""
+        create_subscription_response = await client.post(
+            "/api/v1/subscriptions",
+            json={
+                "keyword": "openai",
+                "language": "en",
+                "max_items": 25,
+                "sources": ["reddit", "youtube"],
+                "interval": "daily",
+                "notify": True,
+            },
+        )
+        subscription_id = create_subscription_response.json()["id"]
+
+        response = await client.put(
+            f"/api/v1/subscriptions/{subscription_id}",
+            json={"sources": ["x", "x"]},
+        )
+
+        assert response.status_code == 422
 
     async def test_subscription_endpoints_include_unread_alert_summary_fields(
         self, client: AsyncClient

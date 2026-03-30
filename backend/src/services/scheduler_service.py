@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from src.models.database import get_db
 from src.models.schemas import CreateTaskRequest
-from src.services.task_service import TaskService
+from src.services.task_service import NoAvailableSourcesError, TaskService
 
 logger = logging.getLogger(__name__)
 
@@ -112,12 +112,33 @@ class SchedulerService:
             max_items=max_items,
             sources=sources,
         )
-        await self._task_service.create_task(request, subscription_id=sub_id)
-        logger.info("Scheduler created task for subscription %s (%s)", sub_id, keyword)
-
         delta = _INTERVAL_DELTAS.get(interval, timedelta(days=1))
         next_run = (now + delta).isoformat()
         now_iso = now.isoformat()
+
+        try:
+            await self._task_service.create_task(request, subscription_id=sub_id)
+        except NoAvailableSourcesError as exc:
+            logger.warning(
+                "Scheduler skipped subscription %s (%s): %s",
+                sub_id,
+                keyword,
+                exc,
+            )
+            db = await get_db()
+            try:
+                await db.execute(
+                    "UPDATE subscriptions "
+                    "SET next_run_at = ?, updated_at = ? "
+                    "WHERE id = ?",
+                    (next_run, now_iso, sub_id),
+                )
+                await db.commit()
+            finally:
+                await db.close()
+            return
+
+        logger.info("Scheduler created task for subscription %s (%s)", sub_id, keyword)
 
         db = await get_db()
         try:

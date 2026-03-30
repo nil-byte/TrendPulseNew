@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -20,6 +23,23 @@ class Settings(BaseSettings):
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
     reddit_user_agent: str = "TrendPulse/1.0"
+    reddit_https_proxy: str = ""
+    reddit_ssl_ca_file: str = ""
+    reddit_http_timeout_seconds: float = Field(
+        default=45.0,
+        ge=5.0,
+        le=180.0,
+        description="asyncpraw/asyncprawcore per-request timeout (OAuth + API calls).",
+        validation_alias="REDDIT_HTTP_TIMEOUT",
+    )
+
+    @field_validator("reddit_https_proxy", "reddit_ssl_ca_file", mode="before")
+    @classmethod
+    def strip_optional_url_fields(cls, value: object) -> object:
+        """Trim .env padding so blank-looking proxy lines do not break matching."""
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
     # YouTube API
     youtube_api_key: str = ""
@@ -29,6 +49,13 @@ class Settings(BaseSettings):
     grok_api_key: str = ""
     grok_base_url: str = "https://api.x.ai/v1"
     grok_model: str = "grok-4.20-reasoning"
+    grok_http_timeout_seconds: float = Field(
+        default=45.0,
+        ge=5.0,
+        le=180.0,
+        description="Per-request timeout for Grok/OpenAI-compatible collection calls.",
+        validation_alias="GROK_HTTP_TIMEOUT",
+    )
 
     # LLM Analysis API (OpenAI SDK compatible)
     llm_api_key: str = ""
@@ -76,7 +103,10 @@ class Settings(BaseSettings):
         self.grok_model = model
         return self
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = SettingsConfigDict(
+        env_file=_BACKEND_DIR / ".env",
+        env_file_encoding="utf-8",
+    )
 
 
 settings = Settings()

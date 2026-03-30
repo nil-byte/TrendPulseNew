@@ -2,13 +2,27 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections import Counter
+from dataclasses import dataclass
 import logging
 from typing import Any
 
 from googleapiclient.discovery import build  # type: ignore[import-untyped]
-from youtube_transcript_api import YouTubeTranscriptApi  # type: ignore[import-untyped]
+from youtube_transcript_api import (  # type: ignore[import-untyped]
+    AgeRestricted,
+    CouldNotRetrieveTranscript,
+    InvalidVideoId,
+    IpBlocked,
+    NoTranscriptFound,
+    RequestBlocked,
+    TranscriptsDisabled,
+    VideoUnavailable,
+    VideoUnplayable,
+    YouTubeTranscriptApi,
+)
 
-from src.adapters.base import BaseAdapter
+from src.adapters.base import BaseAdapter, SourceCollectionError
 from src.config.settings import settings
 from src.models.schemas import RawPost
 
@@ -17,9 +31,20 @@ logger = logging.getLogger(__name__)
 _TRANSCRIPT_MAX_CHARS = 2000
 
 
+@dataclass(slots=True)
+class _TranscriptResult:
+    text: str | None
+    status: str
+    error_code: str | None = None
+    language: str | None = None
+    language_code: str | None = None
+    is_generated: bool | None = None
+
+
 class YouTubeAdapter(BaseAdapter):
     """Collect videos (with transcripts) from YouTube."""
 
+    _MISSING_API_KEY_CODE = "youtube_api_key_missing"
     _MISSING_API_KEY_MESSAGE = "YouTube API key is not configured"
 
     @property
@@ -41,20 +66,47 @@ class YouTubeAdapter(BaseAdapter):
         """
         if not settings.youtube_api_key:
             logger.warning(self._MISSING_API_KEY_MESSAGE)
-            raise RuntimeError(self._MISSING_API_KEY_MESSAGE)
+            raise SourceCollectionError(
+                self._MISSING_API_KEY_CODE,
+                self._MISSING_API_KEY_MESSAGE,
+            )
 
         posts: list[RawPost] = []
+        transcript_status_counts: Counter[str] = Counter()
         try:
-            videos = self._search_videos(keyword, limit)
+            videos = await asyncio.to_thread(self._search_videos, keyword, limit)
             for video in videos:
-                post = self._process_video(video, language)
+                post, transcript_result = await asyncio.to_thread(
+                    self._process_video,
+                    video,
+                    language,
+                )
+                transcript_status_counts[transcript_result.status] += 1
+                logger.info(
+                    "YouTube transcript result video_id=%s status=%s error_code=%s language_code=%s is_generated=%s",
+                    video["video_id"],
+                    transcript_result.status,
+                    transcript_result.error_code,
+                    transcript_result.language_code,
+                    transcript_result.is_generated,
+                )
                 if post is not None:
                     posts.append(post)
+        except SourceCollectionError:
+            raise
         except Exception as exc:
             logger.exception("YouTube collection failed for keyword=%r", keyword)
-            raise RuntimeError(f"YouTube collection failed: {exc}") from exc
+            raise SourceCollectionError(
+                "youtube_collection_failed",
+                f"YouTube collection failed: {exc}",
+            ) from exc
 
-        logger.info("YouTube collected %d posts for keyword=%r", len(posts), keyword)
+        logger.info(
+            "YouTube collected %d posts for keyword=%r transcript_summary=%s",
+            len(posts),
+            keyword,
+            dict(transcript_status_counts),
+        )
         return posts
 
     # ------------------------------------------------------------------
@@ -100,39 +152,108 @@ class YouTubeAdapter(BaseAdapter):
             )
         return results
 
-    def _fetch_transcript(self, video_id: str, language: str) -> str | None:
-        """Attempt to fetch and concatenate a video transcript."""
+    def _fetch_transcript(self, video_id: str, language: str) -> _TranscriptResult:
+        """Attempt to fetch and classify a video transcript result."""
         try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(
-                video_id, languages=[language, "en"]
+            transcript_api = YouTubeTranscriptApi()
+            transcript_list = transcript_api.list(video_id)
+            transcript = transcript_list.find_transcript([language, "en"])
+            fetched = transcript.fetch()
+            full_text = " ".join(snippet.text for snippet in fetched)
+            return _TranscriptResult(
+                text=full_text[:_TRANSCRIPT_MAX_CHARS],
+                status="fetched",
+                language=transcript.language,
+                language_code=transcript.language_code,
+                is_generated=transcript.is_generated,
             )
-            full_text = " ".join(seg["text"] for seg in transcript_list)
-            return full_text[:_TRANSCRIPT_MAX_CHARS]
+        except TranscriptsDisabled:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_transcripts_disabled",
+            )
+        except NoTranscriptFound:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_transcript_not_found",
+            )
+        except VideoUnavailable:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_video_unavailable",
+            )
+        except VideoUnplayable:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_video_unplayable",
+            )
+        except InvalidVideoId:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_invalid_video_id",
+            )
+        except AgeRestricted:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_age_restricted",
+            )
+        except (IpBlocked, RequestBlocked):
+            return _TranscriptResult(
+                text=None,
+                status="blocked",
+                error_code="youtube_transcript_request_blocked",
+            )
+        except CouldNotRetrieveTranscript:
+            return _TranscriptResult(
+                text=None,
+                status="unavailable",
+                error_code="youtube_transcript_unavailable",
+            )
         except Exception:
-            logger.debug("No transcript for video %s — skipping transcript", video_id)
-            return None
+            logger.exception("Unexpected transcript error for video_id=%s", video_id)
+            return _TranscriptResult(
+                text=None,
+                status="error",
+                error_code="youtube_transcript_error",
+            )
 
     def _process_video(
         self, video: dict[str, Any], language: str
-    ) -> RawPost | None:
+    ) -> tuple[RawPost | None, _TranscriptResult]:
         """Build a RawPost from video metadata + optional transcript."""
         title = video["title"]
-        transcript = self._fetch_transcript(video["video_id"], language)
+        transcript_result = self._fetch_transcript(video["video_id"], language)
 
         content_parts = [title]
-        if transcript:
-            content_parts.append(transcript)
+        if transcript_result.text:
+            content_parts.append(transcript_result.text)
         content = "\n\n".join(content_parts).strip()
         if not content:
-            return None
+            return None, transcript_result
 
-        return RawPost(
-            source="youtube",
-            source_id=video["video_id"],
-            author=video.get("channel"),
-            content=content,
-            url=f"https://www.youtube.com/watch?v={video['video_id']}",
-            engagement=video.get("view_count", 0),
-            published_at=video.get("published_at"),
-            metadata_extra={"has_transcript": transcript is not None},
+        return (
+            RawPost(
+                source="youtube",
+                source_id=video["video_id"],
+                author=video.get("channel"),
+                content=content,
+                url=f"https://www.youtube.com/watch?v={video['video_id']}",
+                engagement=video.get("view_count", 0),
+                published_at=video.get("published_at"),
+                metadata_extra={
+                    "has_transcript": transcript_result.text is not None,
+                    "transcript_status": transcript_result.status,
+                    "transcript_error_code": transcript_result.error_code,
+                    "transcript_language": transcript_result.language,
+                    "transcript_language_code": transcript_result.language_code,
+                    "transcript_is_generated": transcript_result.is_generated,
+                },
+            ),
+            transcript_result,
         )

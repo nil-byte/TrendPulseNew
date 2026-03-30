@@ -117,6 +117,27 @@ void main() {
     });
   });
 
+  group('AnalysisSourceAvailability.fromJson', () {
+    test('parses availability payload', () {
+      final json = {
+        'source': 'x',
+        'status': 'unconfigured',
+        'is_available': false,
+        'reason': 'Grok API key is not configured',
+        'reason_code': 'grok_api_key_missing',
+        'checked_at': null,
+      };
+      final availability = AnalysisSourceAvailability.fromJson(json);
+
+      expect(availability.source, 'x');
+      expect(availability.status, 'unconfigured');
+      expect(availability.isAvailable, isFalse);
+      expect(availability.reason, 'Grok API key is not configured');
+      expect(availability.reasonCode, 'grok_api_key_missing');
+      expect(availability.checkedAt, isNull);
+    });
+  });
+
   group('KeyInsight.fromJson', () {
     test('parses valid data', () {
       final json = {

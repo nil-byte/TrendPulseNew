@@ -32,6 +32,19 @@ class AnalysisRepository {
     return AnalysisTask.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<List<AnalysisSourceAvailability>> getSourceAvailability() async {
+    final response = await _apiClient.get(ApiEndpoints.sourceAvailability);
+    final data = response.data as Map<String, dynamic>;
+    final sources = (data['sources'] as List<dynamic>? ?? const []);
+    return sources
+        .map(
+          (item) => AnalysisSourceAvailability.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
   Future<AnalysisReport> getReport(String taskId) async {
     final response = await _apiClient.get(ApiEndpoints.taskReport(taskId));
     return AnalysisReport.fromJson(response.data as Map<String, dynamic>);

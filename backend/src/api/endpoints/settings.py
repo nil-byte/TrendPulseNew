@@ -6,9 +6,11 @@ from fastapi import APIRouter
 
 from src.models.schemas import (
     NotificationSettingsResponse,
+    SourceAvailabilityListResponse,
     UpdateNotificationSettingsRequest,
 )
 from src.services.app_settings_service import AppSettingsService
+from src.services.source_availability_service import source_availability_service
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 app_settings_service = AppSettingsService()
@@ -26,3 +28,11 @@ async def update_notification_settings(
 ) -> NotificationSettingsResponse:
     """Update notification settings and optionally sync subscriptions."""
     return await app_settings_service.update_notification_settings(request)
+
+
+@router.get("/sources", response_model=SourceAvailabilityListResponse)
+async def get_source_availability() -> SourceAvailabilityListResponse:
+    """Return current source availability for new analysis tasks."""
+    return SourceAvailabilityListResponse(
+        sources=source_availability_service.list_availability()
+    )

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.adapters.base import PartialSourceCollectionError, SourceCollectionError
 from src.adapters.reddit_adapter import RedditAdapter
 from src.adapters.x_adapter import XAdapter
 from src.adapters.youtube_adapter import YouTubeAdapter
@@ -25,6 +27,8 @@ class TestRedditAdapter:
         mock_settings.reddit_client_id = "test_id"
         mock_settings.reddit_client_secret = "test_secret"
         mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = ""
+        mock_settings.reddit_ssl_ca_file = ""
 
         fake_submission = SimpleNamespace(
             id="abc123",
@@ -56,6 +60,103 @@ class TestRedditAdapter:
         assert posts[0].engagement == 42
 
     @patch("src.adapters.reddit_adapter.settings")
+    @patch("src.adapters.reddit_adapter.aiohttp.ClientSession")
+    def test_reddit_build_client_session_applies_https_proxy_from_settings(
+        self,
+        mock_client_session: MagicMock,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Configured proxy should stay scoped to the Reddit aiohttp session."""
+        mock_settings.reddit_https_proxy = "http://proxy.internal:3128"
+        mock_settings.reddit_ssl_ca_file = ""
+        mock_settings.reddit_http_timeout_seconds = 45.0
+
+        with patch.dict(os.environ, {}, clear=True):
+            adapter = RedditAdapter()
+            adapter._build_client_session()
+            assert "HTTPS_PROXY" not in os.environ
+            assert "https_proxy" not in os.environ
+            assert "HTTP_PROXY" not in os.environ
+            assert "http_proxy" not in os.environ
+
+        mock_client_session.assert_called_once()
+        kwargs = mock_client_session.call_args.kwargs
+        assert kwargs["proxy"] == "http://proxy.internal:3128"
+        assert kwargs["trust_env"] is False
+
+    @patch("src.adapters.reddit_adapter.settings")
+    async def test_reddit_raises_typed_error_when_ssl_ca_file_is_missing(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """A missing CA file should surface as a typed collection error."""
+        mock_settings.reddit_client_id = "test_id"
+        mock_settings.reddit_client_secret = "test_secret"
+        mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = ""
+        mock_settings.reddit_ssl_ca_file = "/tmp/does-not-exist-ca.pem"
+        mock_settings.reddit_http_timeout_seconds = 45.0
+
+        adapter = RedditAdapter()
+        with pytest.raises(SourceCollectionError) as exc_info:
+            await adapter.collect("test", "en", 10)
+
+        assert exc_info.value.reason_code == "reddit_ssl_error"
+
+    @patch("src.adapters.reddit_adapter.settings")
+    async def test_reddit_raises_typed_error_when_ssl_ca_file_is_invalid(
+        self, mock_settings: MagicMock, tmp_path
+    ) -> None:
+        """A malformed CA file should be rejected before the session is created."""
+        invalid_ca = tmp_path / "invalid-ca.pem"
+        invalid_ca.write_text("not a valid certificate bundle", encoding="utf-8")
+
+        mock_settings.reddit_client_id = "test_id"
+        mock_settings.reddit_client_secret = "test_secret"
+        mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = ""
+        mock_settings.reddit_ssl_ca_file = str(invalid_ca)
+        mock_settings.reddit_http_timeout_seconds = 45.0
+
+        adapter = RedditAdapter()
+        with pytest.raises(SourceCollectionError) as exc_info:
+            await adapter.collect("test", "en", 10)
+
+        assert exc_info.value.reason_code == "reddit_ssl_error"
+
+    @patch("src.adapters.reddit_adapter.settings")
+    def test_reddit_prefers_proxy_error_code_for_proxy_host(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Proxy connectivity failures should not be misclassified as generic network."""
+        mock_settings.reddit_https_proxy = "http://proxy.internal:3128"
+
+        error = RedditAdapter._map_collection_error(
+            RuntimeError(
+                "Cannot connect to host proxy.internal:3128 ssl:default [Connect call failed]"
+            )
+        )
+
+        assert error.reason_code == "reddit_proxy_required"
+
+    @patch("src.adapters.reddit_adapter.settings")
+    async def test_reddit_raises_typed_error_when_proxy_url_is_invalid(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Malformed proxy URLs should be rejected before aiohttp session creation."""
+        mock_settings.reddit_client_id = "test_id"
+        mock_settings.reddit_client_secret = "test_secret"
+        mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = "http://proxy.internal:badport"
+        mock_settings.reddit_ssl_ca_file = ""
+        mock_settings.reddit_http_timeout_seconds = 45.0
+
+        adapter = RedditAdapter()
+        with pytest.raises(SourceCollectionError) as exc_info:
+            await adapter.collect("test", "en", 10)
+
+        assert exc_info.value.reason_code == "reddit_proxy_required"
+
+    @patch("src.adapters.reddit_adapter.settings")
     async def test_reddit_raises_when_credentials_missing(
         self, mock_settings: MagicMock
     ) -> None:
@@ -76,6 +177,8 @@ class TestRedditAdapter:
         mock_settings.reddit_client_id = "test_id"
         mock_settings.reddit_client_secret = "test_secret"
         mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = ""
+        mock_settings.reddit_ssl_ca_file = ""
         mock_asyncpraw.Reddit.side_effect = RuntimeError("auth failed")
 
         adapter = RedditAdapter()
@@ -88,15 +191,18 @@ class TestYouTubeAdapter:
 
     @patch("src.adapters.youtube_adapter.YouTubeTranscriptApi")
     @patch("src.adapters.youtube_adapter.build")
+    @patch("src.adapters.youtube_adapter.asyncio.to_thread")
     @patch("src.adapters.youtube_adapter.settings")
     async def test_youtube_adapter_returns_raw_posts(
         self,
         mock_settings: MagicMock,
+        mock_to_thread: AsyncMock,
         mock_build: MagicMock,
         mock_transcript_api: MagicMock,
     ) -> None:
         """Mock Google API client and transcript API, verify posts with transcript."""
         mock_settings.youtube_api_key = "test_key"
+        mock_to_thread.side_effect = lambda func, *args: func(*args)
 
         search_response = {
             "items": [
@@ -124,9 +230,16 @@ class TestYouTubeAdapter:
         mock_youtube.videos().list().execute.return_value = stats_response
         mock_build.return_value = mock_youtube
 
-        mock_transcript_api.get_transcript.return_value = [
-            {"text": "Hello world this is a transcript"}
+        mock_transcript = MagicMock()
+        mock_transcript.language = "English"
+        mock_transcript.language_code = "en"
+        mock_transcript.is_generated = False
+        mock_transcript.fetch.return_value = [
+            SimpleNamespace(text="Hello world this is a transcript")
         ]
+        mock_transcript_api.return_value.list.return_value.find_transcript.return_value = (
+            mock_transcript
+        )
 
         adapter = YouTubeAdapter()
         posts = await adapter.collect("test", "en", 5)
@@ -137,6 +250,15 @@ class TestYouTubeAdapter:
         assert "Test Video" in posts[0].content
         assert "Hello world" in posts[0].content
         assert posts[0].engagement == 1000
+        assert posts[0].metadata_extra == {
+            "has_transcript": True,
+            "transcript_status": "fetched",
+            "transcript_error_code": None,
+            "transcript_language": "English",
+            "transcript_language_code": "en",
+            "transcript_is_generated": False,
+        }
+        assert mock_to_thread.await_count == 2
 
     @patch("src.adapters.youtube_adapter.settings")
     async def test_youtube_raises_when_api_key_missing(
@@ -176,18 +298,19 @@ class TestXAdapter:
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://configured.example/v1"
         mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
 
-        mock_openai_cls.return_value = MagicMock()
+        mock_openai_cls.return_value = AsyncMock()
         adapter = XAdapter()
 
         with patch.object(adapter, "_query_shard", AsyncMock(return_value=[])):
             posts = await adapter.collect("test", "en", 3)
 
         assert posts == []
-        mock_openai_cls.assert_called_once_with(
-            api_key=mock_settings.grok_api_key,
-            base_url=mock_settings.grok_base_url,
-        )
+        kwargs = mock_openai_cls.call_args.kwargs
+        assert kwargs["api_key"] == mock_settings.grok_api_key
+        assert kwargs["base_url"] == mock_settings.grok_base_url
+        assert kwargs["timeout"] == mock_settings.grok_http_timeout_seconds
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
@@ -198,15 +321,16 @@ class TestXAdapter:
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://compatible.example/v1"
+        mock_settings.grok_http_timeout_seconds = 45.0
 
         adapter = XAdapter()
         client = adapter._build_grok_client()
 
         assert client is mock_openai_cls.return_value
-        mock_openai_cls.assert_called_once_with(
-            api_key=mock_settings.grok_api_key,
-            base_url=mock_settings.grok_base_url,
-        )
+        kwargs = mock_openai_cls.call_args.kwargs
+        assert kwargs["api_key"] == mock_settings.grok_api_key
+        assert kwargs["base_url"] == mock_settings.grok_base_url
+        assert kwargs["timeout"] == mock_settings.grok_http_timeout_seconds
 
     @patch("src.adapters.x_adapter.settings")
     def test_x_resolve_grok_model_returns_configured_model(
@@ -246,10 +370,137 @@ class TestXAdapter:
 
         assert posts == []
         mock_client.chat.completions.create.assert_awaited_once()
-        assert (
-            mock_client.chat.completions.create.await_args.kwargs["model"]
-            == mock_settings.grok_model
+        kwargs = mock_client.chat.completions.create.await_args.kwargs
+        assert kwargs["model"] == mock_settings.grok_model
+        assert kwargs.get("stream") is False
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_rejects_empty_choices_json_string(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Empty `choices` in a JSON string body must not be treated as success."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value='{"choices":[]}')
+
+        adapter = XAdapter()
+        with pytest.raises(SourceCollectionError) as exc_info:
+            await adapter._query_shard(
+                mock_client,
+                keyword="test",
+                language="en",
+                dimension_name="The Pulse",
+                dimension_focus="Latest original posts",
+                shard_limit=1,
+            )
+
+        assert exc_info.value.reason_code == "grok_provider_incompatible"
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_accepts_json_string_completion(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """If the client returns a JSON string, parse it like a raw OpenAI body."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        payload = json.dumps({"choices": [{"message": {"content": "[]"}}]})
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=payload)
+
+        adapter = XAdapter()
+        posts = await adapter._query_shard(
+            mock_client,
+            keyword="test",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=1,
         )
+
+        assert posts == []
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_accepts_openai_shaped_dict_response(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """New API / relays may deserialize to plain dict; shape must still work."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value={"choices": [{"message": {"content": "[]"}}]}
+        )
+
+        adapter = XAdapter()
+        posts = await adapter._query_shard(
+            mock_client,
+            keyword="test",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=1,
+        )
+
+        assert posts == []
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_accepts_wrapped_data_envelope(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Some gateways wrap the OpenAI body under `data` or `result`."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        body = {"choices": [{"message": {"content": "[]"}}]}
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value={"data": body}
+        )
+
+        adapter = XAdapter()
+        posts = await adapter._query_shard(
+            mock_client,
+            keyword="test",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=1,
+        )
+
+        assert posts == []
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_surfaces_provider_error_field(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """HTTP 200 with an `error` object should become a typed provider error."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value={
+                "error": {"message": "Argument not supported: stream_options", "type": "invalid"}
+            }
+        )
+
+        adapter = XAdapter()
+        with pytest.raises(SourceCollectionError) as exc_info:
+            await adapter._query_shard(
+                mock_client,
+                keyword="test",
+                language="en",
+                dimension_name="The Pulse",
+                dimension_focus="Latest original posts",
+                shard_limit=1,
+            )
+
+        assert exc_info.value.reason_code == "grok_provider_error"
+        assert "stream_options" in exc_info.value.message
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
@@ -261,6 +512,7 @@ class TestXAdapter:
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
 
         tweets = [
             {
@@ -302,6 +554,140 @@ class TestXAdapter:
         assert len(ids) == len(set(ids))
 
     @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    async def test_x_collect_rounds_up_shard_limit_to_cover_requested_total(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Shard limit should round up so total shard budget can satisfy limit."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://test.api/v1"
+        mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
+
+        mock_client = AsyncMock()
+        mock_openai_cls.return_value = mock_client
+
+        adapter = XAdapter()
+        query_shard = AsyncMock(return_value=[])
+        with patch.object(adapter, "_query_shard", query_shard):
+            await adapter.collect("test", "en", 10)
+
+        shard_limits = [call.args[-1] for call in query_shard.await_args_list]
+        assert shard_limits == [4, 4, 4]
+
+    @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    async def test_x_collect_does_not_cap_large_requests_at_forty_five_items(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Large requests should not be truncated by a hidden 15-per-shard ceiling."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://test.api/v1"
+        mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
+
+        mock_client = AsyncMock()
+        mock_openai_cls.return_value = mock_client
+
+        adapter = XAdapter()
+        query_shard = AsyncMock(return_value=[])
+        with patch.object(adapter, "_query_shard", query_shard):
+            await adapter.collect("test", "en", 100)
+
+        shard_limits = [call.args[-1] for call in query_shard.await_args_list]
+        assert shard_limits == [34, 34, 34]
+
+    @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    async def test_x_collect_closes_client(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """The Grok client should always be closed after collection."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://test.api/v1"
+        mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
+
+        mock_client = AsyncMock()
+        mock_openai_cls.return_value = mock_client
+
+        adapter = XAdapter()
+        with patch.object(adapter, "_query_shard", AsyncMock(return_value=[])):
+            await adapter.collect("test", "en", 3)
+
+        mock_client.close.assert_awaited_once()
+
+    @patch("src.adapters.x_adapter.settings")
+    @patch("src.adapters.x_adapter.AsyncOpenAI")
+    async def test_x_collect_raises_partial_error_when_a_shard_fails(
+        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Partial shard failures should be surfaced instead of silently marked successful."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_api_key = "test_key"
+        mock_settings.grok_base_url = "https://test.api/v1"
+        mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
+
+        mock_client = AsyncMock()
+        mock_openai_cls.return_value = mock_client
+
+        adapter = XAdapter()
+        with patch.object(
+            adapter,
+            "_query_shard",
+            AsyncMock(
+                side_effect=[
+                    [
+                        adapter._parse_response(
+                            json.dumps(
+                                [
+                                    {
+                                        "id": "t1",
+                                        "username": "user1",
+                                        "content": "Great product launch",
+                                        "perspective": "Bullish",
+                                        "created_at": "2024-01-01T00:00:00Z",
+                                        "engagement": 100,
+                                        "url": "https://x.com/user1/status/t1",
+                                    }
+                                ]
+                            ),
+                            "The Pulse",
+                        )[0]
+                    ],
+                    RuntimeError("shard down"),
+                    [
+                        adapter._parse_response(
+                            json.dumps(
+                                [
+                                    {
+                                        "id": "t2",
+                                        "username": "user2",
+                                        "content": "Need more evidence",
+                                        "perspective": "Skeptical",
+                                        "created_at": "2024-01-01T01:00:00Z",
+                                        "engagement": 50,
+                                        "url": "https://x.com/user2/status/t2",
+                                    }
+                                ]
+                            ),
+                            "The Noise",
+                        )[0]
+                    ],
+                ]
+            ),
+        ):
+            with pytest.raises(PartialSourceCollectionError) as exc_info:
+                await adapter.collect("test", "en", 10)
+
+        assert len(exc_info.value.partial_posts) == 2
+        assert exc_info.value.reason_code == "grok_collection_failed"
+
+    @patch("src.adapters.x_adapter.settings")
     async def test_x_raises_when_api_key_missing(
         self, mock_settings: MagicMock
     ) -> None:
@@ -323,6 +709,7 @@ class TestXAdapter:
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
+        mock_settings.grok_http_timeout_seconds = 45.0
 
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(

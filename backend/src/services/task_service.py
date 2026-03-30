@@ -8,6 +8,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from src.adapters.base import SourceFailure
 from src.models.database import get_db
 from src.models.schemas import (
     AnalysisReportResponse,
@@ -25,6 +26,7 @@ from src.services.analyzer_service import (
     build_mermaid_mindmap,
 )
 from src.services.collector_service import CollectionResult, CollectorService
+from src.services.source_availability_service import source_availability_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,10 @@ LEFT JOIN (
 ) AS post_counts
     ON post_counts.task_id = tasks.id
 """
+
+
+class NoAvailableSourcesError(RuntimeError):
+    """Raised when a task request contains no runnable sources."""
 
 
 def _now_iso() -> str:
@@ -121,6 +127,41 @@ class TaskService:
         Returns:
             The newly created task.
         """
+        availability = source_availability_service.list_availability(request.sources)
+        effective_sources = [item.source for item in availability if item.is_available]
+        unavailable_sources = {
+            item.source: SourceFailure(
+                reason_code=item.reason_code or "source_unavailable",
+                message=item.reason or "Source is unavailable",
+            )
+            for item in availability
+            if not item.is_available
+        }
+        degraded_sources = {
+            item.source: f"{item.reason_code}: {item.reason}"
+            for item in availability
+            if item.status == "degraded" and item.reason and item.reason_code
+        }
+        logger.info(
+            "Task source resolution keyword=%r requested=%s effective=%s unavailable=%s degraded=%s max_items_per_source=%d",
+            request.keyword,
+            request.sources,
+            effective_sources,
+            {
+                source: failure.reason_code
+                for source, failure in sorted(unavailable_sources.items())
+            },
+            degraded_sources,
+            request.max_items,
+        )
+        if not effective_sources:
+            source_summary = self._format_source_failures(unavailable_sources)
+            raise NoAvailableSourcesError(
+                "No requested sources are currently available. "
+                f"Unavailable sources: {source_summary}."
+            )
+
+        effective_request = request.model_copy(update={"sources": effective_sources})
         task_id = str(uuid.uuid4())
         now = _now_iso()
 
@@ -157,7 +198,13 @@ class TaskService:
         finally:
             await db.close()
 
-        asyncio.create_task(self._process_task(task_id, request))
+        asyncio.create_task(
+            self._process_task(
+                task_id,
+                effective_request,
+                initial_source_errors=unavailable_sources,
+            )
+        )
 
         return TaskResponse(
             id=task_id,
@@ -338,12 +385,19 @@ class TaskService:
     # Background processing
     # ------------------------------------------------------------------
 
-    async def _process_task(self, task_id: str, request: CreateTaskRequest) -> None:
+    async def _process_task(
+        self,
+        task_id: str,
+        request: CreateTaskRequest,
+        *,
+        initial_source_errors: dict[str, SourceFailure] | None = None,
+    ) -> None:
         """Background task processing: collect -> analyze -> save results.
 
         Args:
             task_id: UUID of the task being processed.
-            request: Original creation request with parameters.
+            request: Runnable creation request with currently available parameters.
+            initial_source_errors: Source failures known before collection begins.
         """
         try:
             await self._update_status(task_id, "collecting")
@@ -354,9 +408,15 @@ class TaskService:
                 limit=request.max_items,
                 sources=request.sources,
             )
+            source_errors = dict(initial_source_errors or {})
+            source_errors.update(collection_result.source_errors)
+            effective_result = CollectionResult(
+                posts=collection_result.posts,
+                source_errors=source_errors,
+            )
 
             if not collection_result.posts:
-                error_message = self._build_empty_collection_error(collection_result)
+                error_message = self._build_empty_collection_error(effective_result)
                 await self._update_status(
                     task_id,
                     _FAILED_STATUS,
@@ -376,7 +436,7 @@ class TaskService:
             )
 
             if not result.has_analyzable_content():
-                error_message = self._build_empty_analysis_error(collection_result)
+                error_message = self._build_empty_analysis_error(effective_result)
                 await self._update_status(
                     task_id,
                     _FAILED_STATUS,
@@ -387,8 +447,8 @@ class TaskService:
 
             await self._save_analysis_report(task_id, result)
 
-            if collection_result.source_errors:
-                error_message = self._build_partial_error(collection_result)
+            if effective_result.source_errors:
+                error_message = self._build_partial_error(effective_result)
                 await self._update_status(
                     task_id,
                     _PARTIAL_STATUS,
@@ -560,10 +620,11 @@ class TaskService:
             await db.close()
 
     @staticmethod
-    def _format_source_failures(source_errors: dict[str, str]) -> str:
+    def _format_source_failures(source_errors: dict[str, SourceFailure]) -> str:
         """Render source failures into a stable, readable summary."""
         return "; ".join(
-            f"{source} ({message})" for source, message in sorted(source_errors.items())
+            f"{source} ({failure.message})"
+            for source, failure in sorted(source_errors.items())
         )
 
     def _build_empty_collection_error(self, result: CollectionResult) -> str:

@@ -21,12 +21,13 @@ class PostCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tpColors = theme.trendPulseColors;
     final l10n = AppLocalizations.of(context)!;
-    final hasSourceUrl = post.url != null;
+    final sourceUri = _parseLaunchableUrl(post.url);
+    final hasSourceUrl = sourceUri != null;
 
     return Semantics(
       link: hasSourceUrl,
       child: PressFeedback(
-        onTap: hasSourceUrl ? () => _openUrl(post.url!) : null,
+        onTap: hasSourceUrl ? () => _openUrl(context, l10n, sourceUri) : null,
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(
@@ -180,11 +181,39 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Future<void> _openUrl(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _openUrl(
+    BuildContext context,
+    AppLocalizations l10n,
+    Uri uri,
+  ) async {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        _showOpenLinkFailed(context, l10n);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showOpenLinkFailed(context, l10n);
+      }
     }
+  }
+
+  Uri? _parseLaunchableUrl(String? rawUrl) {
+    final normalized = rawUrl?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || !uri.hasScheme) {
+      return null;
+    }
+    return uri.scheme == 'http' || uri.scheme == 'https' ? uri : null;
+  }
+
+  void _showOpenLinkFailed(BuildContext context, AppLocalizations l10n) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.removeCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(l10n.openLinkFailed)));
   }
 
   IconData _sourceIcon(String source) {

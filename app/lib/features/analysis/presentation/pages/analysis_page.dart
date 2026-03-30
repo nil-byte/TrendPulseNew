@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/animations/staggered_list.dart';
+import 'package:trendpulse/core/network/api_exception.dart';
 import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_motion.dart';
@@ -10,6 +12,7 @@ import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -21,10 +24,15 @@ class AnalysisPage extends ConsumerStatefulWidget {
 }
 
 class _AnalysisPageState extends ConsumerState<AnalysisPage> {
+  static const _noAvailableSourcesDetail =
+      'no requested sources are currently available';
+  static const _defaultSources = {'reddit', 'youtube', 'x'};
   final _keywordController = TextEditingController();
   final _searchFocusNode = FocusNode();
   bool _configExpanded = false;
   bool _isSearching = false;
+  bool _sourcesHydrated = false;
+  bool _hasCustomSourceSelection = false;
 
   String _language = 'en';
   Set<String> _sources = {'reddit', 'youtube', 'x'};
@@ -41,9 +49,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     final l10n = AppLocalizations.of(context)!;
     final keyword = _keywordController.text.trim();
     if (keyword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.analysisKeywordRequiredMessage)),
-      );
+      _showMessage(l10n.analysisKeywordRequiredMessage);
       return;
     }
     if (_isSearching) return;
@@ -51,26 +57,96 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     setState(() => _isSearching = true);
 
     try {
+      var effectiveSources = Set<String>.from(_sources);
+      var sourceAvailabilityRefreshFailed = false;
+      try {
+        final sourceAvailability = await ref.refresh(
+          sourceAvailabilityProvider.future,
+        );
+        final availableSources = sourceAvailability
+            .where((source) => source.isAvailable)
+            .map((source) => source.source)
+            .toSet();
+        effectiveSources = _resolveEffectiveSources(
+          currentSelection: effectiveSources,
+          availableSources: availableSources,
+          followAvailableSources: !_hasCustomSourceSelection,
+        );
+        if (!setEquals(effectiveSources, _sources) && mounted) {
+          setState(() => _sources = effectiveSources);
+        }
+      } catch (_) {
+        sourceAvailabilityRefreshFailed = true;
+        // Backend task creation performs the authoritative availability check.
+      }
+
+      if (effectiveSources.isEmpty &&
+          sourceAvailabilityRefreshFailed &&
+          !_hasCustomSourceSelection) {
+        effectiveSources = Set<String>.from(_defaultSources);
+      }
+
+      if (effectiveSources.isEmpty) {
+        if (mounted) {
+          _showMessage(l10n.analysisNoAvailableSourcesMessage);
+        }
+        return;
+      }
+
       final repo = ref.read(analysisRepositoryProvider);
       final task = await repo.createTask(
         keyword: keyword,
         language: _language,
         maxItems: _maxItems.round(),
-        sources: _sources.toList(),
+        sources: effectiveSources.toList(),
       );
 
       if (mounted) {
         context.push('/detail/${task.id}');
       }
-    } catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.analysisCreateTaskError)),
+        _showMessage(
+          _isNoAvailableSourcesError(e)
+              ? l10n.analysisNoAvailableSourcesMessage
+              : l10n.analysisCreateTaskError,
         );
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage(l10n.analysisCreateTaskError);
       }
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
+  }
+
+  void _synchronizeSources(List<AnalysisSourceAvailability> availability) {
+    final availableSources = availability
+        .where((source) => source.isAvailable)
+        .map((source) => source.source)
+        .toSet();
+    final nextSources = _sourcesHydrated
+        ? _resolveEffectiveSources(
+            currentSelection: _sources,
+            availableSources: availableSources,
+            followAvailableSources: !_hasCustomSourceSelection,
+          )
+        : _hasCustomSourceSelection
+        ? _resolveEffectiveSources(
+            currentSelection: _sources,
+            availableSources: availableSources,
+            followAvailableSources: false,
+          )
+        : availableSources;
+    _sourcesHydrated = true;
+    if (setEquals(nextSources, _sources)) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() => _sources = nextSources);
   }
 
   void _fillSearchBar(String keyword) {
@@ -81,10 +157,48 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     );
   }
 
+  bool _isNoAvailableSourcesError(ApiException error) {
+    if (error.statusCode != 422) {
+      return false;
+    }
+    final detail = error.debugMessage?.toLowerCase().trim();
+    return detail?.contains(_noAvailableSourcesDetail) ?? false;
+  }
+
+  Set<String> _resolveEffectiveSources({
+    required Set<String> currentSelection,
+    required Set<String> availableSources,
+    required bool followAvailableSources,
+  }) {
+    if (followAvailableSources) {
+      return Set<String>.from(availableSources);
+    }
+    return currentSelection.intersection(availableSources);
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.removeCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final sourceAvailabilityAsync = ref.watch(sourceAvailabilityProvider);
+    ref.listen<AsyncValue<List<AnalysisSourceAvailability>>>(
+      sourceAvailabilityProvider,
+      (_, next) {
+        final availability = next.valueOrNull;
+        if (availability != null) {
+          _synchronizeSources(availability);
+        }
+      },
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -176,11 +290,15 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                               expanded: _configExpanded,
                               language: _language,
                               sources: _sources,
+                              sourceAvailability:
+                                  sourceAvailabilityAsync.valueOrNull ?? const [],
                               maxItems: _maxItems,
                               onLanguageChanged: (v) =>
                                   setState(() => _language = v),
-                              onSourcesChanged: (v) =>
-                                  setState(() => _sources = v),
+                              onSourcesChanged: (v) => setState(() {
+                                _sources = v;
+                                _hasCustomSourceSelection = true;
+                              }),
                               onMaxItemsChanged: (v) =>
                                   setState(() => _maxItems = v),
                             ),
@@ -333,6 +451,7 @@ class _ConfigPanel extends StatelessWidget {
   final bool expanded;
   final String language;
   final Set<String> sources;
+  final List<AnalysisSourceAvailability> sourceAvailability;
   final double maxItems;
   final ValueChanged<String> onLanguageChanged;
   final ValueChanged<Set<String>> onSourcesChanged;
@@ -342,6 +461,7 @@ class _ConfigPanel extends StatelessWidget {
     required this.expanded,
     required this.language,
     required this.sources,
+    required this.sourceAvailability,
     required this.maxItems,
     required this.onLanguageChanged,
     required this.onSourcesChanged,
@@ -362,6 +482,9 @@ class _ConfigPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final colors = theme.colorScheme;
+    final availabilityBySource = {
+      for (final item in sourceAvailability) item.source: item,
+    };
 
     return Container(
       width: double.infinity,
@@ -418,30 +541,71 @@ class _ConfigPanel extends StatelessWidget {
                   label: l10n.platformReddit,
                   color: tpColors.reddit,
                   selected: sources.contains('reddit'),
+                  status: availabilityBySource['reddit']?.status ?? 'available',
+                  reason: availabilityBySource['reddit']?.reason,
+                  enabled: availabilityBySource['reddit']?.isAvailable ?? true,
                   onSelected: (v) => _toggleSource('reddit', v),
                 ),
                 _SourceChip(
                   label: l10n.platformYouTube,
                   color: tpColors.youtube,
                   selected: sources.contains('youtube'),
+                  status: availabilityBySource['youtube']?.status ?? 'available',
+                  reason: availabilityBySource['youtube']?.reason,
+                  enabled: availabilityBySource['youtube']?.isAvailable ?? true,
                   onSelected: (v) => _toggleSource('youtube', v),
                 ),
                 _SourceChip(
                   label: l10n.platformX,
                   color: tpColors.xPlatform,
                   selected: sources.contains('x'),
+                  status: availabilityBySource['x']?.status ?? 'available',
+                  reason: availabilityBySource['x']?.reason,
+                  enabled: availabilityBySource['x']?.isAvailable ?? true,
                   onSelected: (v) => _toggleSource('x', v),
                 ),
               ],
             );
           }),
+          if (sourceAvailability.any((item) => item.reason?.trim().isNotEmpty ?? false))
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.analysisSourceStatusHint,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.72),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  ...sourceAvailability
+                      .where((item) => item.reason?.trim().isNotEmpty ?? false)
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          child: Text(
+                            '${_sourceLabel(item.source, l10n)} · ${_statusLabel(item, l10n)} · ${item.reason}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: item.isAvailable
+                                  ? colors.onSurface.withValues(alpha: 0.72)
+                                  : colors.error,
+                            ),
+                          ),
+                        ),
+                      ),
+                ],
+              ),
+            ),
           const SizedBox(height: AppSpacing.lg),
 
           // Max Items
           Row(
             children: [
               Text(
-                l10n.maxItems.toUpperCase(),
+                l10n.analysisMaxItemsPerSource.toUpperCase(),
                 style: theme.textTheme.labelSmall,
               ),
               const Spacer(),
@@ -453,6 +617,14 @@ class _ConfigPanel extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.analysisPerSourceLimitHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.72),
+              fontStyle: FontStyle.italic,
+            ),
           ),
           Slider(
             value: maxItems,
@@ -475,34 +647,83 @@ class _ConfigPanel extends StatelessWidget {
     }
     onSourcesChanged(next);
   }
+
+  String _sourceLabel(String source, AppLocalizations l10n) {
+    switch (source) {
+      case 'reddit':
+        return l10n.platformReddit;
+      case 'youtube':
+        return l10n.platformYouTube;
+      case 'x':
+        return l10n.platformX;
+      default:
+        return source;
+    }
+  }
+
+  String _statusLabel(
+    AnalysisSourceAvailability availability,
+    AppLocalizations l10n,
+  ) {
+    switch (availability.status) {
+      case 'degraded':
+        return l10n.analysisSourceDegradedLabel;
+      case 'unconfigured':
+        return l10n.analysisSourceUnavailableLabel;
+      default:
+        return availability.status;
+    }
+  }
 }
 
 class _SourceChip extends StatelessWidget {
   final String label;
   final Color color;
   final bool selected;
-  final ValueChanged<bool> onSelected;
+  final String status;
+  final bool enabled;
+  final String? reason;
+  final ValueChanged<bool>? onSelected;
 
   const _SourceChip({
     required this.label,
     required this.color,
     required this.selected,
+    required this.status,
+    required this.enabled,
+    this.reason,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FilterChip(
-      label: Text(label),
+    final tooltipMessage = reason?.trim();
+    final chip = FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (status == 'degraded') ...[
+            Icon(
+              Icons.warning_amber_rounded,
+              size: 16,
+              color: selected
+                  ? AppColors.onBrandFill(color)
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.72),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          Text(label),
+        ],
+      ),
       selected: selected,
-      onSelected: onSelected,
+      onSelected: enabled ? onSelected : null,
       showCheckmark: false,
       selectedColor: color,
       labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
         color: selected
             ? AppColors.onBrandFill(color)
-            : theme.colorScheme.onSurface,
+            : theme.colorScheme.onSurface.withValues(alpha: enabled ? 1.0 : 0.48),
         fontWeight: FontWeight.w700,
         letterSpacing: 0.4,
       ),
@@ -514,6 +735,10 @@ class _SourceChip extends StatelessWidget {
         width: selected ? 1.2 : 1.0,
       ),
     );
+    if (tooltipMessage == null || tooltipMessage.isEmpty) {
+      return chip;
+    }
+    return Tooltip(message: tooltipMessage, child: chip);
   }
 }
 

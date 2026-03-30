@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+
+# Load settings before any import that pulls in asyncpraw/asyncprawcore: those
+# libraries read ``PRAWCORE_TIMEOUT`` from os.environ once at import time.
+from src.config.settings import settings
+
+os.environ["PRAWCORE_TIMEOUT"] = str(float(settings.reddit_http_timeout_seconds))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.router import api_router
-from src.config.settings import settings
 from src.models.database import init_db
 from src.services.scheduler_service import SchedulerService
 

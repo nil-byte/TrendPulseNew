@@ -13,6 +13,7 @@ from src.models.schemas import (
     UpdateSubscriptionRequest,
 )
 from src.services.subscription_service import SubscriptionService
+from src.services.task_service import NoAvailableSourcesError
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 subscription_service = SubscriptionService()
@@ -77,7 +78,10 @@ async def mark_subscription_alerts_read(sub_id: str) -> None:
 @router.post("/{sub_id}/tasks", response_model=TaskResponse, status_code=201)
 async def run_subscription_now(sub_id: str) -> TaskResponse:
     """Create a task immediately from an existing subscription."""
-    task = await subscription_service.run_subscription_now(sub_id)
+    try:
+        task = await subscription_service.run_subscription_now(sub_id)
+    except NoAvailableSourcesError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Subscription not found")
     return task

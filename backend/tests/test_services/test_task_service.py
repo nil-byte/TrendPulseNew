@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from collections.abc import Iterator
@@ -11,8 +12,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from src.adapters.base import SourceFailure
 from src.models.database import get_db
 from src.models.schemas import CreateTaskRequest, KeyInsight, RawPost
+from src.services.source_availability_service import source_availability_service
 from src.services.analyzer_service import AnalysisResult
 from src.services.task_service import TaskService
 
@@ -46,12 +49,22 @@ def _make_analysis_result(sentiment_score: float = 72.5) -> AnalysisResult:
     )
 
 
+def _make_failure(source: str, message: str) -> dict[str, SourceFailure]:
+    """Create a structured source failure map for TaskService tests."""
+    return {
+        source: SourceFailure(
+            reason_code=f"{source}_test_failure",
+            message=message,
+        )
+    }
+
+
 @dataclass(slots=True)
 class FakeCollectionResult:
     """Minimal collector result test double for TaskService orchestration."""
 
     posts: list[RawPost]
-    source_errors: dict[str, str]
+    source_errors: dict[str, SourceFailure]
 
     def __iter__(self) -> Iterator[RawPost]:
         """Support legacy list-style iteration during red phase."""
@@ -158,6 +171,18 @@ async def _get_task_state(task_id: str) -> tuple[str, str | None]:
         await db.close()
 
 
+async def _get_task_sources(task_id: str) -> list[str]:
+    """Return the stored source list for a task."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT sources FROM tasks WHERE id = ?", (task_id,))
+        row = await cursor.fetchone()
+        assert row is not None
+        return json.loads(row["sources"])
+    finally:
+        await db.close()
+
+
 async def _count_raw_posts(task_id: str) -> int:
     """Count raw posts saved for a task."""
     db = await get_db()
@@ -209,6 +234,83 @@ async def _get_alert_rows(task_id: str) -> list[object]:
 class TestTaskServiceProcessTask:
     """Regression tests for task completion semantics."""
 
+    async def test_create_task_preserves_requested_sources_but_processes_only_runnable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Task rows should keep the requested sources while background work uses runnable ones."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr("src.config.settings.settings.youtube_api_key", "youtube-key")
+        monkeypatch.setattr("src.config.settings.settings.grok_api_key", "")
+
+        request = CreateTaskRequest(
+            keyword="openai",
+            language="zh",
+            max_items=20,
+            sources=["youtube", "x"],
+        )
+        service = TaskService()
+        service._process_task = AsyncMock()  # type: ignore[method-assign]
+
+        response = await service.create_task(request)
+        await asyncio.sleep(0)
+
+        assert response.sources == ["youtube", "x"]
+        assert await _get_task_sources(response.id) == ["youtube", "x"]
+        service._process_task.assert_awaited_once()
+        await_args = service._process_task.await_args
+        assert await_args.args[1].sources == ["youtube"]
+        initial_source_errors = await_args.kwargs["initial_source_errors"]
+        assert initial_source_errors["x"].reason_code == "grok_api_key_missing"
+
+    async def test_process_task_marks_partial_when_sources_were_unavailable_before_collection(
+        self,
+    ) -> None:
+        """Known-unavailable sources from task creation must survive to final status."""
+        stored_request = CreateTaskRequest(
+            keyword="openai",
+            language="zh",
+            sources=["youtube", "x"],
+        )
+        runnable_request = stored_request.model_copy(update={"sources": ["youtube"]})
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, stored_request)
+
+        collected_posts = [
+            _make_post(
+                "youtube",
+                "A real transcript-backed post with enough text to analyze",
+            )
+        ]
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            return_value=FakeCollectionResult(posts=collected_posts, source_errors={})
+        )
+        service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
+            return_value=_make_analysis_result()
+        )
+
+        await service._process_task(
+            task_id,
+            runnable_request,
+            initial_source_errors={
+                "x": SourceFailure(
+                    reason_code="grok_api_key_missing",
+                    message="Grok API key is not configured",
+                )
+            },
+        )
+
+        status, error_message = await _get_task_state(task_id)
+        assert status == "partial"
+        assert (
+            error_message
+            == "Completed with source failures: x (Grok API key is not configured)."
+        )
+        assert await _get_task_sources(task_id) == ["youtube", "x"]
+        assert await _count_raw_posts(task_id) == 1
+        assert await _count_reports(task_id) == 1
+
     async def test_process_task_fails_when_collection_returns_no_posts(self) -> None:
         """No collected posts must fail instead of reporting success."""
         request = CreateTaskRequest(keyword="openai", sources=["reddit"])
@@ -219,7 +321,7 @@ class TestTaskServiceProcessTask:
         service._collector.collect = AsyncMock(  # type: ignore[method-assign]
             return_value=FakeCollectionResult(
                 posts=[],
-                source_errors={"reddit": "API down"},
+                source_errors=_make_failure("reddit", "API down"),
             )
         )
         service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
@@ -259,7 +361,7 @@ class TestTaskServiceProcessTask:
         service._collector.collect = AsyncMock(  # type: ignore[method-assign]
             return_value=FakeCollectionResult(
                 posts=collected_posts,
-                source_errors={"youtube": "API down"},
+                source_errors=_make_failure("youtube", "API down"),
             )
         )
         service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
@@ -313,13 +415,13 @@ class TestTaskServiceProcessTask:
         ("source_errors", "expected_status"),
         [
             ({}, "completed"),
-            ({"youtube": "API down"}, "partial"),
+            (_make_failure("youtube", "API down"), "partial"),
         ],
         ids=["completed", "partial"],
     )
     async def test_process_task_creates_unread_alert_for_low_score_subscription_task(
         self,
-        source_errors: dict[str, str],
+        source_errors: dict[str, SourceFailure],
         expected_status: str,
     ) -> None:
         """Low-score subscription runs must create a new unread alert."""

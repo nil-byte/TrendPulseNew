@@ -17,12 +17,21 @@ final taskDetailProvider =
 class TaskDetailNotifier
     extends AutoDisposeFamilyAsyncNotifier<AnalysisTask, String> {
   Timer? _pollTimer;
+  bool _disposed = false;
+  int _pollGeneration = 0;
 
   @override
   Future<AnalysisTask> build(String arg) async {
-    ref.onDispose(() => _pollTimer?.cancel());
+    ref.onDispose(() {
+      _disposed = true;
+      _pollGeneration++;
+      _pollTimer?.cancel();
+    });
     final repo = ref.read(analysisRepositoryProvider);
     final task = await repo.getTaskStatus(arg);
+    if (_disposed) {
+      return task;
+    }
     if (task.isInProgress) {
       _startPolling(arg);
     }
@@ -31,27 +40,46 @@ class TaskDetailNotifier
 
   void _startPolling(String taskId) {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    final generation = ++_pollGeneration;
+    _scheduleNextPoll(taskId, generation);
+  }
+
+  void _scheduleNextPoll(String taskId, int generation) {
+    _pollTimer = Timer(const Duration(seconds: 3), () async {
+      _pollTimer = null;
+      if (_disposed || generation != _pollGeneration) {
+        return;
+      }
       try {
         final repo = ref.read(analysisRepositoryProvider);
         final task = await repo.getTaskStatus(taskId);
+        if (_disposed || generation != _pollGeneration) {
+          return;
+        }
         state = AsyncData(task);
         if (!task.isInProgress) {
-          _pollTimer?.cancel();
+          return;
         }
+        _scheduleNextPoll(taskId, generation);
       } catch (e, st) {
+        if (_disposed || generation != _pollGeneration) {
+          return;
+        }
         state = AsyncError(e, st);
-        _pollTimer?.cancel();
       }
     });
   }
 
   Future<void> refresh() async {
     _pollTimer?.cancel();
+    _pollGeneration++;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(analysisRepositoryProvider);
       final task = await repo.getTaskStatus(arg);
+      if (_disposed) {
+        return task;
+      }
       if (task.isInProgress) {
         _startPolling(arg);
       }

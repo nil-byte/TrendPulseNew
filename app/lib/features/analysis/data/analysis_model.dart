@@ -55,6 +55,38 @@ class AnalysisTask {
   }
 }
 
+class AnalysisSourceAvailability {
+  final String source;
+  final String status;
+  final bool isAvailable;
+  final String? reason;
+  final String? reasonCode;
+  final String? checkedAt;
+
+  const AnalysisSourceAvailability({
+    required this.source,
+    required this.status,
+    required this.isAvailable,
+    this.reason,
+    this.reasonCode,
+    this.checkedAt,
+  });
+
+  bool get isDegraded => status == 'degraded';
+  bool get isUnconfigured => status == 'unconfigured';
+
+  factory AnalysisSourceAvailability.fromJson(Map<String, dynamic> json) {
+    return AnalysisSourceAvailability(
+      source: json['source'] as String,
+      status: (json['status'] as String?) ?? 'available',
+      isAvailable: json['is_available'] as bool? ?? false,
+      reason: json['reason'] as String?,
+      reasonCode: json['reason_code'] as String?,
+      checkedAt: json['checked_at'] as String?,
+    );
+  }
+}
+
 class KeyInsight {
   final String text;
   final String sentiment;

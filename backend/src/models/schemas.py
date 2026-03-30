@@ -34,12 +34,32 @@ _VALID_SOURCES = {"reddit", "youtube", "x"}
 _VALID_LANGUAGES = {"en", "zh"}
 
 
+def _validate_sources_list(v: list[str]) -> list[str]:
+    """Validate source names and reject duplicates."""
+    if not v:
+        raise ValueError("at least one source is required")
+    invalid = set(v) - _VALID_SOURCES
+    if invalid:
+        raise ValueError(
+            f"invalid sources: {sorted(invalid)}; "
+            f"allowed: {sorted(_VALID_SOURCES)}"
+        )
+    if len(set(v)) != len(v):
+        raise ValueError("duplicate sources are not allowed")
+    return v
+
+
 class CreateTaskRequest(BaseModel):
     """Request body for creating a new analysis task."""
 
     keyword: str = Field(..., min_length=1, max_length=200)
     language: str = Field(default="en")
-    max_items: int = Field(default=50, ge=1, le=100)
+    max_items: int = Field(
+        default=50,
+        ge=1,
+        le=100,
+        description="Maximum number of items to collect per selected source.",
+    )
     sources: list[str] = Field(default=["reddit", "youtube", "x"])
 
     @field_validator("keyword")
@@ -59,15 +79,7 @@ class CreateTaskRequest(BaseModel):
     @field_validator("sources")
     @classmethod
     def sources_valid(cls, v: list[str]) -> list[str]:
-        if not v:
-            raise ValueError("at least one source is required")
-        invalid = set(v) - _VALID_SOURCES
-        if invalid:
-            raise ValueError(
-                f"invalid sources: {sorted(invalid)}; "
-                f"allowed: {sorted(_VALID_SOURCES)}"
-            )
-        return v
+        return _validate_sources_list(v)
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +158,23 @@ class PostListResponse(BaseModel):
     total: int
 
 
+class SourceAvailability(BaseModel):
+    """Availability metadata for a single collection source."""
+
+    source: str
+    status: str
+    is_available: bool
+    reason: str | None = None
+    reason_code: str | None = None
+    checked_at: str | None = None
+
+
+class SourceAvailabilityListResponse(BaseModel):
+    """Collection-source availability payload for API responses."""
+
+    sources: list[SourceAvailability]
+
+
 # ---------------------------------------------------------------------------
 # Subscription models
 # ---------------------------------------------------------------------------
@@ -158,7 +187,12 @@ class CreateSubscriptionRequest(BaseModel):
 
     keyword: str = Field(..., min_length=1, max_length=200)
     language: str = Field(default="en")
-    max_items: int = Field(default=50, ge=1, le=100)
+    max_items: int = Field(
+        default=50,
+        ge=1,
+        le=100,
+        description="Maximum number of items to collect per selected source.",
+    )
     sources: list[str] = Field(default=["reddit", "youtube", "x"])
     interval: str = Field(default="daily")
     notify: bool | None = Field(default=None)
@@ -180,15 +214,7 @@ class CreateSubscriptionRequest(BaseModel):
     @field_validator("sources")
     @classmethod
     def sources_valid(cls, v: list[str]) -> list[str]:
-        if not v:
-            raise ValueError("at least one source is required")
-        invalid = set(v) - _VALID_SOURCES
-        if invalid:
-            raise ValueError(
-                f"invalid sources: {sorted(invalid)}; "
-                f"allowed: {sorted(_VALID_SOURCES)}"
-            )
-        return v
+        return _validate_sources_list(v)
 
     @field_validator("interval")
     @classmethod
@@ -210,7 +236,12 @@ class UpdateSubscriptionRequest(BaseModel):
 
     keyword: str | None = Field(default=None, min_length=1, max_length=200)
     language: str | None = None
-    max_items: int | None = Field(default=None, ge=1, le=100)
+    max_items: int | None = Field(
+        default=None,
+        ge=1,
+        le=100,
+        description="Maximum number of items to collect per selected source.",
+    )
     sources: list[str] | None = None
     interval: str | None = None
     is_active: bool | None = None
@@ -234,14 +265,7 @@ class UpdateSubscriptionRequest(BaseModel):
     @classmethod
     def sources_valid(cls, v: list[str] | None) -> list[str] | None:
         if v is not None:
-            if not v:
-                raise ValueError("at least one source is required")
-            invalid = set(v) - _VALID_SOURCES
-            if invalid:
-                raise ValueError(
-                    f"invalid sources: {sorted(invalid)}; "
-                    f"allowed: {sorted(_VALID_SOURCES)}"
-                )
+            return _validate_sources_list(v)
         return v
 
     @field_validator("interval")

@@ -43,5 +43,28 @@ void main() {
       expect(mapped.statusCode, 404);
       expect(mapped.toString(), '请求的资源不存在或已被删除。');
     });
+
+    test('keeps 422 detail in debugMessage for UI-specific handling', () {
+      final exception = DioException(
+        requestOptions: RequestOptions(path: '/api/v1/tasks'),
+        response: Response<Map<String, dynamic>>(
+          requestOptions: RequestOptions(path: '/api/v1/tasks'),
+          statusCode: 422,
+          data: const {
+            'detail':
+                'No requested sources are currently available. Unavailable sources: reddit (missing credentials).',
+          },
+        ),
+        type: DioExceptionType.badResponse,
+      );
+
+      final mapped = ApiException.fromDioException(exception);
+
+      expect(mapped.statusCode, 422);
+      expect(
+        mapped.debugMessage,
+        'No requested sources are currently available. Unavailable sources: reddit (missing credentials).',
+      );
+    });
   });
 }

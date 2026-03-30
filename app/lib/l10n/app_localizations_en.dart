@@ -278,6 +278,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openOriginal => 'Open original';
 
   @override
+  String get openLinkFailed => 'Could not open link';
+
+  @override
   String get newLabel => 'New';
 
   @override
@@ -354,12 +357,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analysisDataSourcesList => 'Reddit • YouTube • X';
 
   @override
+  String get analysisSourceStatusHint =>
+      'Source status reflects the latest configuration check or collection run.';
+
+  @override
+  String get analysisSourceUnavailableLabel => 'Unavailable';
+
+  @override
+  String get analysisSourceDegradedLabel => 'Retryable';
+
+  @override
+  String get analysisMaxItemsPerSource => 'Max Items Per Source';
+
+  @override
+  String get analysisPerSourceLimitHint =>
+      'This limit is applied separately to each selected data source.';
+
+  @override
   String get analysisKeywordRequiredMessage =>
       'Enter a topic before starting analysis.';
 
   @override
   String get analysisCreateTaskError =>
       'Unable to start this analysis right now. Please try again.';
+
+  @override
+  String get analysisNoAvailableSourcesMessage =>
+      'No data sources are currently available. Check source configuration or try again later.';
 
   @override
   String get reportOn => 'Report On';
