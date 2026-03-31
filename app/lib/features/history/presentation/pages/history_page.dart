@@ -9,6 +9,7 @@ import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
+import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/features/history/data/history_item.dart';
 import 'package:trendpulse/features/history/presentation/providers/history_provider.dart';
 import 'package:trendpulse/features/history/presentation/widgets/history_card.dart';
@@ -221,18 +222,18 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     );
 
     if (confirmed == true && context.mounted) {
-      _executeDelete(context, taskId);
+      _executeDelete(taskId);
     }
   }
 
-  Future<void> _executeDelete(BuildContext context, String taskId) async {
+  Future<void> _executeDelete(String taskId) async {
     try {
       final repository = ref.read(historyRepositoryProvider);
       await repository.deleteTask(taskId);
       if (!mounted) {
         return;
       }
-      await _refreshHistory();
+      ref.read(taskMutationSignalProvider.notifier).state++;
     } catch (_) {
       if (!mounted) {
         return;
@@ -263,7 +264,8 @@ class _DismissibleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
     return Dismissible(
@@ -284,9 +286,8 @@ class _DismissibleCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               '${l10n.confirm.toUpperCase()} ${l10n.delete.toUpperCase()}',
-              style: TextStyle(
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: colorScheme.onPrimary,
-                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
               ),

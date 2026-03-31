@@ -35,7 +35,7 @@ class SettingsRepository {
 
   Future<String> getLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyLanguage) ?? 'en';
+    return prefs.getString(_keyLanguage) ?? 'zh';
   }
 
   Future<void> setLanguage(String language) async {
@@ -72,7 +72,7 @@ class SettingsRepository {
 
   Future<String> getThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyThemeMode) ?? 'system';
+    return prefs.getString(_keyThemeMode) ?? 'light';
   }
 
   Future<void> setThemeMode(String mode) async {

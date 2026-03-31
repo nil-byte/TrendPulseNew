@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/theme/app_colors.dart';
+import 'package:trendpulse/core/theme/app_motion.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_typography.dart';
@@ -127,6 +128,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!_loaded && mounted) {
                 setState(() {
+                  _contentLanguage = ref.read(defaultLanguageProvider);
                   _notify = notifyDefault;
                   _loaded = true;
                 });
@@ -235,33 +237,38 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
             ),
 
             const SizedBox(height: AppSpacing.xl),
-            _SectionLabel(label: l10n.dataSources.toUpperCase(), theme: theme),
+            _SectionLabel(label: l10n.dataSources, theme: theme),
             const EditorialDivider(
               topSpace: AppSpacing.xs,
               bottomSpace: AppSpacing.md,
             ),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
+            Row(
               children: [
-                _SourceFilterChip(
-                  label: l10n.platformReddit.toUpperCase(),
-                  color: tpColors.reddit,
-                  selected: _sources.contains('reddit'),
-                  onSelected: (v) => setState(() => _toggleSource('reddit', v)),
+                Expanded(
+                  child: _SourceToggleButton(
+                    label: l10n.platformReddit,
+                    color: tpColors.reddit,
+                    selected: _sources.contains('reddit'),
+                    onTap: () => setState(() => _toggleSource('reddit', !_sources.contains('reddit'))),
+                  ),
                 ),
-                _SourceFilterChip(
-                  label: l10n.platformYouTube.toUpperCase(),
-                  color: tpColors.youtube,
-                  selected: _sources.contains('youtube'),
-                  onSelected: (v) =>
-                      setState(() => _toggleSource('youtube', v)),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _SourceToggleButton(
+                    label: l10n.platformYouTube,
+                    color: tpColors.youtube,
+                    selected: _sources.contains('youtube'),
+                    onTap: () => setState(() => _toggleSource('youtube', !_sources.contains('youtube'))),
+                  ),
                 ),
-                _SourceFilterChip(
-                  label: l10n.platformX.toUpperCase(),
-                  color: tpColors.xPlatform,
-                  selected: _sources.contains('x'),
-                  onSelected: (v) => setState(() => _toggleSource('x', v)),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _SourceToggleButton(
+                    label: l10n.platformX,
+                    color: tpColors.xPlatform,
+                    selected: _sources.contains('x'),
+                    onTap: () => setState(() => _toggleSource('x', !_sources.contains('x'))),
+                  ),
                 ),
               ],
             ),
@@ -275,25 +282,15 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               topSpace: AppSpacing.xs,
               bottomSpace: AppSpacing.md,
             ),
-            SegmentedButton<String>(
+            _IntervalSelector(
               segments: [
-                ButtonSegment(
-                  value: 'hourly',
-                  label: Text(l10n.intervalHourly),
-                ),
-                ButtonSegment(
-                  value: '6hours',
-                  label: Text(l10n.intervalSixHours),
-                ),
-                ButtonSegment(value: 'daily', label: Text(l10n.intervalDaily)),
-                ButtonSegment(
-                  value: 'weekly',
-                  label: Text(l10n.intervalWeekly),
-                ),
+                (value: 'hourly', label: l10n.intervalHourly),
+                (value: '6hours', label: l10n.intervalSixHours),
+                (value: 'daily', label: l10n.intervalDaily),
+                (value: 'weekly', label: l10n.intervalWeekly),
               ],
-              selected: {_interval},
-              onSelectionChanged: (v) => setState(() => _interval = v.first),
-              showSelectedIcon: false,
+              selected: _interval,
+              onChanged: (v) => setState(() => _interval = v),
             ),
 
             const SizedBox(height: AppSpacing.xl),
@@ -356,7 +353,6 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                     : Text(
                         l10n.subscriptionSaveAction.toUpperCase(),
                         style: theme.textTheme.labelLarge?.copyWith(
-                          fontSize: 17,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
                           color: colorScheme.onPrimary,
@@ -437,41 +433,163 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _SourceFilterChip extends StatelessWidget {
+/// Equal-width source toggle — fills its [Expanded] parent, pill shape,
+/// brand colour when selected.
+class _SourceToggleButton extends StatelessWidget {
   final String label;
   final Color color;
   final bool selected;
-  final ValueChanged<bool> onSelected;
+  final VoidCallback onTap;
 
-  const _SourceFilterChip({
+  const _SourceToggleButton({
     required this.label,
     required this.color,
     required this.selected,
-    required this.onSelected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: onSelected,
-      showCheckmark: false,
-      selectedColor: color,
-      labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-        color: selected
-            ? AppColors.onBrandFill(color)
-            : theme.colorScheme.onSurface,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4,
+    final textColor =
+        selected ? AppColors.onBrandFill(color) : theme.colorScheme.onSurface;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+    );
+
+    return SizedBox(
+      width: double.infinity,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: FilterChip(
+          label: Text(
+            label,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+          selected: selected,
+          onSelected: (_) => onTap(),
+          showCheckmark: false,
+          selectedColor: color,
+          backgroundColor: Colors.transparent,
+          materialTapTargetSize: MaterialTapTargetSize.padded,
+          visualDensity: VisualDensity.standard,
+          labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+            color: textColor,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+          ),
+          shape: shape,
+          side: BorderSide(
+            color: selected ? color : theme.colorScheme.outline,
+            width: selected ? 1.5 : 1.0,
+          ),
+        ),
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+    );
+  }
+}
+
+/// Flat editorial interval selector — 4 equal segments, sharp corners,
+/// and explicit semantics for keyboard and accessibility users.
+class _IntervalSelector extends StatelessWidget {
+  final List<({String value, String label})> segments;
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  const _IntervalSelector({
+    required this.segments,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.outline),
+        borderRadius: BorderRadius.zero,
       ),
-      side: BorderSide(
-        color: selected ? color : theme.colorScheme.outline,
-        width: selected ? 1.2 : 1.0,
+      child: SizedBox(
+        height: 48,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: List.generate(segments.length, (i) {
+            final seg = segments[i];
+            final isSelected = seg.value == selected;
+
+            return Expanded(
+              child: MergeSemantics(
+                key: ValueKey('subscription-interval-${seg.value}'),
+                child: Semantics(
+                  label: seg.label,
+                  selected: isSelected,
+                  child: AnimatedContainer(
+                    duration: AppMotion.quick,
+                    curve: AppMotion.standard,
+                    decoration: BoxDecoration(
+                      color: isSelected ? colors.primary : Colors.transparent,
+                      border: i == 0
+                          ? null
+                          : Border(
+                              left: BorderSide(color: colors.outline),
+                            ),
+                    ),
+                    child: TextButton(
+                      onPressed: () => onChanged(seg.value),
+                      style: ButtonStyle(
+                        padding: const WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                        ),
+                        foregroundColor: WidgetStatePropertyAll(
+                          isSelected ? colors.onPrimary : colors.onSurface,
+                        ),
+                        backgroundColor: const WidgetStatePropertyAll(
+                          Colors.transparent,
+                        ),
+                        shape: const WidgetStatePropertyAll(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.zero,
+                          ),
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                        overlayColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.pressed)) {
+                            return colors.primary.withValues(
+                              alpha: AppOpacity.soft,
+                            );
+                          }
+                          if (states.contains(WidgetState.hovered)) {
+                            return colors.primary.withValues(
+                              alpha: AppOpacity.hover,
+                            );
+                          }
+                          return null;
+                        }),
+                      ),
+                      child: ExcludeSemantics(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            seg.label,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight:
+                                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
       ),
     );
   }

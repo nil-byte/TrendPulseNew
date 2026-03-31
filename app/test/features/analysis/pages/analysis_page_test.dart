@@ -191,6 +191,40 @@ void main() {
     },
   );
 
+  testWidgets(
+    'analysis source chips keep accessible tap targets and toggle semantics',
+    (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
+
+      await tester.pumpWidget(_wrap(const AnalysisPage()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.tune_rounded).first);
+      await tester.pumpAndSettle();
+
+      final redditChip = find.widgetWithText(FilterChip, 'Reddit');
+      expect(redditChip, findsOneWidget);
+      expect(tester.getSize(redditChip).height, greaterThanOrEqualTo(48));
+
+      expect(
+        tester.getSemantics(redditChip),
+        matchesSemantics(
+          label: 'Reddit',
+          hasTapAction: true,
+          hasFocusAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasSelectedState: true,
+          isSelected: true,
+          isButton: true,
+          isFocusable: true,
+        ),
+      );
+
+      semanticsHandle.dispose();
+    },
+  );
+
   testWidgets('analysis page deselects and disables unavailable sources', (
     tester,
   ) async {

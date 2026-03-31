@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -37,10 +38,11 @@ class ReportTab extends ConsumerWidget {
       ),
       data: (task) {
         if (task.isFailed) {
+          if (kDebugMode && task.errorMessage != null) {
+            debugPrint('[TaskFailed:$taskId] ${task.errorMessage}');
+          }
           return _ErrorContent(
-            message: task.errorMessage?.trim().isNotEmpty == true
-                ? task.errorMessage
-                : l10n.errorGeneric,
+            message: l10n.reportAnalysisFailedMessage,
             onRetry: () =>
                 ref.read(taskDetailProvider(taskId).notifier).refresh(),
           );
@@ -561,7 +563,7 @@ class _LegendItem extends StatelessWidget {
           value,
           style: AppTypography.dataNumber(
             theme.textTheme,
-            fontSize: 26,
+            fontSize: 22,
             weight: FontWeight.w900,
           ),
         ),

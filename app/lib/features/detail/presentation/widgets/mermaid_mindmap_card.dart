@@ -228,7 +228,7 @@ class _MindmapNodeCard extends StatelessWidget {
                     '\u2013',
                     style: TextStyle(
                       color: colorScheme.primary.withValues(alpha: AppOpacity.hint),
-                      fontSize: 13,
+                      fontSize: 11,
                       height: 1.4,
                     ),
                   ),
@@ -269,11 +269,11 @@ class _MindmapNodeCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 1, right: AppSpacing.xs),
                 child: Text(
                   '\u2014',
-                  style: TextStyle(
-                    color: colorScheme.outline.withValues(alpha: AppOpacity.muted),
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
+                    style: TextStyle(
+                      color: colorScheme.outline.withValues(alpha: AppOpacity.muted),
+                      fontSize: 10,
+                      height: 1.4,
+                    ),
                 ),
               ),
               Expanded(

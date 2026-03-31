@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'l10n/app_localizations.dart';
 import 'core/network/api_base_url_resolver.dart';
 import 'core/network/api_endpoints.dart';
+import 'core/observers/app_provider_observer.dart';
 import 'features/settings/data/settings_repository.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
@@ -26,6 +30,11 @@ Future<String> loadInitialLanguage(SettingsRepository repository) async {
   return repository.getLanguage();
 }
 
+Future<ThemeMode> loadInitialThemeMode(SettingsRepository repository) async {
+  final storedThemeMode = await repository.getThemeMode();
+  return ThemeModeNotifier.fromStorage(storedThemeMode);
+}
+
 Future<List<Override>> buildAppOverrides({
   SettingsRepository? settingsRepository,
   TargetPlatform? targetPlatform,
@@ -39,6 +48,7 @@ Future<List<Override>> buildAppOverrides({
   );
   final initialInAppNotify = await repository.getInAppNotify();
   final initialLanguage = await loadInitialLanguage(repository);
+  final initialThemeMode = await loadInitialThemeMode(repository);
 
   return [
     settingsRepositoryProvider.overrideWithValue(repository),
@@ -46,6 +56,8 @@ Future<List<Override>> buildAppOverrides({
     initialInAppNotifyProvider.overrideWithValue(initialInAppNotify),
     initialLanguageProvider.overrideWithValue(initialLanguage),
     initialLanguagePreloadedProvider.overrideWithValue(true),
+    initialThemeModeProvider.overrideWithValue(initialThemeMode),
+    initialThemeModePreloadedProvider.overrideWithValue(true),
     baseUrlTargetPlatformProvider.overrideWithValue(
       targetPlatform ?? defaultTargetPlatform,
     ),
@@ -55,6 +67,58 @@ Future<List<Override>> buildAppOverrides({
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final overrides = await buildAppOverrides();
-  runApp(ProviderScope(overrides: overrides, child: const TrendPulseApp()));
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    Zone.current.handleUncaughtError(
+      details.exception,
+      details.stack ?? StackTrace.current,
+    );
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    Zone.current.handleUncaughtError(error, stack);
+    return true;
+  };
+
+  if (kReleaseMode) {
+    ErrorWidget.builder = (_) => const _ReleaseErrorFallback();
+  }
+
+  await runZonedGuarded(() async {
+    final overrides = await buildAppOverrides();
+    runApp(
+      ProviderScope(
+        overrides: overrides,
+        observers: [AppProviderObserver()],
+        child: const TrendPulseApp(),
+      ),
+    );
+  }, (error, stackTrace) {
+    debugPrint('[ZoneError] $error');
+    debugPrint('$stackTrace');
+  });
+}
+
+class _ReleaseErrorFallback extends StatelessWidget {
+  const _ReleaseErrorFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    final message =
+        AppLocalizations.of(context)?.errorGeneric ??
+        '出了点问题 / Something went wrong.';
+
+    return ColoredBox(
+      color: Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          message,
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,7 @@ void main() {
     mockRepo = _MockSettingsRepository();
     when(() => mockRepo.getInAppNotify()).thenAnswer((_) async => true);
     when(() => mockRepo.getLanguage()).thenAnswer((_) async => 'en');
+    when(() => mockRepo.getThemeMode()).thenAnswer((_) async => 'light');
     when(
       () => mockRepo.getReportLanguage(baseUrl: any(named: 'baseUrl')),
     ).thenAnswer((_) async => 'en');
@@ -96,6 +98,29 @@ void main() {
 
       expect(container.read(defaultLanguageProvider), 'zh');
       verify(() => mockRepo.getLanguage()).called(1);
+    },
+  );
+
+  test(
+    'buildAppOverrides preloads persisted theme mode for synchronous provider startup',
+    () async {
+      when(() => mockRepo.getBaseUrl()).thenAnswer((_) async => '');
+      when(() => mockRepo.getThemeMode()).thenAnswer((_) async => 'dark');
+
+      final overrides = await app.buildAppOverrides(
+        settingsRepository: mockRepo,
+        targetPlatform: TargetPlatform.iOS,
+      );
+      final container = ProviderContainer(overrides: overrides);
+      addTearDown(container.dispose);
+
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+      verify(() => mockRepo.getThemeMode()).called(1);
     },
   );
 

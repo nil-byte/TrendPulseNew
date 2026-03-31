@@ -94,7 +94,7 @@ abstract final class AppTheme {
     );
     final baseLabelStyle =
         textTheme.labelLarge ??
-        const TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+        const TextStyle(fontSize: 13, fontWeight: FontWeight.w600);
 
     return ThemeData(
       useMaterial3: true,
@@ -139,7 +139,7 @@ abstract final class AppTheme {
         indicatorShape: const RoundedRectangleBorder(borderRadius: editorialRadius),
         surfaceTintColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        height: 68,
+        height: 60,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
           return textTheme.labelMedium?.copyWith(
@@ -171,7 +171,7 @@ abstract final class AppTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -180,10 +180,10 @@ abstract final class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           disabledBackgroundColor: colorScheme.surfaceContainerHigh,
           disabledForegroundColor: colorScheme.onSurface.withValues(alpha: AppOpacity.disabled),
-          minimumSize: const Size(0, 50),
+          minimumSize: const Size(0, 44),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
           textStyle: baseLabelStyle.copyWith(
             fontWeight: FontWeight.w700,
@@ -196,10 +196,10 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.onSurface,
           disabledForegroundColor: colorScheme.onSurface.withValues(alpha: AppOpacity.disabled),
-          minimumSize: const Size(0, 50),
+          minimumSize: const Size(0, 44),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
           textStyle: baseLabelStyle.copyWith(
             fontWeight: FontWeight.w700,
@@ -233,7 +233,7 @@ abstract final class AppTheme {
             );
           }),
           padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+            EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
           ),
           textStyle: WidgetStatePropertyAll(
             baseLabelStyle.copyWith(

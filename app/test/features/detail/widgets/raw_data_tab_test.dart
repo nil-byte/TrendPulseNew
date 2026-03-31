@@ -422,7 +422,7 @@ void main() {
     expect(allSourcesChip.labelStyle?.letterSpacing, 0.4);
     expect(allSourcesChip.side?.color, theme.colorScheme.primary);
 
-    await tester.tap(find.text('Reddit'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Reddit'));
     await tester.pumpAndSettle();
 
     final redditChip = tester.widget<FilterChip>(find.byType(FilterChip).at(1));
@@ -434,7 +434,7 @@ void main() {
     );
     expect(redditChip.side?.color, theme.trendPulseColors.reddit);
 
-    await tester.tap(find.text('YouTube'));
+    await tester.tap(find.widgetWithText(FilterChip, 'YouTube'));
     await tester.pumpAndSettle();
 
     final youtubeChip = tester.widget<FilterChip>(find.byType(FilterChip).at(2));
@@ -446,7 +446,7 @@ void main() {
     );
     expect(youtubeChip.side?.color, theme.trendPulseColors.youtube);
 
-    await tester.tap(find.text('X'));
+    await tester.tap(find.widgetWithText(FilterChip, 'X'));
     await tester.pumpAndSettle();
 
     final xChip = tester.widget<FilterChip>(find.byType(FilterChip).at(3));

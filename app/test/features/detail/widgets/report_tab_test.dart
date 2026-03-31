@@ -82,6 +82,18 @@ void main() {
         '        12 条来源\n',
     createdAt: '2026-03-28T12:05:00Z',
   );
+  const failedTask = AnalysisTask(
+    id: 'task-1',
+    keyword: '人工智能舆情长期趋势观察',
+    contentLanguage: 'zh',
+    reportLanguage: 'zh',
+    maxItems: 50,
+    status: 'failed',
+    sources: ['reddit', 'youtube', 'x'],
+    createdAt: '2026-03-28T12:00:00Z',
+    updatedAt: '2026-03-28T12:05:00Z',
+    errorMessage: 'Traceback: internal pipeline exploded',
+  );
 
   testWidgets('report tab localizes core section headers in Chinese', (
     tester,
@@ -174,4 +186,19 @@ void main() {
       expect(find.textContaining('flowchart TD'), findsOneWidget);
     },
   );
+
+  testWidgets('report tab hides raw backend failure details from users', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        analysisRepository: _FakeAnalysisRepository(task: failedTask, report: report),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('分析过程中出现错误，请重试或更换关键词。'), findsOneWidget);
+    expect(find.textContaining('Traceback'), findsNothing);
+    expect(find.textContaining('internal pipeline exploded'), findsNothing);
+  });
 }

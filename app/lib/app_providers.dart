@@ -9,3 +9,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   final baseUrl = ref.watch(baseUrlProvider);
   return ApiClient(baseUrl: baseUrl);
 });
+
+/// Monotonic counter that any feature can bump after mutating task data
+/// (create, delete, etc.). Providers that display task lists should
+/// [ref.watch] this so they rebuild automatically.
+final taskMutationSignalProvider = StateProvider<int>((ref) => 0);

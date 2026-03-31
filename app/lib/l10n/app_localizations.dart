@@ -884,6 +884,12 @@ abstract class AppLocalizations {
   /// **'Analysis Failed'**
   String get reportAnalysisFailedTitle;
 
+  /// No description provided for @reportAnalysisFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong during analysis. Please retry or try a different keyword.'**
+  String get reportAnalysisFailedMessage;
+
   /// No description provided for @reportMindmapFallbackTitle.
   ///
   /// In en, this message translates to:

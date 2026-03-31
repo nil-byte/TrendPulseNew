@@ -12,6 +12,7 @@ import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
@@ -103,6 +104,8 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
         maxItems: _maxItems.round(),
         sources: effectiveSources.toList(),
       );
+
+      ref.read(taskMutationSignalProvider.notifier).state++;
 
       if (mounted) {
         context.push('/detail/${task.id}');
@@ -531,42 +534,48 @@ class _ConfigPanel extends StatelessWidget {
 
           // Data Sources
           Text(
-            l10n.dataSources.toUpperCase(),
+            l10n.dataSources,
             style: theme.textTheme.labelSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
           Builder(builder: (context) {
             final tpColors = Theme.of(context).trendPulseColors;
-            return Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
+            return Row(
               children: [
-                _SourceChip(
-                  label: l10n.platformReddit,
-                  color: tpColors.reddit,
-                  selected: sources.contains('reddit'),
-                  status: availabilityBySource['reddit']?.status ?? 'available',
-                  reason: availabilityBySource['reddit']?.reason,
-                  enabled: availabilityBySource['reddit']?.isAvailable ?? true,
-                  onSelected: (v) => _toggleSource('reddit', v),
+                Expanded(
+                  child: _SourceChip(
+                    label: l10n.platformReddit,
+                    color: tpColors.reddit,
+                    selected: sources.contains('reddit'),
+                    status: availabilityBySource['reddit']?.status ?? 'available',
+                    reason: availabilityBySource['reddit']?.reason,
+                    enabled: availabilityBySource['reddit']?.isAvailable ?? true,
+                    onSelected: (v) => _toggleSource('reddit', v),
+                  ),
                 ),
-                _SourceChip(
-                  label: l10n.platformYouTube,
-                  color: tpColors.youtube,
-                  selected: sources.contains('youtube'),
-                  status: availabilityBySource['youtube']?.status ?? 'available',
-                  reason: availabilityBySource['youtube']?.reason,
-                  enabled: availabilityBySource['youtube']?.isAvailable ?? true,
-                  onSelected: (v) => _toggleSource('youtube', v),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _SourceChip(
+                    label: l10n.platformYouTube,
+                    color: tpColors.youtube,
+                    selected: sources.contains('youtube'),
+                    status: availabilityBySource['youtube']?.status ?? 'available',
+                    reason: availabilityBySource['youtube']?.reason,
+                    enabled: availabilityBySource['youtube']?.isAvailable ?? true,
+                    onSelected: (v) => _toggleSource('youtube', v),
+                  ),
                 ),
-                _SourceChip(
-                  label: l10n.platformX,
-                  color: tpColors.xPlatform,
-                  selected: sources.contains('x'),
-                  status: availabilityBySource['x']?.status ?? 'available',
-                  reason: availabilityBySource['x']?.reason,
-                  enabled: availabilityBySource['x']?.isAvailable ?? true,
-                  onSelected: (v) => _toggleSource('x', v),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _SourceChip(
+                    label: l10n.platformX,
+                    color: tpColors.xPlatform,
+                    selected: sources.contains('x'),
+                    status: availabilityBySource['x']?.status ?? 'available',
+                    reason: availabilityBySource['x']?.reason,
+                    enabled: availabilityBySource['x']?.isAvailable ?? true,
+                    onSelected: (v) => _toggleSource('x', v),
+                  ),
                 ),
               ],
             );
@@ -680,6 +689,8 @@ class _ConfigPanel extends StatelessWidget {
   }
 }
 
+/// Equal-width source toggle — fills its [Expanded] parent, pill shape,
+/// brand colour when selected. Preserves tooltip and degraded-status icon.
 class _SourceChip extends StatelessWidget {
   final String label;
   final Color color;
@@ -702,47 +713,72 @@ class _SourceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tooltipMessage = reason?.trim();
-    final chip = FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (status == 'degraded') ...[
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 16,
-              color: selected
-                  ? AppColors.onBrandFill(color)
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.72),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          Text(label),
+    final colors = theme.colorScheme;
+    final isDegraded = status == 'degraded';
+    final effectiveAlpha = enabled ? 1.0 : 0.48;
+    final textColor = selected
+        ? AppColors.onBrandFill(color)
+        : colors.onSurface.withValues(alpha: effectiveAlpha);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+    );
+    final chipLabel = Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (isDegraded) ...[
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 14,
+            color: textColor,
+          ),
+          const SizedBox(width: AppSpacing.xxs),
         ],
-      ),
-      selected: selected,
-      onSelected: enabled ? onSelected : null,
-      showCheckmark: false,
-      selectedColor: color,
-      labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-        color: selected
-            ? AppColors.onBrandFill(color)
-            : theme.colorScheme.onSurface.withValues(alpha: enabled ? 1.0 : 0.48),
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      ),
-      side: BorderSide(
-        color: selected ? color : theme.colorScheme.outline,
-        width: selected ? 1.2 : 1.0,
+        Flexible(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+
+    Widget button = SizedBox(
+      width: double.infinity,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: FilterChip(
+          label: chipLabel,
+          selected: selected,
+          onSelected: enabled ? onSelected : null,
+          showCheckmark: false,
+          selectedColor: color.withValues(alpha: effectiveAlpha),
+          disabledColor: Colors.transparent,
+          backgroundColor: Colors.transparent,
+          materialTapTargetSize: MaterialTapTargetSize.padded,
+          visualDensity: VisualDensity.standard,
+          labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+            color: textColor,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+          ),
+          shape: shape,
+          side: BorderSide(
+            color: selected
+                ? color.withValues(alpha: effectiveAlpha)
+                : colors.outline.withValues(alpha: effectiveAlpha),
+            width: selected ? 1.5 : 1.0,
+          ),
+        ),
       ),
     );
-    if (tooltipMessage == null || tooltipMessage.isEmpty) {
-      return chip;
+
+    final tooltipMessage = reason?.trim();
+    if (tooltipMessage != null && tooltipMessage.isNotEmpty) {
+      button = Tooltip(message: tooltipMessage, child: button);
     }
-    return Tooltip(message: tooltipMessage, child: chip);
+    return button;
   }
 }
 

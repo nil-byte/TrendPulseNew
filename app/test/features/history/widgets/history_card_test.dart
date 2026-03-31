@@ -32,13 +32,15 @@ void main() {
     );
 
     await tester.pumpWidget(_wrap(HistoryCard(item: item, onTap: _noop)));
+    final pageContext = tester.element(find.byType(HistoryCard));
+    final theme = Theme.of(pageContext);
 
     expect(find.text('+2'), findsOneWidget);
 
     final overflowBadge = tester.widget<Text>(find.text('+2'));
     final completedLabel = tester.widget<Text>(find.text('COMPLETED'));
 
-    expect(overflowBadge.style?.fontSize, 12.5);
+    expect(overflowBadge.style?.fontSize, theme.textTheme.labelSmall?.fontSize);
     expect(completedLabel.style?.fontSize, 10);
     expect(find.text('18'), findsOneWidget);
     expect(find.text('POSTS'), findsOneWidget);

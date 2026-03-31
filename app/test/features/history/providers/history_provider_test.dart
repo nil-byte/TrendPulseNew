@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/features/history/data/history_item.dart';
 import 'package:trendpulse/features/history/data/history_repository.dart';
 import 'package:trendpulse/features/history/presentation/providers/history_provider.dart';
@@ -357,4 +358,55 @@ void main() {
       expect(seenKeywords, ['refresh result']);
     },
   );
+
+  testWidgets('reloads history when task mutation signal changes', (
+    tester,
+  ) async {
+    final repository = _SequencedHistoryRepository([
+      [_itemWithStatus('completed', keyword: 'initial result')],
+      [_itemWithStatus('completed', keyword: 'mutated result')],
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          historyRepositoryProvider.overrideWithValue(repository),
+          historyPollingIntervalProvider.overrideWithValue(
+            const Duration(minutes: 1),
+          ),
+        ],
+        child: const MaterialApp(home: _HistoryMutationWatcher()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.getHistoryCalls, 1);
+    expect(find.text('initial result'), findsOneWidget);
+
+    await tester.tap(find.text('mutate'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(repository.getHistoryCalls, 2);
+    expect(find.text('mutated result'), findsOneWidget);
+  });
+}
+
+class _HistoryMutationWatcher extends ConsumerWidget {
+  const _HistoryMutationWatcher();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(historyListProvider);
+
+    return Column(
+      children: [
+        Text(historyAsync.valueOrNull?.single.keyword ?? 'loading'),
+        TextButton(
+          onPressed: () => ref.read(taskMutationSignalProvider.notifier).state++,
+          child: const Text('mutate'),
+        ),
+      ],
+    );
+  }
 }

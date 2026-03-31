@@ -66,7 +66,7 @@ class PostCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      sourcePlatformLabel(post.source, l10n).toUpperCase(),
+                      sourcePlatformLabel(post.source, l10n),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: _sourceColor(post.source, tpColors),
                         fontWeight: FontWeight.w700,

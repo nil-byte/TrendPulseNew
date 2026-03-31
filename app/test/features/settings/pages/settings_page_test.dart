@@ -181,6 +181,8 @@ Widget _wrap(
       initialBaseUrlProvider.overrideWithValue(initialBaseUrl),
       baseUrlTargetPlatformProvider.overrideWithValue(baseUrlTargetPlatform),
       baseUrlIsWebProvider.overrideWithValue(baseUrlIsWeb),
+      initialLanguageProvider.overrideWithValue(locale.languageCode),
+      initialLanguagePreloadedProvider.overrideWithValue(true),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -204,6 +206,7 @@ void main() {
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
+          initialLanguageProvider.overrideWithValue('en'),
         ],
       );
       addTearDown(container.dispose);
@@ -230,6 +233,7 @@ void main() {
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
+          initialLanguageProvider.overrideWithValue('en'),
         ],
       );
       addTearDown(container.dispose);
@@ -256,6 +260,7 @@ void main() {
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
+          initialLanguageProvider.overrideWithValue('en'),
         ],
       );
       addTearDown(container.dispose);
@@ -439,6 +444,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const SettingsPage(),
+          locale: const Locale('zh'),
           repository: repository,
           initialBaseUrl: initialBaseUrl,
           baseUrlTargetPlatform: TargetPlatform.android,
@@ -446,7 +452,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('USE DEFAULT'));
+      await tester.tap(find.text('恢复默认'));
       await tester.pumpAndSettle();
 
       final textField = tester.widget<TextField>(find.byType(TextField));
@@ -466,7 +472,13 @@ void main() {
       final repository = _FakeSettingsRepository();
       await repository.setLanguage('zh');
 
-      await tester.pumpWidget(_wrap(const SettingsPage(), repository: repository));
+      await tester.pumpWidget(
+        _wrap(
+          const SettingsPage(),
+          locale: const Locale('zh'),
+          repository: repository,
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.enterText(

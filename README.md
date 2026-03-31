@@ -72,7 +72,7 @@ lsof -i :8000        # 查看占用进程 PID
 kill <PID>           # 仍不退出可用 kill -9 <PID>
 ```
 
-或改用其它端口（如 8001），并同步修改 App 设置里的服务地址、`scripts/adb-reverse-backend.sh` 的端口参数。
+或改用其它端口（如 8001），并同步修改 App 设置里的服务地址，以及你使用的 `adb reverse` 命令或本地开发脚本配置。
 
 ### 前端启动
 
@@ -88,19 +88,30 @@ flutter run
 手机上的 `127.0.0.1` 指向手机自身，要让 App 访问 **电脑上的后端**，应对 `8000` 做端口反向映射：
 
 1. 后端已在电脑上监听 `8000`（见上一节）。
-2. 仓库根目录执行（**多台设备/模拟器同时在线时须指定序列号**）：
+2. 建立端口反向映射（**多台设备/模拟器同时在线时须指定序列号**）：
 
 ```bash
 # 仅一台设备时可省略 -s
-./scripts/adb-reverse-backend.sh -s <adb devices 第一列序列号>
+adb reverse tcp:8000 tcp:8000
+
+# 多设备时请显式指定序列号
+adb -s <adb devices 第一列序列号> reverse tcp:8000 tcp:8000
 ```
 
 3. App **设置** 中服务器地址填：`http://127.0.0.1:8000`（或 `http://localhost:8000`），保存。
 4. `cd app && flutter run -d <真机设备ID>`。
 
-**注意**：重插 USB 或 `adb` 重连后，若无映射需 **再执行一次** `adb-reverse-backend.sh`。脚本支持 `ANDROID_SERIAL` 或 `-s`；用法见脚本内注释。
+**注意**：重插 USB 或 `adb` 重连后，若无映射需 **再执行一次** 上述 `adb reverse` 命令。
 
-**模拟器一条龙**（含自动 `adb reverse`）可选用：`scripts/dev-android.sh`；物理真机日常开发通常只需：**后端 + `adb-reverse-backend.sh` + `flutter run`**。
+**一条龙脚本**：`scripts/dev-android.sh` 默认用于模拟器，也支持 USB 真机模式：
+
+```bash
+# 模拟器
+scripts/dev-android.sh
+
+# USB 真机（多设备时建议补 --device-serial）
+scripts/dev-android.sh --usb --device-serial <adb devices 第一列序列号>
+```
 
 ### Android：调试构建与 HTTP（简要）
 
@@ -179,7 +190,7 @@ TrendPulseNew/
 │   │       └── settings/      # 设置
 │   └── test/                  # 前端测试
 ├── docs/                      # 演示 / 验收 / 补充文档
-├── scripts/                   # 常用开发与验证脚本（如 adb-reverse-backend.sh、dev-android.sh）
+├── scripts/                   # 常用开发与验证脚本（如 dev-android.sh）
 └── README.md
 ```
 

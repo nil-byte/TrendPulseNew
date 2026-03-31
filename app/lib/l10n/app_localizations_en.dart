@@ -426,6 +426,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportAnalysisFailedTitle => 'Analysis Failed';
 
   @override
+  String get reportAnalysisFailedMessage =>
+      'Something went wrong during analysis. Please retry or try a different keyword.';
+
+  @override
   String get reportMindmapFallbackTitle => 'Mind map preview unavailable';
 
   @override

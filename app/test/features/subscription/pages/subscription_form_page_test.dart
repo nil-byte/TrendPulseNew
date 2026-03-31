@@ -8,6 +8,7 @@ import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/features/settings/data/notification_settings.dart';
 import 'package:trendpulse/features/settings/data/notification_settings_repository.dart';
+import 'package:trendpulse/features/settings/data/settings_repository.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/features/subscription/data/subscription_request.dart';
@@ -77,6 +78,22 @@ class _FakeSubscriptionRepository extends SubscriptionRepository {
   }
 }
 
+class _FakeSettingsRepository extends SettingsRepository {
+  _FakeSettingsRepository(this.language);
+
+  final String language;
+
+  @override
+  Future<String> getLanguage() async => language;
+
+  @override
+  Future<String> getReportLanguage({String? baseUrl}) async => language;
+
+  @override
+  Future<String> setReportLanguage(String language, {String? baseUrl}) async =>
+      language;
+}
+
 Widget _wrap(
   Widget child, {
   Locale locale = const Locale('en'),
@@ -86,9 +103,14 @@ Widget _wrap(
 }) {
   return ProviderScope(
     overrides: [
+      settingsRepositoryProvider.overrideWithValue(
+        _FakeSettingsRepository(locale.languageCode),
+      ),
       notificationSettingsRepositoryProvider.overrideWithValue(
         notificationSettingsRepository ?? _FakeNotificationSettingsRepository(),
       ),
+      initialLanguageProvider.overrideWithValue(locale.languageCode),
+      initialLanguagePreloadedProvider.overrideWithValue(true),
       if (subscriptionRepository != null)
         subscriptionRepositoryProvider.overrideWithValue(
           subscriptionRepository,
@@ -255,6 +277,58 @@ void main() {
         find.byType(FilledButton),
       );
       expect(filledButton.style, isNull);
+    },
+  );
+
+  testWidgets(
+    'subscription interval selector keeps accessible tap targets and button semantics',
+    (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
+
+      await tester.pumpWidget(_wrap(const SubscriptionFormPage()));
+      await tester.pumpAndSettle();
+
+      final dailySegment = find.byKey(
+        const ValueKey('subscription-interval-daily'),
+      );
+      final weeklySegment = find.byKey(
+        const ValueKey('subscription-interval-weekly'),
+      );
+
+      expect(dailySegment, findsOneWidget);
+      expect(weeklySegment, findsOneWidget);
+      expect(tester.getSize(dailySegment).height, greaterThanOrEqualTo(48));
+
+      expect(
+        tester.getSemantics(dailySegment),
+        matchesSemantics(
+          label: 'Daily',
+          hasTapAction: true,
+          hasFocusAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasSelectedState: true,
+          isSelected: true,
+          isButton: true,
+          isFocusable: true,
+        ),
+      );
+      expect(
+        tester.getSemantics(weeklySegment),
+        matchesSemantics(
+          label: 'Weekly',
+          hasTapAction: true,
+          hasFocusAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasSelectedState: true,
+          isSelected: false,
+          isButton: true,
+          isFocusable: true,
+        ),
+      );
+
+      semanticsHandle.dispose();
     },
   );
 

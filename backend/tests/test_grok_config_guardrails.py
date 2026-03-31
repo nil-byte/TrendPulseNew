@@ -12,14 +12,12 @@ from src.config.settings import Settings
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_DIR.parent
-REPORT_PATH = REPO_ROOT / "GROK_API_INTEGRATION_REPORT.md"
 README_PATH = REPO_ROOT / "README.md"
 APP_README_PATH = REPO_ROOT / "app/README.md"
 DEMO_RUNBOOK_PATH = REPO_ROOT / "docs/demo-acceptance-runbook.md"
 DOCS_GROK_REPORT_PATH = REPO_ROOT / "docs/GROK_API_INTEGRATION_REPORT.md"
 DOCS_OBJECTIVE_PATH = REPO_ROOT / "docs/Objective.md"
 VERIFY_SCRIPT_PATH = REPO_ROOT / "scripts/verify-critical-paths.sh"
-ADB_REVERSE_SCRIPT_PATH = REPO_ROOT / "scripts/adb-reverse-backend.sh"
 DEV_ANDROID_SCRIPT_PATH = REPO_ROOT / "scripts/dev-android.sh"
 ENV_EXAMPLE_PATH = BACKEND_DIR / ".env.example"
 SETTINGS_PATH = BACKEND_DIR / "src/config/settings.py"
@@ -32,14 +30,13 @@ REAL_LOOKING_API_KEY_PATTERN = re.compile(
 )
 
 VISIBLE_GROK_ARTIFACTS = (
-    REPORT_PATH,
+    DOCS_GROK_REPORT_PATH,
     ENV_EXAMPLE_PATH,
     SETTINGS_PATH,
 )
 
 PUBLIC_TEXT_ARTIFACT_PATTERNS = (
     "**/README.md",
-    "GROK_API_INTEGRATION_REPORT.md",
     "docs/**/*.md",
     "scripts/**/*.sh",
     "backend/.env.example",
@@ -48,13 +45,11 @@ PUBLIC_TEXT_ARTIFACT_PATTERNS = (
 EXPECTED_PUBLIC_TEXT_ARTIFACTS = (
     README_PATH,
     APP_README_PATH,
-    REPORT_PATH,
     DOCS_GROK_REPORT_PATH,
     DOCS_OBJECTIVE_PATH,
     ENV_EXAMPLE_PATH,
     DEMO_RUNBOOK_PATH,
     DEV_ANDROID_SCRIPT_PATH,
-    ADB_REVERSE_SCRIPT_PATH,
     VERIFY_SCRIPT_PATH,
 )
 
@@ -122,7 +117,7 @@ def _extract_python_string_default(path: Path, field_name: str) -> str:
 
 def _extract_documented_grok_base_url(path: Path) -> str:
     """Extract the canonical Grok base URL from a documented config file."""
-    if path == REPORT_PATH:
+    if path == DOCS_GROK_REPORT_PATH:
         return _extract_markdown_backtick_value(path, "Base URL")
     if path == ENV_EXAMPLE_PATH:
         return _extract_env_assignment(path, "GROK_BASE_URL")
@@ -134,7 +129,7 @@ def _extract_documented_grok_base_url(path: Path) -> str:
 
 def _extract_documented_grok_model(path: Path) -> str:
     """Extract the canonical Grok model identifier from a documented config file."""
-    if path == REPORT_PATH:
+    if path == DOCS_GROK_REPORT_PATH:
         return _extract_markdown_backtick_value(path, "Model")
     if path == ENV_EXAMPLE_PATH:
         return _extract_env_assignment(path, "GROK_MODEL")
@@ -160,7 +155,7 @@ def test_real_looking_api_key_pattern_matches_supported_prefixes(token: str) -> 
 def test_guardrail_targets_visible_grok_artifacts_only() -> None:
     """Repository hygiene guardrails should only scan visible docs/config artifacts."""
     assert VISIBLE_GROK_ARTIFACTS == (
-        REPORT_PATH,
+        DOCS_GROK_REPORT_PATH,
         ENV_EXAMPLE_PATH,
         SETTINGS_PATH,
     )

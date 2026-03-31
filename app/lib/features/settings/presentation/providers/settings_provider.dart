@@ -31,10 +31,18 @@ final initialInAppNotifyProvider = Provider<bool>((ref) {
 });
 
 final initialLanguageProvider = Provider<String>((ref) {
-  return 'en';
+  return 'zh';
 });
 
 final initialLanguagePreloadedProvider = Provider<bool>((ref) {
+  return false;
+});
+
+final initialThemeModeProvider = Provider<ThemeMode>((ref) {
+  return ThemeMode.light;
+});
+
+final initialThemeModePreloadedProvider = Provider<bool>((ref) {
   return false;
 });
 
@@ -42,7 +50,13 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
   ref,
 ) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return ThemeModeNotifier(repo);
+  final initialThemeMode = ref.watch(initialThemeModeProvider);
+  final isPreloaded = ref.watch(initialThemeModePreloadedProvider);
+  return ThemeModeNotifier(
+    repo,
+    initialThemeMode: initialThemeMode,
+    isPreloaded: isPreloaded,
+  );
 });
 
 final baseUrlProvider = StateNotifierProvider<BaseUrlNotifier, String>((ref) {
@@ -135,27 +149,33 @@ class NotificationSettingsController {
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   final SettingsRepository _repo;
 
-  ThemeModeNotifier(this._repo) : super(ThemeMode.system) {
-    _load();
+  ThemeModeNotifier(
+    this._repo, {
+    required ThemeMode initialThemeMode,
+    required bool isPreloaded,
+  }) : super(initialThemeMode) {
+    if (!isPreloaded) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
     final mode = await _repo.getThemeMode();
-    state = _fromString(mode);
+    state = fromStorage(mode);
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     state = mode;
-    await _repo.setThemeMode(_toString(mode));
+    await _repo.setThemeMode(toStorage(mode));
   }
 
-  static ThemeMode _fromString(String value) => switch (value) {
+  static ThemeMode fromStorage(String value) => switch (value) {
     'light' => ThemeMode.light,
     'dark' => ThemeMode.dark,
     _ => ThemeMode.system,
   };
 
-  static String _toString(ThemeMode mode) => switch (mode) {
+  static String toStorage(ThemeMode mode) => switch (mode) {
     ThemeMode.light => 'light',
     ThemeMode.dark => 'dark',
     ThemeMode.system => 'system',

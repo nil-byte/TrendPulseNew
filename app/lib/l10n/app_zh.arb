@@ -162,6 +162,7 @@
     }
   },
   "reportAnalysisFailedTitle": "分析失败",
+  "reportAnalysisFailedMessage": "分析过程中出现错误，请重试或更换关键词。",
   "reportMindmapFallbackTitle": "当前导图暂不可视化",
   "reportMindmapFallbackBody": "目前仅支持后端生成的 Mermaid mindmap 子集，以下保留原始文本，方便继续核对。",
   "allSources": "全部来源",

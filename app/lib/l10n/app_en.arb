@@ -162,6 +162,7 @@
     }
   },
   "reportAnalysisFailedTitle": "Analysis Failed",
+  "reportAnalysisFailedMessage": "Something went wrong during analysis. Please retry or try a different keyword.",
   "reportMindmapFallbackTitle": "Mind map preview unavailable",
   "reportMindmapFallbackBody": "Only the backend-generated Mermaid mindmap subset is supported right now. The raw Mermaid text is shown below.",
   "allSources": "All Sources",

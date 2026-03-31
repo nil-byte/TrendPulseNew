@@ -144,9 +144,8 @@ class SubscriptionCard extends StatelessWidget {
                             border: Border.all(color: colors.onSurface),
                           ),
                           child: Text(
-                            sourcePlatformLabel(s, l10n).toUpperCase(),
+                            sourcePlatformLabel(s, l10n),
                             style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: colors.onSurface,
                               letterSpacing: 0.8,

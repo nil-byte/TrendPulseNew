@@ -132,14 +132,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: AppSpacing.lg),
 
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  l10n.settingsLanguageLabel.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    l10n.settingsLanguageLabel.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+                const SizedBox(width: AppSpacing.sm),
                 SegmentedButton<String>(
                   segments: [
                     ButtonSegment(
@@ -201,8 +203,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 SizedBox(
-                  height: 52,
-                  width: 52,
+                  height: 44,
+                  width: 44,
                   child: IconButton.filled(
                     onPressed: _isBaseUrlSaving ? null : _saveBaseUrl,
                     icon: const Icon(Icons.save_outlined),

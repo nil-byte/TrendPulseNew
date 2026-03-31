@@ -41,6 +41,10 @@ class HistoryListNotifier
     });
 
     ref.watch(historyRepositoryProvider);
+    ref.listen<int>(taskMutationSignalProvider, (_, __) {
+      final generation = _beginGeneration();
+      unawaited(_runRequestForGeneration(generation));
+    });
     _startInitialLoad();
     return const AsyncLoading();
   }

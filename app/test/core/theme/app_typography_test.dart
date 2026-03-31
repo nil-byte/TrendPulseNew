@@ -7,12 +7,12 @@ void main() {
     testWidgets('body styles favor readable long-form sizing', (tester) async {
       final textTheme = AppTypography.textTheme;
 
-      expect(textTheme.bodyLarge?.fontSize, 16);
-      expect(textTheme.bodyLarge?.height, 1.65);
-      expect(textTheme.bodyMedium?.fontSize, 15);
-      expect(textTheme.bodyMedium?.height, 1.55);
-      expect(textTheme.bodySmall?.fontSize, 13.5);
-      expect(textTheme.bodySmall?.height, 1.5);
+      expect(textTheme.bodyLarge?.fontSize, 15);
+      expect(textTheme.bodyLarge?.height, 1.6);
+      expect(textTheme.bodyMedium?.fontSize, 13);
+      expect(textTheme.bodyMedium?.height, 1.5);
+      expect(textTheme.bodySmall?.fontSize, 11.5);
+      expect(textTheme.bodySmall?.height, 1.45);
     });
 
     testWidgets('label styles no longer drop below readable comfort floor', (
@@ -20,9 +20,9 @@ void main() {
     ) async {
       final textTheme = AppTypography.textTheme;
 
-      expect(textTheme.labelLarge?.fontSize, 15);
-      expect(textTheme.labelMedium?.fontSize, 13.5);
-      expect(textTheme.labelSmall?.fontSize, 13);
+      expect(textTheme.labelLarge?.fontSize, 13);
+      expect(textTheme.labelMedium?.fontSize, 11.5);
+      expect(textTheme.labelSmall?.fontSize, 10.5);
       expect(textTheme.labelSmall?.letterSpacing, 0.35);
     });
 
@@ -31,11 +31,11 @@ void main() {
     ) async {
       final textTheme = AppTypography.textTheme;
 
-      expect(textTheme.displayLarge?.fontSize, 57);
-      expect(textTheme.headlineSmall?.fontSize, 24);
-      expect(textTheme.titleLarge?.fontSize, 22);
-      expect(textTheme.titleMedium?.fontSize, 18);
-      expect(textTheme.titleSmall?.fontSize, 15);
+      expect(textTheme.displayLarge?.fontSize, 52);
+      expect(textTheme.headlineSmall?.fontSize, 20);
+      expect(textTheme.titleLarge?.fontSize, 20);
+      expect(textTheme.titleMedium?.fontSize, 15);
+      expect(textTheme.titleSmall?.fontSize, 13);
       expect(
         textTheme.displayLarge?.fontFamily,
         AppTypography.editorialSerifFamily,
@@ -103,7 +103,7 @@ void main() {
       final style = AppTypography.caption(AppTypography.textTheme);
 
       expect(style.fontFamily, AppTypography.editorialSansFamily);
-      expect(style.fontSize, 11.5);
+      expect(style.fontSize, 10.5);
       expect(style.fontWeight, FontWeight.w500);
       expect(style.letterSpacing, 0.4);
       expect(style.height, 1.35);
@@ -119,7 +119,7 @@ void main() {
       final style = AppTypography.editorialEyebrow(AppTypography.textTheme);
 
       expect(style.fontFamily, AppTypography.editorialSansFamily);
-      expect(style.fontSize, 13);
+      expect(style.fontSize, 11.5);
       expect(style.fontWeight, FontWeight.w700);
       expect(style.letterSpacing, 0.8);
       expect(style.height, 1.32);

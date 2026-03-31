@@ -412,6 +412,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportAnalysisFailedTitle => '分析失败';
 
   @override
+  String get reportAnalysisFailedMessage => '分析过程中出现错误，请重试或更换关键词。';
+
+  @override
   String get reportMindmapFallbackTitle => '当前导图暂不可视化';
 
   @override
