@@ -79,7 +79,7 @@
   "settingsServerUrlSyncFailed": "报告语言同步失败，服务器地址未生效。",
   "settingsLanguageSyncFailed": "报告语言同步失败，语言切换未生效。",
   "settingsServerUrlInvalid": "请输入完整的 http:// 或 https:// 服务器地址。",
-  "settingsServerUrlAndroidHttpUnsupported": "Android 下 HTTP 仅支持 localhost、127.0.0.1 或 10.0.2.2，其他地址请使用 HTTPS。",
+  "settingsServerUrlAndroidHttpUnsupported": "Android 正式版仅允许 HTTP 访问 localhost、127.0.0.1、10.0.2.2；调试/分析构建还可使用私网 IP（如 192.168.x.x），其它地址请使用 HTTPS。",
   "settingsAboutMeta": "版本 {version} • 许可协议：{license}",
   "@settingsAboutMeta": {
     "placeholders": {

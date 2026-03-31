@@ -50,3 +50,6 @@ Objective.md
 .superpowers/
 backend/uv.lock
 TrendPulse.png
+
+# Local flutter_launcher_icons / manual export output (not app sources)
+/icon/

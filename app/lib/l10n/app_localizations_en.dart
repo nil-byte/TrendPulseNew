@@ -253,7 +253,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsServerUrlAndroidHttpUnsupported =>
-      'On Android, HTTP only works with localhost, 127.0.0.1, or 10.0.2.2. Use HTTPS for other hosts.';
+      'On Android release, HTTP is only allowed for localhost, 127.0.0.1, or 10.0.2.2. Debug/profile builds also allow private IPs (e.g. 192.168.x.x). Otherwise use HTTPS.';
 
   @override
   String settingsAboutMeta(String version, String license) {

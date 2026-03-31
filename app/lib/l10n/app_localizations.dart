@@ -575,7 +575,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsServerUrlAndroidHttpUnsupported.
   ///
   /// In en, this message translates to:
-  /// **'On Android, HTTP only works with localhost, 127.0.0.1, or 10.0.2.2. Use HTTPS for other hosts.'**
+  /// **'On Android release, HTTP is only allowed for localhost, 127.0.0.1, or 10.0.2.2. Debug/profile builds also allow private IPs (e.g. 192.168.x.x). Otherwise use HTTPS.'**
   String get settingsServerUrlAndroidHttpUnsupported;
 
   /// No description provided for @settingsAboutMeta.

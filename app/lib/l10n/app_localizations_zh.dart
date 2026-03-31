@@ -247,7 +247,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsServerUrlAndroidHttpUnsupported =>
-      'Android 下 HTTP 仅支持 localhost、127.0.0.1 或 10.0.2.2，其他地址请使用 HTTPS。';
+      'Android 正式版仅允许 HTTP 访问 localhost、127.0.0.1、10.0.2.2；调试/分析构建还可使用私网 IP（如 192.168.x.x），其它地址请使用 HTTPS。';
 
   @override
   String settingsAboutMeta(String version, String license) {

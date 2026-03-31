@@ -59,10 +59,20 @@ cp .env.example .env
 # 编辑 .env 填入 API Keys
 # 官方 xAI: 保持 GROK_PROVIDER_MODE=official_xai
 # 第三方兼容端点: 设置 GROK_PROVIDER_MODE=openai_compatible，并改写 GROK_BASE_URL / GROK_MODEL
-uvicorn src.main:app --reload
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-API 文档: http://localhost:8000/docs
+- **API 文档**: http://localhost:8000/docs
+- **`--host 0.0.0.0`**: 便于同局域网设备访问；若仅用 USB + `adb reverse`，也可只开 `--reload`，但统一加上更省事。
+
+若启动时报 **`[Errno 48] Address already in use`**，表示 **8000 端口已被占用**（例如未关掉的旧 `uvicorn`）。处理：
+
+```bash
+lsof -i :8000        # 查看占用进程 PID
+kill <PID>           # 仍不退出可用 kill -9 <PID>
+```
+
+或改用其它端口（如 8001），并同步修改 App 设置里的服务地址、`scripts/adb-reverse-backend.sh` 的端口参数。
 
 ### 前端启动
 
@@ -70,7 +80,43 @@ API 文档: http://localhost:8000/docs
 cd app
 flutter pub get
 flutter run
+# 指定设备：flutter devices 后使用 flutter run -d <deviceId>
 ```
+
+### Android 真机通过 USB 连接本机后端（推荐）
+
+手机上的 `127.0.0.1` 指向手机自身，要让 App 访问 **电脑上的后端**，应对 `8000` 做端口反向映射：
+
+1. 后端已在电脑上监听 `8000`（见上一节）。
+2. 仓库根目录执行（**多台设备/模拟器同时在线时须指定序列号**）：
+
+```bash
+# 仅一台设备时可省略 -s
+./scripts/adb-reverse-backend.sh -s <adb devices 第一列序列号>
+```
+
+3. App **设置** 中服务器地址填：`http://127.0.0.1:8000`（或 `http://localhost:8000`），保存。
+4. `cd app && flutter run -d <真机设备ID>`。
+
+**注意**：重插 USB 或 `adb` 重连后，若无映射需 **再执行一次** `adb-reverse-backend.sh`。脚本支持 `ANDROID_SERIAL` 或 `-s`；用法见脚本内注释。
+
+**模拟器一条龙**（含自动 `adb reverse`）可选用：`scripts/dev-android.sh`；物理真机日常开发通常只需：**后端 + `adb-reverse-backend.sh` + `flutter run`**。
+
+### Android：调试构建与 HTTP（简要）
+
+- **Release 包**：Android 上明文 HTTP 仅允许少量本机相关 host（如 `localhost`、`127.0.0.1`、模拟器访问宿主机用的 `10.0.2.2`），公网服务应使用 **HTTPS**。
+- **Debug / Profile 包**：工程内对 **RFC1918 私网 IP**（如 `192.168.x.x`）的 `http://` 在 Dart 校验与网络安全配置上放宽，便于 **Wi‑Fi 直连开发机**；上架与正式环境仍应使用 HTTPS。
+
+### 应用启动图标维护
+
+源文件位于 `app/assets/icons/`（`foreground.png`、`background.png`）。修改后重新生成各分辨率图标：
+
+```bash
+cd app
+dart run flutter_launcher_icons
+```
+
+配置见 `app/pubspec.yaml` 中的 `flutter_launcher_icons`。重新安装 App 后才能在桌面看到新图标。
 
 ## API 端点
 
@@ -119,6 +165,9 @@ TrendPulseNew/
 │   │   └── api/endpoints/     # REST 端点
 │   └── tests/                 # 后端测试
 ├── app/                        # Flutter 前端
+│   ├── assets/
+│   │   ├── icons/             # 启动图标源图（见「应用启动图标维护」）
+│   │   └── fonts/             # 字体资源
 │   ├── lib/
 │   │   ├── core/              # 主题 + 网络 + 通用组件
 │   │   └── features/          # 功能模块
@@ -130,7 +179,7 @@ TrendPulseNew/
 │   │       └── settings/      # 设置
 │   └── test/                  # 前端测试
 ├── docs/                      # 演示 / 验收 / 补充文档
-├── scripts/                   # 常用开发与验证脚本
+├── scripts/                   # 常用开发与验证脚本（如 adb-reverse-backend.sh、dev-android.sh）
 └── README.md
 ```
 
