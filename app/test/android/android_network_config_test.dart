@@ -23,6 +23,23 @@ void main() {
   });
 
   test(
+    'Android debug network config allows cleartext for dev LAN backends',
+    () {
+      final configFile = File(
+        'android/app/src/debug/res/xml/network_security_config.xml',
+      );
+
+      expect(configFile.existsSync(), isTrue);
+
+      final config = configFile.readAsStringSync();
+      expect(
+        config,
+        contains('<base-config cleartextTrafficPermitted="true">'),
+      );
+    },
+  );
+
+  test(
     'Android network security config only opts in local cleartext hosts',
     () {
       final configFile = File(

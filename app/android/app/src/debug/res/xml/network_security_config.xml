@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Debug builds only: cleartext HTTP to any host (e.g. http://192.168.x.x:8000).
+         Release uses src/main/res/xml/network_security_config.xml (strict). -->
+    <base-config cleartextTrafficPermitted="true">
+    </base-config>
+</network-security-config>

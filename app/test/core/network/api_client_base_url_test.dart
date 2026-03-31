@@ -164,6 +164,28 @@ void main() {
   );
 
   test(
+    'baseUrlProvider keeps Android private LAN cleartext initial URL in non-release',
+    () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      final container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(mockRepo),
+          initialBaseUrlProvider.overrideWithValue('http://192.168.1.50:8000'),
+          baseUrlTargetPlatformProvider.overrideWithValue(
+            TargetPlatform.android,
+          ),
+          baseUrlIsWebProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(baseUrlProvider), 'http://192.168.1.50:8000');
+    },
+  );
+
+  test(
     'baseUrlProvider keeps supported Android local cleartext initial URL',
     () {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;

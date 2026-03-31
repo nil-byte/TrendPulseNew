@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Profile builds: same as debug for local backend during performance runs. -->
+    <base-config cleartextTrafficPermitted="true">
+    </base-config>
+</network-security-config>

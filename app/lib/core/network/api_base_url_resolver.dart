@@ -9,6 +9,35 @@ abstract final class ApiBaseUrlResolver {
     '10.0.2.2',
   };
 
+  /// RFC1918 literal IPv4 — allowed for `http` on Android in debug/profile
+  /// (see debug/profile `network_security_config.xml` overlays).
+  static bool _isPrivateLanIpv4(String host) {
+    final parts = host.split('.');
+    if (parts.length != 4) {
+      return false;
+    }
+    final octets = <int>[];
+    for (final part in parts) {
+      final value = int.tryParse(part);
+      if (value == null || value < 0 || value > 255) {
+        return false;
+      }
+      octets.add(value);
+    }
+    final a = octets[0];
+    final b = octets[1];
+    if (a == 10) {
+      return true;
+    }
+    if (a == 172 && b >= 16 && b <= 31) {
+      return true;
+    }
+    if (a == 192 && b == 168) {
+      return true;
+    }
+    return false;
+  }
+
   /// Keep configured URLs explicit instead of inferring emulator behavior.
   ///
   /// `localhost` can be valid on desktop, web, and Android devices using
@@ -36,6 +65,9 @@ abstract final class ApiBaseUrlResolver {
         effectivePlatform == TargetPlatform.android &&
         scheme == 'http' &&
         !_supportedAndroidCleartextHosts.contains(uri.host.toLowerCase())) {
+      if (!kReleaseMode && _isPrivateLanIpv4(uri.host)) {
+        return null;
+      }
       return ApiBaseUrlValidationError.unsupportedAndroidHttp;
     }
 
