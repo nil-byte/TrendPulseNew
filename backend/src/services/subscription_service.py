@@ -37,7 +37,7 @@ _SUBSCRIPTION_SELECT_WITH_ALERT_SUMMARY = """
 SELECT
     subscriptions.id,
     subscriptions.keyword,
-    subscriptions.language,
+    subscriptions.content_language,
     subscriptions.max_items,
     subscriptions.sources,
     subscriptions.interval,
@@ -134,14 +134,14 @@ class SubscriptionService:
             await db.execute(
                 """
                 INSERT INTO subscriptions
-                    (id, keyword, language, max_items, sources, interval,
+                    (id, keyword, content_language, max_items, sources, interval,
                      is_active, notify, created_at, updated_at, next_run_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     sub_id,
                     request.keyword,
-                    request.language,
+                    request.content_language,
                     request.max_items,
                     json.dumps(request.sources),
                     request.interval,
@@ -162,7 +162,7 @@ class SubscriptionService:
         return SubscriptionResponse(
             id=sub_id,
             keyword=request.keyword,
-            language=request.language,
+            content_language=request.content_language,
             max_items=request.max_items,
             sources=request.sources,
             interval=request.interval,
@@ -238,8 +238,8 @@ class SubscriptionService:
             updates: dict[str, object] = {}
             if request.keyword is not None:
                 updates["keyword"] = request.keyword
-            if request.language is not None:
-                updates["language"] = request.language
+            if request.content_language is not None:
+                updates["content_language"] = request.content_language
             if request.max_items is not None:
                 updates["max_items"] = request.max_items
             if request.sources is not None:
@@ -365,7 +365,7 @@ class SubscriptionService:
 
         request = CreateTaskRequest(
             keyword=subscription.keyword,
-            language=subscription.language,
+            content_language=subscription.content_language,
             max_items=subscription.max_items,
             sources=subscription.sources,
         )
@@ -393,7 +393,7 @@ class SubscriptionService:
         return SubscriptionResponse(
             id=row["id"],  # type: ignore[index]
             keyword=row["keyword"],  # type: ignore[index]
-            language=row["language"],  # type: ignore[index]
+            content_language=row["content_language"],  # type: ignore[index]
             max_items=row["max_items"],  # type: ignore[index]
             sources=json.loads(row["sources"]),  # type: ignore[index]
             interval=row["interval"],  # type: ignore[index]

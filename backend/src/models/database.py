@@ -18,7 +18,8 @@ _SQL_CREATE_TASKS = """
 CREATE TABLE IF NOT EXISTS tasks (
     id          TEXT PRIMARY KEY,
     keyword     TEXT NOT NULL,
-    language    TEXT NOT NULL DEFAULT 'en',
+    content_language TEXT NOT NULL DEFAULT 'en',
+    report_language TEXT NOT NULL DEFAULT 'en',
     max_items   INTEGER NOT NULL DEFAULT 50,
     status      TEXT NOT NULL DEFAULT 'pending',
     sources     TEXT NOT NULL,
@@ -74,7 +75,7 @@ _SQL_CREATE_SUBSCRIPTIONS = """
 CREATE TABLE IF NOT EXISTS subscriptions (
     id          TEXT PRIMARY KEY,
     keyword     TEXT NOT NULL,
-    language    TEXT NOT NULL DEFAULT 'en',
+    content_language TEXT NOT NULL DEFAULT 'en',
     max_items   INTEGER NOT NULL DEFAULT 50,
     sources     TEXT NOT NULL,
     interval    TEXT NOT NULL DEFAULT 'daily',
@@ -91,6 +92,7 @@ _SQL_CREATE_APP_SETTINGS = """
 CREATE TABLE IF NOT EXISTS app_settings (
     id                            INTEGER PRIMARY KEY CHECK (id = 1),
     default_subscription_notify   INTEGER NOT NULL DEFAULT 1,
+    report_language               TEXT NOT NULL DEFAULT 'en',
     created_at                    TEXT NOT NULL,
     updated_at                    TEXT NOT NULL
 );
@@ -100,10 +102,11 @@ _SQL_INSERT_DEFAULT_APP_SETTINGS = """
 INSERT OR IGNORE INTO app_settings (
     id,
     default_subscription_notify,
+    report_language,
     created_at,
     updated_at
 )
-VALUES (1, 1, ?, ?);
+VALUES (1, 1, 'en', ?, ?);
 """
 
 _SQL_CREATE_SUBSCRIPTION_ALERTS = """
@@ -131,6 +134,10 @@ _SQL_CREATE_INDEX_SUBSCRIPTION_ALERTS_UNREAD = """
 CREATE INDEX IF NOT EXISTS idx_subscription_alerts_unread
 ON subscription_alerts (subscription_id, is_read, created_at DESC);
 """
+
+
+class DatabaseSchemaContractError(RuntimeError):
+    """Raised when the on-disk SQLite schema no longer matches the backend contract."""
 
 
 def _now_iso() -> str:
@@ -180,6 +187,7 @@ async def init_db() -> None:
         await db.execute(_SQL_CREATE_APP_SETTINGS)
         await db.execute(_SQL_CREATE_SUBSCRIPTIONS)
         await db.execute(_SQL_CREATE_SUBSCRIPTION_ALERTS)
+        await _ensure_language_contract(db)
         await db.execute(_SQL_INSERT_DEFAULT_APP_SETTINGS, (now, now))
         await db.execute(_SQL_CREATE_INDEX_RAW_POSTS_TASK)
         await db.execute(_SQL_CREATE_INDEX_REPORTS_TASK)
@@ -196,6 +204,53 @@ async def init_db() -> None:
         await close_db(db)
 
 
+async def _ensure_language_contract(db: aiosqlite.Connection) -> None:
+    """Fail fast when an existing database still uses the removed language contract."""
+    expected_columns_by_table = {
+        "tasks": {"content_language", "report_language"},
+        "subscriptions": {"content_language"},
+        "app_settings": {"report_language"},
+    }
+    for table, required_columns in expected_columns_by_table.items():
+        columns = await _get_table_columns(db, table)
+        if not columns:
+            continue
+        has_legacy_language = "language" in columns
+        missing_columns = sorted(required_columns - set(columns))
+        if has_legacy_language or missing_columns:
+            raise DatabaseSchemaContractError(
+                _build_schema_contract_error(
+                    table=table,
+                    columns=columns,
+                    missing_columns=missing_columns,
+                    has_legacy_language=has_legacy_language,
+                )
+            )
+
+
+def _build_schema_contract_error(
+    *,
+    table: str,
+    columns: list[str],
+    missing_columns: list[str],
+    has_legacy_language: bool,
+) -> str:
+    """Build a clear error for unsupported legacy SQLite schemas."""
+    issues: list[str] = []
+    if has_legacy_language:
+        issues.append("legacy language column present")
+    if missing_columns:
+        issues.append(f"missing columns: {', '.join(missing_columns)}")
+    issue_summary = "; ".join(issues) if issues else "schema contract mismatch"
+    return (
+        f"legacy language schema detected in table '{table}' for database "
+        f"'{_resolve_db_path()}': {issue_summary}. "
+        f"found columns: {', '.join(columns)}. "
+        "delete the development SQLite database and restart so the backend can "
+        "initialize the current schema."
+    )
+
+
 async def _safe_add_column(
     db: aiosqlite.Connection, table: str, column: str, ddl: str
 ) -> None:
@@ -207,10 +262,16 @@ async def _safe_add_column(
         column: Column name to check for.
         ddl: The ALTER TABLE DDL to run if the column is missing.
     """
-    cursor = await db.execute(f"PRAGMA table_info({table})")
-    cols = [row[1] for row in await cursor.fetchall()]
+    cols = await _get_table_columns(db, table)
     if column not in cols:
         await db.execute(ddl)
+
+
+async def _get_table_columns(db: aiosqlite.Connection, table: str) -> list[str]:
+    """Return column names for the given table in definition order."""
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    rows = await cursor.fetchall()
+    return [row[1] for row in rows]
 
 
 async def close_db(db: aiosqlite.Connection) -> None:

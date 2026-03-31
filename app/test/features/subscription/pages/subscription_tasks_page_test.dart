@@ -36,7 +36,7 @@ class _FakeSubscriptionRepository extends SubscriptionRepository {
   static const _defaultSubscription = Subscription(
     id: 'sub-1',
     keyword: 'AI Watch',
-    language: 'en',
+    contentLanguage: 'en',
     interval: 'daily',
     maxItems: 50,
     sources: ['reddit', 'youtube', 'x'],
@@ -97,7 +97,7 @@ class _FakeSubscriptionRepository extends SubscriptionRepository {
     _currentDetail = Subscription(
       id: _currentDetail.id,
       keyword: _currentDetail.keyword,
-      language: _currentDetail.language,
+      contentLanguage: _currentDetail.contentLanguage,
       interval: _currentDetail.interval,
       maxItems: _currentDetail.maxItems,
       sources: _currentDetail.sources,
@@ -344,7 +344,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -396,7 +396,7 @@ void main() {
             detail: const Subscription(
               id: 'sub-1',
               keyword: 'AI Watch',
-              language: 'en',
+              contentLanguage: 'en',
               interval: 'daily',
               maxItems: 50,
               sources: ['reddit', 'youtube', 'x'],
@@ -443,7 +443,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -491,7 +491,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -552,7 +552,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -603,7 +603,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -648,7 +648,7 @@ void main() {
         const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -687,7 +687,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],
@@ -742,7 +742,7 @@ void main() {
             detail: const Subscription(
               id: 'sub-1',
               keyword: 'AI Watch',
-              language: 'en',
+              contentLanguage: 'en',
               interval: 'daily',
               maxItems: 50,
               sources: ['reddit', 'youtube', 'x'],
@@ -783,7 +783,7 @@ void main() {
             detail: const Subscription(
               id: 'sub-1',
               keyword: 'AI Watch',
-              language: 'en',
+              contentLanguage: 'en',
               interval: 'daily',
               maxItems: 50,
               sources: ['reddit', 'youtube', 'x'],
@@ -823,7 +823,7 @@ void main() {
         detail: const Subscription(
           id: 'sub-1',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit', 'youtube', 'x'],

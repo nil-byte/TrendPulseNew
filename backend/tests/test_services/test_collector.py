@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from src.adapters.base import PartialSourceCollectionError, SourceFailure
+from src.adapters.base import (
+    PartialSourceCollectionError,
+    SourceCollectionError,
+    SourceFailure,
+)
 from src.models.schemas import RawPost
 from src.services.collector_service import CollectorService
 from src.services.source_availability_service import source_availability_service
@@ -17,6 +23,177 @@ def _make_post(source: str, content: str) -> RawPost:
 
 class TestCollectorService:
     """Tests for CollectorService concurrent collection."""
+
+    async def test_collect_uses_localized_search_query_for_adapters(self) -> None:
+        """Collector should localize once, then pass the rewritten query to adapters."""
+        source_availability_service.reset_runtime_state()
+        mock_reddit = AsyncMock()
+        mock_reddit.collect = AsyncMock(
+            return_value=[_make_post("reddit", "Reddit post about AI trends")]
+        )
+        mock_reddit.source_name = "reddit"
+
+        mock_youtube = AsyncMock()
+        mock_youtube.collect = AsyncMock(
+            return_value=[_make_post("youtube", "YouTube video about AI trends")]
+        )
+        mock_youtube.source_name = "youtube"
+
+        mock_x = AsyncMock()
+        mock_x.collect = AsyncMock(
+            return_value=[_make_post("x", "Tweet about AI trends")]
+        )
+        mock_x.source_name = "x"
+
+        mock_search_query_service = AsyncMock()
+        mock_search_query_service.build_search_query = AsyncMock(
+            return_value=SimpleNamespace(
+                query="artificial intelligence",
+                status="localized",
+                reason=None,
+            )
+        )
+
+        service = CollectorService(
+            adapters={
+                "reddit": mock_reddit,
+                "youtube": mock_youtube,
+                "x": mock_x,
+            },
+            search_query_service=mock_search_query_service,
+        )
+        result = await service.collect("人工智能", "en", 30, ["reddit", "youtube", "x"])
+
+        assert len(result.posts) == 3
+        assert result.source_errors == {}
+        mock_search_query_service.build_search_query.assert_awaited_once_with(
+            "人工智能",
+            "en",
+        )
+        mock_reddit.collect.assert_awaited_once_with(
+            "artificial intelligence",
+            "en",
+            30,
+        )
+        mock_youtube.collect.assert_awaited_once_with(
+            "artificial intelligence",
+            "en",
+            30,
+        )
+        mock_x.collect.assert_awaited_once_with("artificial intelligence", "en", 30)
+        source_availability_service.reset_runtime_state()
+
+    async def test_collect_logs_search_query_fallback_status_and_reason(
+        self,
+        caplog,
+    ) -> None:
+        """Collector should log localization fallback metadata for observability."""
+        source_availability_service.reset_runtime_state()
+        mock_x = AsyncMock()
+        mock_x.collect = AsyncMock(return_value=[_make_post("x", "Tweet content here")])
+        mock_x.source_name = "x"
+
+        mock_search_query_service = AsyncMock()
+        mock_search_query_service.build_search_query = AsyncMock(
+            return_value=SimpleNamespace(
+                query='"exact phrase"',
+                status="fallback",
+                reason="llm_call_failed",
+            )
+        )
+
+        service = CollectorService(
+            adapters={"x": mock_x},
+            search_query_service=mock_search_query_service,
+        )
+
+        with caplog.at_level(logging.INFO, logger="src.services.collector_service"):
+            result = await service.collect('"exact phrase"', "en", 10, ["x"])
+
+        assert len(result.posts) == 1
+        mock_x.collect.assert_awaited_once_with('"exact phrase"', "en", 10)
+        assert "Collector starting" in caplog.text
+        assert 'search_query=\'"exact phrase"\'' in caplog.text
+        assert "search_query_status=fallback" in caplog.text
+        assert "search_query_reason='llm_call_failed'" in caplog.text
+        source_availability_service.reset_runtime_state()
+
+    async def test_collect_logs_zero_post_success_with_posts_count(
+        self,
+        caplog,
+    ) -> None:
+        """Successful zero-post collections should still log posts=0."""
+        source_availability_service.reset_runtime_state()
+        mock_youtube = AsyncMock()
+        mock_youtube.collect = AsyncMock(return_value=[])
+        mock_youtube.source_name = "youtube"
+
+        mock_search_query_service = AsyncMock()
+        mock_search_query_service.build_search_query = AsyncMock(
+            return_value=SimpleNamespace(
+                query="AI",
+                status="localized",
+                reason=None,
+            )
+        )
+
+        service = CollectorService(
+            adapters={"youtube": mock_youtube},
+            search_query_service=mock_search_query_service,
+        )
+
+        with caplog.at_level(logging.INFO, logger="src.services.collector_service"):
+            result = await service.collect("AI", "en", 10, ["youtube"])
+
+        assert result.posts == []
+        assert result.source_errors == {}
+        assert "Collection succeeded source=youtube posts=0" in caplog.text
+        source_availability_service.reset_runtime_state()
+
+    async def test_collect_logs_source_and_reason_code_when_source_fails(
+        self,
+        caplog,
+    ) -> None:
+        """Failed collections should log both source and stable reason_code."""
+        source_availability_service.reset_runtime_state()
+        mock_youtube = AsyncMock()
+        mock_youtube.collect = AsyncMock(
+            side_effect=SourceCollectionError(
+                "youtube_rate_limited",
+                "YouTube API rate limit exceeded",
+            )
+        )
+        mock_youtube.source_name = "youtube"
+
+        mock_search_query_service = AsyncMock()
+        mock_search_query_service.build_search_query = AsyncMock(
+            return_value=SimpleNamespace(
+                query="AI",
+                status="localized",
+                reason=None,
+            )
+        )
+
+        service = CollectorService(
+            adapters={"youtube": mock_youtube},
+            search_query_service=mock_search_query_service,
+        )
+
+        with caplog.at_level(logging.ERROR, logger="src.services.collector_service"):
+            result = await service.collect("AI", "en", 10, ["youtube"])
+
+        assert result.posts == []
+        assert result.source_errors == {
+            "youtube": SourceFailure(
+                reason_code="youtube_rate_limited",
+                message="YouTube API rate limit exceeded",
+            )
+        }
+        assert (
+            "Collection failed source=youtube reason_code=youtube_rate_limited"
+            in caplog.text
+        )
+        source_availability_service.reset_runtime_state()
 
     @patch("src.services.collector_service.XAdapter")
     @patch("src.services.collector_service.YouTubeAdapter")

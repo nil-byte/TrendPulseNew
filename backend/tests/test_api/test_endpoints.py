@@ -62,7 +62,8 @@ async def _insert_subscription_task(
                 (
                     id,
                     keyword,
-                    language,
+                    content_language,
+                    report_language,
                     max_items,
                     status,
                     sources,
@@ -70,11 +71,12 @@ async def _insert_subscription_task(
                     updated_at,
                     subscription_id
                 )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task_id,
                 "openai",
+                "en",
                 "en",
                 25,
                 "completed",
@@ -110,7 +112,7 @@ async def _fetch_app_settings_rows() -> list[object]:
     try:
         cursor = await db.execute(
             """
-            SELECT id, default_subscription_notify, created_at, updated_at
+            SELECT id, default_subscription_notify, report_language, created_at, updated_at
             FROM app_settings
             ORDER BY id
             """
@@ -251,7 +253,8 @@ class TestTaskEndpoints:
         """POST /api/v1/tasks with valid body returns 201 with task data."""
         body = {
             "keyword": "artificial intelligence",
-            "language": "en",
+            "content_language": "zh",
+            "report_language": "en",
             "max_items": 20,
             "sources": ["reddit", "youtube"],
         }
@@ -261,7 +264,8 @@ class TestTaskEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert data["keyword"] == "artificial intelligence"
-        assert data["language"] == "en"
+        assert data["content_language"] == "zh"
+        assert data["report_language"] == "en"
         assert data["max_items"] == 20
         assert data["status"] == "pending"
         assert "sentiment_score" in data
@@ -275,11 +279,28 @@ class TestTaskEndpoints:
         """POST with empty keyword returns 422."""
         body = {
             "keyword": "",
-            "language": "en",
+            "content_language": "en",
+            "report_language": "en",
             "sources": ["reddit"],
         }
 
         response = await client.post("/api/v1/tasks", json=body)
+
+        assert response.status_code == 422
+
+    async def test_create_task_rejects_legacy_language_field(
+        self, client: AsyncClient
+    ) -> None:
+        """POST should reject the removed legacy language field."""
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "language": "zh",
+                "max_items": 20,
+                "sources": ["reddit"],
+            },
+        )
 
         assert response.status_code == 422
 
@@ -291,7 +312,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "ai",
-                "language": "en",
+                "content_language": "en",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["reddit", "reddit"],
             },
@@ -317,7 +339,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "ai",
-                "language": "zh",
+                "content_language": "zh",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["youtube", "x"],
             },
@@ -357,7 +380,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "ai",
-                "language": "zh",
+                "content_language": "zh",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["reddit", "youtube"],
             },
@@ -387,7 +411,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "ai",
-                "language": "zh",
+                "content_language": "zh",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["reddit", "x"],
             },
@@ -420,7 +445,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "ai",
-                "language": "zh",
+                "content_language": "zh",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["reddit"],
             },
@@ -470,7 +496,7 @@ class TestTaskEndpoints:
         """Task detail/list endpoints must expose partial report fields."""
         create_subscription_body = {
             "keyword": "openai",
-            "language": "en",
+            "content_language": "zh",
             "max_items": 25,
             "sources": ["reddit", "youtube"],
             "interval": "daily",
@@ -585,6 +611,8 @@ class TestTaskEndpoints:
 
         for payload in (detail_data, list_task, subscription_task):
             assert payload["status"] == "partial"
+            assert payload["content_language"] == "zh"
+            assert payload["report_language"] == "en"
             assert payload["sentiment_score"] == 72.5
             assert payload["post_count"] == 2
             assert (
@@ -601,7 +629,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["reddit"],
             },
@@ -683,7 +712,8 @@ class TestTaskEndpoints:
             "/api/v1/tasks",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
+                "report_language": "en",
                 "max_items": 20,
                 "sources": ["reddit"],
             },
@@ -781,8 +811,34 @@ class TestNotificationSettingsEndpoints:
         assert len(rows) == 1
         assert rows[0]["id"] == 1
         assert bool(rows[0]["default_subscription_notify"]) is True
+        assert rows[0]["report_language"] == "en"
         assert rows[0]["created_at"]
         assert rows[0]["updated_at"]
+
+    async def test_get_report_language_defaults_to_english(
+        self, client: AsyncClient
+    ) -> None:
+        """GET returns the persisted app-level report language."""
+        response = await client.get("/api/v1/settings/report-language")
+
+        assert response.status_code == 200
+        assert response.json() == {"report_language": "en"}
+
+    async def test_update_report_language_persists(
+        self, client: AsyncClient
+    ) -> None:
+        """PUT updates the app-level report language."""
+        response = await client.put(
+            "/api/v1/settings/report-language",
+            json={"report_language": "zh"},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"report_language": "zh"}
+
+        get_response = await client.get("/api/v1/settings/report-language")
+        assert get_response.status_code == 200
+        assert get_response.json() == {"report_language": "zh"}
 
     async def test_get_notification_settings_defaults_to_enabled(
         self, client: AsyncClient
@@ -801,7 +857,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "x"],
                 "interval": "daily",
@@ -812,7 +868,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "cursor",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "youtube"],
                 "interval": "daily",
@@ -848,7 +904,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "x"],
                 "interval": "daily",
@@ -859,7 +915,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "cursor",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "youtube"],
                 "interval": "daily",
@@ -898,7 +954,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "x"],
                 "interval": "daily",
@@ -926,7 +982,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "x"],
                 "interval": "daily",
@@ -946,7 +1002,7 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "x"],
                 "interval": "daily",
@@ -964,9 +1020,26 @@ class TestNotificationSettingsEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "reddit"],
+                "interval": "daily",
+            },
+        )
+
+        assert response.status_code == 422
+
+    async def test_create_subscription_rejects_legacy_language_field(
+        self, client: AsyncClient
+    ) -> None:
+        """Subscriptions should reject the removed legacy language field."""
+        response = await client.post(
+            "/api/v1/subscriptions",
+            json={
+                "keyword": "openai",
+                "language": "zh",
+                "max_items": 25,
+                "sources": ["reddit"],
                 "interval": "daily",
             },
         )
@@ -991,7 +1064,7 @@ class TestSubscriptionEndpoints:
         monkeypatch.setattr(settings, "grok_api_key", "grok-key")
         create_subscription_body = {
             "keyword": "openai",
-            "language": "en",
+            "content_language": "zh",
             "max_items": 25,
             "sources": ["reddit", "x"],
             "interval": "daily",
@@ -1008,7 +1081,8 @@ class TestSubscriptionEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert data["keyword"] == create_subscription_body["keyword"]
-        assert data["language"] == create_subscription_body["language"]
+        assert data["content_language"] == create_subscription_body["content_language"]
+        assert data["report_language"] == "en"
         assert data["max_items"] == create_subscription_body["max_items"]
         assert data["sources"] == create_subscription_body["sources"]
         assert data["subscription_id"] == subscription_id
@@ -1051,7 +1125,7 @@ class TestSubscriptionEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit"],
                 "interval": "daily",
@@ -1072,7 +1146,7 @@ class TestSubscriptionEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "youtube"],
                 "interval": "daily",
@@ -1088,6 +1162,63 @@ class TestSubscriptionEndpoints:
 
         assert response.status_code == 422
 
+    async def test_update_subscription_rejects_legacy_language_field(
+        self, client: AsyncClient
+    ) -> None:
+        """PUT should reject the removed language field."""
+        create_subscription_response = await client.post(
+            "/api/v1/subscriptions",
+            json={
+                "keyword": "openai",
+                "content_language": "en",
+                "max_items": 25,
+                "sources": ["reddit"],
+                "interval": "daily",
+                "notify": True,
+            },
+        )
+        subscription_id = create_subscription_response.json()["id"]
+
+        response = await client.put(
+            f"/api/v1/subscriptions/{subscription_id}",
+            json={"language": "zh"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_get_and_update_subscription_only_expose_content_language(
+        self, client: AsyncClient
+    ) -> None:
+        """Subscription GET/PUT responses must expose content_language only."""
+        create_subscription_response = await client.post(
+            "/api/v1/subscriptions",
+            json={
+                "keyword": "openai",
+                "content_language": "zh",
+                "max_items": 25,
+                "sources": ["reddit"],
+                "interval": "daily",
+                "notify": True,
+            },
+        )
+        subscription_id = create_subscription_response.json()["id"]
+
+        get_response = await client.get(f"/api/v1/subscriptions/{subscription_id}")
+        update_response = await client.put(
+            f"/api/v1/subscriptions/{subscription_id}",
+            json={"content_language": "en"},
+        )
+
+        assert get_response.status_code == 200
+        get_payload = get_response.json()
+        assert get_payload["content_language"] == "zh"
+        assert "language" not in get_payload
+
+        assert update_response.status_code == 200
+        update_payload = update_response.json()
+        assert update_payload["content_language"] == "en"
+        assert "language" not in update_payload
+
     async def test_subscription_endpoints_include_unread_alert_summary_fields(
         self, client: AsyncClient
     ) -> None:
@@ -1096,7 +1227,7 @@ class TestSubscriptionEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "x"],
                 "interval": "daily",
@@ -1157,7 +1288,7 @@ class TestSubscriptionEndpoints:
             "/api/v1/subscriptions",
             json={
                 "keyword": "openai",
-                "language": "en",
+                "content_language": "en",
                 "max_items": 25,
                 "sources": ["reddit", "youtube"],
                 "interval": "daily",
@@ -1238,7 +1369,7 @@ class TestSubscriptionEndpoints:
         """Manual runs should clear overdue state to avoid duplicate scheduler tasks."""
         create_subscription_body = {
             "keyword": "openai",
-            "language": "en",
+            "content_language": "en",
             "max_items": 25,
             "sources": ["reddit", "x"],
             "interval": "daily",

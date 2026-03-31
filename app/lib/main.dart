@@ -22,6 +22,10 @@ Future<String> loadInitialBaseUrl(
   );
 }
 
+Future<String> loadInitialLanguage(SettingsRepository repository) async {
+  return repository.getLanguage();
+}
+
 Future<List<Override>> buildAppOverrides({
   SettingsRepository? settingsRepository,
   TargetPlatform? targetPlatform,
@@ -34,11 +38,14 @@ Future<List<Override>> buildAppOverrides({
     isWeb: isWeb,
   );
   final initialInAppNotify = await repository.getInAppNotify();
+  final initialLanguage = await loadInitialLanguage(repository);
 
   return [
     settingsRepositoryProvider.overrideWithValue(repository),
     initialBaseUrlProvider.overrideWithValue(initialBaseUrl),
     initialInAppNotifyProvider.overrideWithValue(initialInAppNotify),
+    initialLanguageProvider.overrideWithValue(initialLanguage),
+    initialLanguagePreloadedProvider.overrideWithValue(true),
     baseUrlTargetPlatformProvider.overrideWithValue(
       targetPlatform ?? defaultTargetPlatform,
     ),

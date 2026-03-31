@@ -16,6 +16,13 @@ void main() {
   setUp(() {
     mockRepo = _MockSettingsRepository();
     when(() => mockRepo.getInAppNotify()).thenAnswer((_) async => true);
+    when(() => mockRepo.getLanguage()).thenAnswer((_) async => 'en');
+    when(
+      () => mockRepo.getReportLanguage(baseUrl: any(named: 'baseUrl')),
+    ).thenAnswer((_) async => 'en');
+    when(
+      () => mockRepo.setReportLanguage(any(), baseUrl: any(named: 'baseUrl')),
+    ).thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
   });
 
   test(
@@ -63,6 +70,32 @@ void main() {
         'http://bootstrap.example:7000',
       );
       verify(() => mockRepo.getBaseUrl()).called(1);
+    },
+  );
+
+  test(
+    'buildAppOverrides preloads persisted language for synchronous provider startup',
+    () async {
+      when(() => mockRepo.getBaseUrl()).thenAnswer((_) async => '');
+      when(() => mockRepo.getLanguage()).thenAnswer((_) async => 'zh');
+      when(
+        () => mockRepo.getReportLanguage(baseUrl: any(named: 'baseUrl')),
+      ).thenAnswer((_) async => 'zh');
+
+      final overrides = await app.buildAppOverrides(
+        settingsRepository: mockRepo,
+        targetPlatform: TargetPlatform.iOS,
+      );
+      final container = ProviderContainer(overrides: overrides);
+      addTearDown(container.dispose);
+
+      expect(container.read(defaultLanguageProvider), 'zh');
+
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(defaultLanguageProvider), 'zh');
+      verify(() => mockRepo.getLanguage()).called(1);
     },
   );
 

@@ -6,7 +6,7 @@ where appropriate.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared adapter model
@@ -49,11 +49,21 @@ def _validate_sources_list(v: list[str]) -> list[str]:
     return v
 
 
+def _validate_language_code(v: str) -> str:
+    """Validate a supported language code."""
+    if v not in _VALID_LANGUAGES:
+        raise ValueError(f"language must be one of {sorted(_VALID_LANGUAGES)}")
+    return v
+
+
 class CreateTaskRequest(BaseModel):
     """Request body for creating a new analysis task."""
 
+    model_config = ConfigDict(extra="forbid")
+
     keyword: str = Field(..., min_length=1, max_length=200)
-    language: str = Field(default="en")
+    content_language: str = Field(default="en")
+    report_language: str | None = None
     max_items: int = Field(
         default=50,
         ge=1,
@@ -69,12 +79,17 @@ class CreateTaskRequest(BaseModel):
             raise ValueError("keyword must not be blank")
         return v.strip()
 
-    @field_validator("language")
+    @field_validator("content_language")
     @classmethod
-    def language_supported(cls, v: str) -> str:
-        if v not in _VALID_LANGUAGES:
-            raise ValueError(f"language must be one of {sorted(_VALID_LANGUAGES)}")
-        return v
+    def content_language_supported(cls, v: str) -> str:
+        return _validate_language_code(v)
+
+    @field_validator("report_language")
+    @classmethod
+    def report_language_supported(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return _validate_language_code(v)
 
     @field_validator("sources")
     @classmethod
@@ -92,7 +107,8 @@ class TaskResponse(BaseModel):
 
     id: str
     keyword: str
-    language: str
+    content_language: str
+    report_language: str
     max_items: int
     status: str
     sources: list[str]
@@ -185,8 +201,10 @@ _VALID_INTERVALS = {"hourly", "6hours", "daily", "weekly"}
 class CreateSubscriptionRequest(BaseModel):
     """Request body for creating a subscription."""
 
+    model_config = ConfigDict(extra="forbid")
+
     keyword: str = Field(..., min_length=1, max_length=200)
-    language: str = Field(default="en")
+    content_language: str = Field(default="en")
     max_items: int = Field(
         default=50,
         ge=1,
@@ -204,12 +222,10 @@ class CreateSubscriptionRequest(BaseModel):
             raise ValueError("keyword must not be blank")
         return v.strip()
 
-    @field_validator("language")
+    @field_validator("content_language")
     @classmethod
     def language_supported(cls, v: str) -> str:
-        if v not in _VALID_LANGUAGES:
-            raise ValueError(f"language must be one of {sorted(_VALID_LANGUAGES)}")
-        return v
+        return _validate_language_code(v)
 
     @field_validator("sources")
     @classmethod
@@ -234,8 +250,10 @@ class CreateSubscriptionRequest(BaseModel):
 class UpdateSubscriptionRequest(BaseModel):
     """Request body for updating a subscription. All fields optional."""
 
+    model_config = ConfigDict(extra="forbid")
+
     keyword: str | None = Field(default=None, min_length=1, max_length=200)
-    language: str | None = None
+    content_language: str | None = None
     max_items: int | None = Field(
         default=None,
         ge=1,
@@ -254,11 +272,11 @@ class UpdateSubscriptionRequest(BaseModel):
             raise ValueError("keyword must not be blank")
         return v.strip() if v else v
 
-    @field_validator("language")
+    @field_validator("content_language")
     @classmethod
     def language_supported(cls, v: str | None) -> str | None:
-        if v is not None and v not in _VALID_LANGUAGES:
-            raise ValueError(f"language must be one of {sorted(_VALID_LANGUAGES)}")
+        if v is not None:
+            return _validate_language_code(v)
         return v
 
     @field_validator("sources")
@@ -282,8 +300,29 @@ class NotificationSettingsResponse(BaseModel):
     subscription_notify_default: bool
 
 
+class ReportLanguageSettingsResponse(BaseModel):
+    """Report-language settings exposed by the backend."""
+
+    report_language: str
+
+
+class UpdateReportLanguageRequest(BaseModel):
+    """Request body for updating the report language setting."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    report_language: str
+
+    @field_validator("report_language")
+    @classmethod
+    def report_language_supported(cls, v: str) -> str:
+        return _validate_language_code(v)
+
+
 class UpdateNotificationSettingsRequest(BaseModel):
     """Request body for updating notification settings."""
+
+    model_config = ConfigDict(extra="forbid")
 
     subscription_notify_default: bool
     apply_to_existing: bool
@@ -294,7 +333,7 @@ class SubscriptionResponse(BaseModel):
 
     id: str
     keyword: str
-    language: str
+    content_language: str
     max_items: int
     sources: list[str]
     interval: str

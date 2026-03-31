@@ -2,7 +2,8 @@ class HistoryItem {
   final String id;
   final String keyword;
   final String status;
-  final String language;
+  final String contentLanguage;
+  final String reportLanguage;
   final List<String> sources;
   final String createdAt;
   final double? sentimentScore;
@@ -13,7 +14,8 @@ class HistoryItem {
     required this.id,
     required this.keyword,
     required this.status,
-    required this.language,
+    required this.contentLanguage,
+    required this.reportLanguage,
     required this.sources,
     required this.createdAt,
     this.sentimentScore,
@@ -26,7 +28,16 @@ class HistoryItem {
       id: json['id'] as String,
       keyword: json['keyword'] as String,
       status: json['status'] as String? ?? 'pending',
-      language: json['language'] as String? ?? 'en',
+      contentLanguage: _requireHistoryString(
+        json,
+        'content_language',
+        context: 'HistoryItem',
+      ),
+      reportLanguage: _requireHistoryString(
+        json,
+        'report_language',
+        context: 'HistoryItem',
+      ),
       sources:
           (json['sources'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -48,4 +59,16 @@ class HistoryItem {
   bool get isInProgress => isPending || isCollecting || isAnalyzing;
   bool get isRunning => isInProgress;
   bool get canViewReport => isCompleted || isPartial;
+}
+
+String _requireHistoryString(
+  Map<String, dynamic> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('Missing or invalid "$key" in $context JSON.');
 }

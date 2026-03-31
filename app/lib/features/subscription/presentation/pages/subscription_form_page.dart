@@ -28,7 +28,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _keywordController = TextEditingController();
 
-  String _language = 'en';
+  String _contentLanguage = 'en';
   Set<String> _sources = {'reddit'};
   String _interval = 'daily';
   double _maxItems = 50;
@@ -84,7 +84,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               if (!_loaded && mounted) {
                 setState(() {
                   _keywordController.text = sub.keyword;
-                  _language = sub.language;
+                  _contentLanguage = sub.contentLanguage;
                   _sources = sub.sources.toSet();
                   _interval = sub.interval;
                   _maxItems = sub.maxItems.toDouble();
@@ -209,7 +209,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
             ),
 
             const SizedBox(height: AppSpacing.xl),
-            _SectionLabel(label: l10n.language.toUpperCase(), theme: theme),
+            _SectionLabel(
+              label: l10n.contentLanguageLabel.toUpperCase(),
+              theme: theme,
+            ),
             const EditorialDivider(
               topSpace: AppSpacing.xs,
               bottomSpace: AppSpacing.md,
@@ -225,8 +228,9 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                   label: Text(l10n.languageChinese.toUpperCase()),
                 ),
               ],
-              selected: {_language},
-              onSelectionChanged: (v) => setState(() => _language = v.first),
+              selected: {_contentLanguage},
+              onSelectionChanged: (v) =>
+                  setState(() => _contentLanguage = v.first),
               showSelectedIcon: false,
             ),
 
@@ -385,7 +389,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
 
     final request = SubscriptionUpsertRequest(
       keyword: _keywordController.text.trim(),
-      language: _language,
+      contentLanguage: _contentLanguage,
       sources: _sources.toList(),
       interval: _interval,
       maxItems: _maxItems.toInt(),

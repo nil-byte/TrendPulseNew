@@ -90,7 +90,7 @@ void main() {
             const Subscription(
               id: 'sub-1',
               keyword: 'AI Watch',
-              language: 'en',
+              contentLanguage: 'en',
               interval: 'daily',
               maxItems: 50,
               sources: ['reddit', 'youtube'],
@@ -124,7 +124,7 @@ void main() {
             const Subscription(
               id: 'sub-1',
               keyword: 'AI Watch',
-              language: 'en',
+              contentLanguage: 'en',
               interval: 'daily',
               maxItems: 50,
               sources: ['reddit', 'youtube'],

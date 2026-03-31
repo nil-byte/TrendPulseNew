@@ -75,7 +75,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         error: (error, _) => AppErrorWidget(
           message: l10n.errorGeneric,
           retryLabel: l10n.retry,
-          onRetry: () => ref.invalidate(historyListProvider),
+          onRetry: _retryHistory,
         ),
         data: (items) {
           if (items.isEmpty) {
@@ -140,10 +140,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     : RefreshIndicator(
                         color: theme.colorScheme.onSurface,
                         backgroundColor: theme.colorScheme.surface,
-                        onRefresh: () async {
-                          ref.invalidate(historyListProvider);
-                          await ref.read(historyListProvider.future);
-                        },
+                        onRefresh: _refreshHistory,
                         child: ListView.separated(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg,
@@ -174,6 +171,14 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         },
       ),
     );
+  }
+
+  void _retryHistory() {
+    _refreshHistory();
+  }
+
+  Future<void> _refreshHistory() {
+    return ref.read(historyListProvider.notifier).refresh();
   }
 
   Future<void> _confirmDelete(BuildContext context, String taskId) async {
@@ -224,16 +229,21 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     try {
       final repository = ref.read(historyRepositoryProvider);
       await repository.deleteTask(taskId);
-      ref.invalidate(historyListProvider);
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.historyDeleteError),
-          ),
-        );
-        ref.invalidate(historyListProvider);
+      if (!mounted) {
+        return;
       }
+      await _refreshHistory();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.historyDeleteError),
+        ),
+      );
+      await _refreshHistory();
     }
   }
 }

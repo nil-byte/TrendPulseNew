@@ -16,6 +16,7 @@ from src.adapters.reddit_adapter import RedditAdapter
 from src.adapters.x_adapter import XAdapter
 from src.adapters.youtube_adapter import YouTubeAdapter
 from src.models.schemas import RawPost
+from src.services.search_query_service import SearchQueryService
 from src.services.source_availability_service import source_availability_service
 
 logger = logging.getLogger(__name__)
@@ -37,12 +38,18 @@ class CollectionResult:
 class CollectorService:
     """Orchestrates data collection from multiple sources concurrently."""
 
-    def __init__(self) -> None:
-        self._adapters: dict[str, BaseAdapter] = {
+    def __init__(
+        self,
+        *,
+        adapters: dict[str, BaseAdapter] | None = None,
+        search_query_service: SearchQueryService | None = None,
+    ) -> None:
+        self._adapters = adapters or {
             "reddit": RedditAdapter(),
             "youtube": YouTubeAdapter(),
             "x": XAdapter(),
         }
+        self._search_query_service = search_query_service or SearchQueryService()
 
     async def collect(
         self,
@@ -82,9 +89,18 @@ class CollectorService:
             return CollectionResult(posts=[], source_errors=source_errors)
 
         per_source_limit = limit
-        logger.info(
-            "Collector starting keyword=%r sources=%s max_items_per_source=%d",
+        search_query_result = await self._search_query_service.build_search_query(
             keyword,
+            language,
+        )
+        search_query = search_query_result.query
+        logger.info(
+            "Collector starting keyword=%r search_query=%r search_query_status=%s "
+            "search_query_reason=%r sources=%s max_items_per_source=%d",
+            keyword,
+            search_query,
+            search_query_result.status,
+            search_query_result.reason,
             [source_name for source_name, _ in valid_sources],
             per_source_limit,
         )
@@ -94,7 +110,7 @@ class CollectorService:
                 asyncio.create_task(
                     self._collect_from_source(
                         adapter,
-                        keyword,
+                        search_query,
                         language,
                         per_source_limit,
                     )

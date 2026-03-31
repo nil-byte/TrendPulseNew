@@ -25,6 +25,7 @@ from src.services.analyzer_service import (
     AnalyzerService,
     build_mermaid_mindmap,
 )
+from src.services.app_settings_service import AppSettingsService
 from src.services.collector_service import CollectionResult, CollectorService
 from src.services.source_availability_service import source_availability_service
 
@@ -42,7 +43,8 @@ _TASK_SELECT_WITH_METRICS = """
 SELECT
     tasks.id,
     tasks.keyword,
-    tasks.language,
+    tasks.content_language,
+    tasks.report_language,
     tasks.max_items,
     tasks.status,
     tasks.sources,
@@ -89,7 +91,8 @@ def row_to_task_response(row: object) -> TaskResponse:
     return TaskResponse(
         id=row["id"],  # type: ignore[index]
         keyword=row["keyword"],  # type: ignore[index]
-        language=row["language"],  # type: ignore[index]
+        content_language=row["content_language"],  # type: ignore[index]
+        report_language=row["report_language"],  # type: ignore[index]
         max_items=row["max_items"],  # type: ignore[index]
         status=row["status"],  # type: ignore[index]
         sources=json.loads(row["sources"]),  # type: ignore[index]
@@ -106,6 +109,7 @@ class TaskService:
     """Manages the full lifecycle of analysis tasks."""
 
     def __init__(self) -> None:
+        self._app_settings_service = AppSettingsService()
         self._collector = CollectorService()
         self._analyzer = AnalyzerService()
 
@@ -161,7 +165,16 @@ class TaskService:
                 f"Unavailable sources: {source_summary}."
             )
 
-        effective_request = request.model_copy(update={"sources": effective_sources})
+        report_language = request.report_language
+        if report_language is None:
+            report_language = await self._app_settings_service.get_report_language()
+
+        effective_request = request.model_copy(
+            update={
+                "sources": effective_sources,
+                "report_language": report_language,
+            }
+        )
         task_id = str(uuid.uuid4())
         now = _now_iso()
 
@@ -172,7 +185,8 @@ class TaskService:
                 INSERT INTO tasks (
                     id,
                     keyword,
-                    language,
+                    content_language,
+                    report_language,
                     max_items,
                     status,
                     sources,
@@ -180,12 +194,13 @@ class TaskService:
                     updated_at,
                     subscription_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task_id,
                     request.keyword,
-                    request.language,
+                    request.content_language,
+                    report_language,
                     request.max_items,
                     "pending",
                     json.dumps(request.sources),
@@ -209,7 +224,8 @@ class TaskService:
         return TaskResponse(
             id=task_id,
             keyword=request.keyword,
-            language=request.language,
+            content_language=request.content_language,
+            report_language=report_language,
             max_items=request.max_items,
             status="pending",
             sources=request.sources,
@@ -275,7 +291,7 @@ class TaskService:
                 SELECT
                     analysis_reports.*,
                     tasks.keyword AS keyword,
-                    tasks.language AS language
+                    tasks.report_language AS report_language
                 FROM analysis_reports
                 JOIN tasks
                     ON tasks.id = analysis_reports.task_id
@@ -303,7 +319,7 @@ class TaskService:
                     keyword=row["keyword"],
                     summary=row["summary"],
                     insights=key_insights,
-                    language=row["language"],
+                    language=row["report_language"],
                 )
             return AnalysisReportResponse(
                 id=row["id"],
@@ -404,7 +420,7 @@ class TaskService:
 
             collection_result = await self._collector.collect(
                 keyword=request.keyword,
-                language=request.language,
+                language=request.content_language,
                 limit=request.max_items,
                 sources=request.sources,
             )
@@ -432,7 +448,7 @@ class TaskService:
             result = await self._analyzer.analyze(
                 collection_result.posts,
                 request.keyword,
-                language=request.language,
+                language=request.report_language,
             )
 
             if not result.has_analyzable_content():

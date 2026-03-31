@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 import ssl
 from datetime import datetime, timezone
+import re
 from urllib.parse import urlparse
 
 import aiohttp  # type: ignore[import-untyped]
@@ -17,6 +18,9 @@ from src.config.settings import settings
 from src.models.schemas import RawPost
 
 logger = logging.getLogger(__name__)
+
+_CJK_RE = re.compile(r"[\u3400-\u4DBF\u4E00-\u9FFF]")
+_ASCII_ALPHA_RE = re.compile(r"[A-Za-z]")
 
 
 class RedditAdapter(BaseAdapter):
@@ -82,6 +86,13 @@ class RedditAdapter(BaseAdapter):
                     content = "\n\n".join(content_parts).strip()
                     if not content:
                         continue
+                    if not self._matches_target_language(content, language):
+                        logger.debug(
+                            "Skipping Reddit post id=%s for obvious language mismatch target=%s",
+                            submission.id,
+                            language,
+                        )
+                        continue
 
                     author_name = (
                         str(submission.author) if submission.author else None
@@ -143,6 +154,18 @@ class RedditAdapter(BaseAdapter):
             connector=connector,
             timeout=aiohttp.ClientTimeout(total=settings.reddit_http_timeout_seconds),
         )
+
+    @staticmethod
+    def _matches_target_language(text: str, language: str) -> bool:
+        """Keep mixed-language content, filtering only obvious en/zh mismatches."""
+        cjk_count = len(_CJK_RE.findall(text))
+        ascii_count = len(_ASCII_ALPHA_RE.findall(text))
+
+        if language == "en":
+            return not (cjk_count >= 2 and ascii_count == 0)
+        if language == "zh":
+            return not (ascii_count >= 6 and cjk_count == 0)
+        return True
 
     @staticmethod
     def _validate_ssl_ca_file(ca_file: str) -> str:

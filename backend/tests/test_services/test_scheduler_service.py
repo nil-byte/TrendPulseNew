@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -18,6 +19,7 @@ async def _insert_due_subscription(
     *,
     sources: list[str],
     interval: str = "daily",
+    content_language: str = "en",
 ) -> str:
     """Insert an active subscription that is already due to run."""
     now = datetime.now(timezone.utc)
@@ -30,7 +32,7 @@ async def _insert_due_subscription(
                 (
                     id,
                     keyword,
-                    language,
+                    content_language,
                     max_items,
                     sources,
                     interval,
@@ -45,7 +47,7 @@ async def _insert_due_subscription(
             (
                 subscription_id,
                 "openai",
-                "en",
+                content_language,
                 25,
                 json.dumps(sources),
                 interval,
@@ -60,6 +62,19 @@ async def _insert_due_subscription(
     finally:
         await db.close()
     return overdue_at
+
+
+async def _update_report_language(report_language: str) -> None:
+    """Persist a specific app-level report language for scheduler tests."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE app_settings SET report_language = ?, updated_at = ? WHERE id = 1",
+            (report_language, datetime.now(timezone.utc).isoformat()),
+        )
+        await db.commit()
+    finally:
+        await db.close()
 
 
 async def _fetch_subscription_schedule(subscription_id: str) -> tuple[str | None, str]:
@@ -117,3 +132,28 @@ async def test_tick_reschedules_due_subscription_when_sources_are_unavailable(
     assert next_run_at > overdue_at
     assert last_run_at_after_second_tick is None
     assert next_run_at_after_second_tick == next_run_at
+
+
+@pytest.mark.asyncio
+async def test_tick_defers_report_language_resolution_to_task_service() -> None:
+    """Scheduler-created tasks should let TaskService resolve report_language."""
+    subscription_id = str(uuid.uuid4())
+    await _insert_due_subscription(
+        subscription_id,
+        sources=["reddit"],
+        content_language="en",
+    )
+    await _update_report_language("zh")
+
+    scheduler = SchedulerService()
+    scheduler._task_service.create_task = AsyncMock()  # type: ignore[method-assign]
+
+    await scheduler._tick()
+
+    scheduler._task_service.create_task.assert_awaited_once()
+    await_args = scheduler._task_service.create_task.await_args
+    request = await_args.args[0]
+    assert request.keyword == "openai"
+    assert request.content_language == "en"
+    assert request.report_language is None
+    assert await_args.kwargs["subscription_id"] == subscription_id

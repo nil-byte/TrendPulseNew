@@ -1,6 +1,6 @@
 class SubscriptionUpsertRequest {
   final String keyword;
-  final String language;
+  final String contentLanguage;
   final List<String> sources;
   final String interval;
   final int maxItems;
@@ -8,7 +8,7 @@ class SubscriptionUpsertRequest {
 
   const SubscriptionUpsertRequest({
     required this.keyword,
-    required this.language,
+    required this.contentLanguage,
     required this.sources,
     required this.interval,
     required this.maxItems,
@@ -17,7 +17,7 @@ class SubscriptionUpsertRequest {
 
   Map<String, dynamic> toJson() => {
     'keyword': keyword,
-    'language': language,
+    'content_language': contentLanguage,
     'sources': sources,
     'interval': interval,
     'max_items': maxItems,

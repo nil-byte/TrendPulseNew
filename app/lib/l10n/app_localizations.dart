@@ -158,6 +158,12 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// No description provided for @contentLanguageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Language'**
+  String get contentLanguageLabel;
+
   /// No description provided for @dataSources.
   ///
   /// In en, this message translates to:
@@ -461,7 +467,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLanguageLabel.
   ///
   /// In en, this message translates to:
-  /// **'Language'**
+  /// **'App / Report Language'**
   String get settingsLanguageLabel;
 
   /// No description provided for @settingsService.
@@ -547,6 +553,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Using default server URL'**
   String get settingsServerUrlResetToDefault;
+
+  /// No description provided for @settingsServerUrlSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL was not changed because report language sync failed.'**
+  String get settingsServerUrlSyncFailed;
+
+  /// No description provided for @settingsLanguageSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Language was not changed because report language sync failed.'**
+  String get settingsLanguageSyncFailed;
 
   /// No description provided for @settingsServerUrlInvalid.
   ///

@@ -7,7 +7,8 @@ void main() {
       final json = {
         'id': 'task-1',
         'keyword': 'flutter',
-        'language': 'en',
+        'content_language': 'en',
+        'report_language': 'zh',
         'max_items': 50,
         'status': 'completed',
         'sources': ['reddit', 'youtube'],
@@ -21,7 +22,8 @@ void main() {
 
       expect(task.id, 'task-1');
       expect(task.keyword, 'flutter');
-      expect(task.language, 'en');
+      expect(task.contentLanguage, 'en');
+      expect(task.reportLanguage, 'zh');
       expect(task.maxItems, 50);
       expect(task.status, 'completed');
       expect(task.sources, ['reddit', 'youtube']);
@@ -39,21 +41,52 @@ void main() {
       final json = {
         'id': 'task-2',
         'keyword': 'dart',
+        'content_language': 'en',
+        'report_language': 'zh',
         'status': 'pending',
         'created_at': '2026-03-28T00:00:00Z',
         'updated_at': '2026-03-28T00:00:00Z',
       };
       final task = AnalysisTask.fromJson(json);
 
-      expect(task.language, 'en');
+      expect(task.contentLanguage, 'en');
+      expect(task.reportLanguage, 'zh');
       expect(task.maxItems, 50);
       expect(task.sources, isEmpty);
+    });
+
+    test('throws when content_language is missing', () {
+      final json = {
+        'id': 'task-4',
+        'keyword': 'dart',
+        'report_language': 'zh',
+        'status': 'pending',
+        'created_at': '2026-03-28T00:00:00Z',
+        'updated_at': '2026-03-28T00:00:00Z',
+      };
+
+      expect(() => AnalysisTask.fromJson(json), throwsFormatException);
+    });
+
+    test('throws when report_language is missing', () {
+      final json = {
+        'id': 'task-5',
+        'keyword': 'dart',
+        'content_language': 'zh',
+        'status': 'pending',
+        'created_at': '2026-03-28T00:00:00Z',
+        'updated_at': '2026-03-28T00:00:00Z',
+      };
+
+      expect(() => AnalysisTask.fromJson(json), throwsFormatException);
     });
 
     test('parses error_message', () {
       final json = {
         'id': 'task-3',
         'keyword': 'test',
+        'content_language': 'en',
+        'report_language': 'zh',
         'status': 'failed',
         'created_at': '2026-03-28T00:00:00Z',
         'updated_at': '2026-03-28T00:00:00Z',
@@ -69,7 +102,8 @@ void main() {
     AnalysisTask makeTask(String status) => AnalysisTask(
       id: 'id',
       keyword: 'kw',
-      language: 'en',
+      contentLanguage: 'en',
+      reportLanguage: 'zh',
       maxItems: 50,
       status: status,
       sources: const [],

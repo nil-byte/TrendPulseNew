@@ -11,7 +11,8 @@ class AnalysisRepository {
 
   Future<AnalysisTask> createTask({
     required String keyword,
-    String language = 'en',
+    String contentLanguage = 'en',
+    required String reportLanguage,
     int maxItems = 50,
     List<String> sources = const ['reddit', 'youtube', 'x'],
   }) async {
@@ -19,7 +20,8 @@ class AnalysisRepository {
       ApiEndpoints.tasks,
       data: {
         'keyword': keyword,
-        'language': language,
+        'content_language': contentLanguage,
+        'report_language': reportLanguage,
         'max_items': maxItems,
         'sources': sources,
       },

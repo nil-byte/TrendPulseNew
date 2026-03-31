@@ -10,6 +10,8 @@ import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/data/analysis_repository.dart';
 import 'package:trendpulse/features/analysis/presentation/pages/analysis_page.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
+import 'package:trendpulse/features/settings/data/settings_repository.dart';
+import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
 class _FakeAnalysisRepository extends AnalysisRepository {
@@ -25,6 +27,8 @@ class _FakeAnalysisRepository extends AnalysisRepository {
   final Object? sourceAvailabilityExceptionOnRefresh;
   final ApiException? createTaskException;
   int sourceAvailabilityCallCount = 0;
+  String? lastCreateTaskContentLanguage;
+  String? lastCreateTaskReportLanguage;
   List<String>? lastCreateTaskSources;
 
   @override
@@ -43,10 +47,13 @@ class _FakeAnalysisRepository extends AnalysisRepository {
   @override
   Future<AnalysisTask> createTask({
     required String keyword,
-    String language = 'en',
+    String contentLanguage = 'en',
+    required String reportLanguage,
     int maxItems = 50,
     List<String> sources = const ['reddit', 'youtube', 'x'],
   }) async {
+    lastCreateTaskContentLanguage = contentLanguage;
+    lastCreateTaskReportLanguage = reportLanguage;
     lastCreateTaskSources = List<String>.from(sources);
     if (createTaskException != null) {
       throw createTaskException!;
@@ -54,7 +61,8 @@ class _FakeAnalysisRepository extends AnalysisRepository {
     return const AnalysisTask(
       id: 'task-1',
       keyword: 'ai',
-      language: 'en',
+      contentLanguage: 'en',
+      reportLanguage: 'zh',
       maxItems: 50,
       status: 'pending',
       sources: ['reddit'],
@@ -76,14 +84,16 @@ class _DelayedSourceAvailabilityRepository extends AnalysisRepository {
   @override
   Future<AnalysisTask> createTask({
     required String keyword,
-    String language = 'en',
+    String contentLanguage = 'en',
+    required String reportLanguage,
     int maxItems = 50,
     List<String> sources = const ['reddit', 'youtube', 'x'],
   }) async {
     return const AnalysisTask(
       id: 'task-1',
       keyword: 'ai',
-      language: 'en',
+      contentLanguage: 'en',
+      reportLanguage: 'zh',
       maxItems: 50,
       status: 'pending',
       sources: ['reddit'],
@@ -93,10 +103,27 @@ class _DelayedSourceAvailabilityRepository extends AnalysisRepository {
   }
 }
 
+class _FakeSettingsRepository extends SettingsRepository {
+  _FakeSettingsRepository({required this.language});
+
+  final String language;
+
+  @override
+  Future<String> getLanguage() async => language;
+
+  @override
+  Future<String> getReportLanguage({String? baseUrl}) async => language;
+
+  @override
+  Future<String> setReportLanguage(String language, {String? baseUrl}) async =>
+      language;
+}
+
 Widget _wrap(
   Widget child, {
   ThemeData? theme,
   AnalysisRepository? analysisRepository,
+  SettingsRepository? settingsRepository,
 }) {
   return ProviderScope(
     overrides: [
@@ -121,6 +148,9 @@ Widget _wrap(
                 ),
               ],
             ),
+      ),
+      settingsRepositoryProvider.overrideWithValue(
+        settingsRepository ?? _FakeSettingsRepository(language: 'en'),
       ),
     ],
     child: MaterialApp(
@@ -245,6 +275,46 @@ void main() {
     expect(redditChip.selected, isTrue);
     expect(redditChip.onSelected, isNotNull);
   });
+
+  testWidgets(
+    'analysis search sends form content language and app report language separately',
+    (tester) async {
+      final repo = _FakeAnalysisRepository(
+        sourceAvailability: const [
+          AnalysisSourceAvailability(
+            source: 'reddit',
+            status: 'available',
+            isAvailable: true,
+          ),
+          AnalysisSourceAvailability(
+            source: 'youtube',
+            status: 'available',
+            isAvailable: true,
+          ),
+          AnalysisSourceAvailability(
+            source: 'x',
+            status: 'available',
+            isAvailable: true,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const AnalysisPage(),
+          analysisRepository: repo,
+          settingsRepository: _FakeSettingsRepository(language: 'zh'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'openai');
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded).first);
+      await tester.pumpAndSettle();
+
+      expect(repo.lastCreateTaskContentLanguage, 'en');
+      expect(repo.lastCreateTaskReportLanguage, 'zh');
+    },
+  );
 
   testWidgets(
     'analysis search rehydrates sources when availability recovers from an empty selection',

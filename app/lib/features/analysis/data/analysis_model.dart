@@ -1,7 +1,8 @@
 class AnalysisTask {
   final String id;
   final String keyword;
-  final String language;
+  final String contentLanguage;
+  final String reportLanguage;
   final int maxItems;
   final String status;
   final List<String> sources;
@@ -14,7 +15,8 @@ class AnalysisTask {
   const AnalysisTask({
     required this.id,
     required this.keyword,
-    required this.language,
+    required this.contentLanguage,
+    required this.reportLanguage,
     required this.maxItems,
     required this.status,
     required this.sources,
@@ -38,7 +40,16 @@ class AnalysisTask {
     return AnalysisTask(
       id: json['id'] as String,
       keyword: json['keyword'] as String,
-      language: (json['language'] as String?) ?? 'en',
+      contentLanguage: _requireString(
+        json,
+        'content_language',
+        context: 'AnalysisTask',
+      ),
+      reportLanguage: _requireString(
+        json,
+        'report_language',
+        context: 'AnalysisTask',
+      ),
       maxItems: (json['max_items'] as num?)?.toInt() ?? 50,
       status: json['status'] as String,
       sources:
@@ -53,6 +64,18 @@ class AnalysisTask {
       postCount: (json['post_count'] as num?)?.toInt(),
     );
   }
+}
+
+String _requireString(
+  Map<String, dynamic> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('Missing or invalid "$key" in $context JSON.');
 }
 
 class AnalysisSourceAvailability {

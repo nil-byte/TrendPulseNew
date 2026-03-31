@@ -39,6 +39,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
+  String get contentLanguageLabel => 'Search Language';
+
+  @override
   String get dataSources => 'Data Sources';
 
   @override
@@ -191,7 +194,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeSystem => 'System';
 
   @override
-  String get settingsLanguageLabel => 'Language';
+  String get settingsLanguageLabel => 'App / Report Language';
 
   @override
   String get settingsService => 'Service';
@@ -235,6 +238,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsServerUrlResetToDefault => 'Using default server URL';
+
+  @override
+  String get settingsServerUrlSyncFailed =>
+      'Server URL was not changed because report language sync failed.';
+
+  @override
+  String get settingsLanguageSyncFailed =>
+      'Language was not changed because report language sync failed.';
 
   @override
   String get settingsServerUrlInvalid =>

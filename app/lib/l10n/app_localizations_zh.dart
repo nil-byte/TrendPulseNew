@@ -39,6 +39,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get language => '语言';
 
   @override
+  String get contentLanguageLabel => '搜索语言';
+
+  @override
   String get dataSources => '数据源';
 
   @override
@@ -189,7 +192,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeSystem => '跟随系统';
 
   @override
-  String get settingsLanguageLabel => '语言';
+  String get settingsLanguageLabel => '应用 / 报告语言';
 
   @override
   String get settingsService => '服务';
@@ -232,6 +235,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsServerUrlResetToDefault => '已恢复默认服务器地址';
+
+  @override
+  String get settingsServerUrlSyncFailed => '报告语言同步失败，服务器地址未生效。';
+
+  @override
+  String get settingsLanguageSyncFailed => '报告语言同步失败，语言切换未生效。';
 
   @override
   String get settingsServerUrlInvalid => '请输入完整的 http:// 或 https:// 服务器地址。';

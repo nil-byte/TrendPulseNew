@@ -46,7 +46,8 @@ void main() {
   const task = AnalysisTask(
     id: 'task-1',
     keyword: '人工智能舆情长期趋势观察',
-    language: 'zh',
+    contentLanguage: 'zh',
+    reportLanguage: 'zh',
     maxItems: 50,
     status: 'completed',
     sources: ['reddit', 'youtube', 'x'],

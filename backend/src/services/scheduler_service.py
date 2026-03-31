@@ -101,14 +101,14 @@ class SchedulerService:
         """
         sub_id: str = row["id"]  # type: ignore[index]
         keyword: str = row["keyword"]  # type: ignore[index]
-        language: str = row["language"]  # type: ignore[index]
+        content_language: str = row["content_language"]  # type: ignore[index]
         max_items: int = row["max_items"]  # type: ignore[index]
         sources: list[str] = json.loads(row["sources"])  # type: ignore[index]
         interval: str = row["interval"]  # type: ignore[index]
 
         request = CreateTaskRequest(
             keyword=keyword,
-            language=language,
+            content_language=content_language,
             max_items=max_items,
             sources=sources,
         )

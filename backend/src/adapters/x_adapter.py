@@ -21,6 +21,8 @@ from src.config.settings import settings
 from src.models.schemas import RawPost
 
 logger = logging.getLogger(__name__)
+_CJK_RE = re.compile(r"[\u3400-\u4DBF\u4E00-\u9FFF]")
+_ASCII_ALPHA_RE = re.compile(r"[A-Za-z]")
 
 # ---------------------------------------------------------------------------
 # Prompt templates for triple-helix sampling
@@ -56,6 +58,7 @@ low-value phrases.
 _USER_PROMPT_TEMPLATE = """\
 <context>
 Keyword: "{keyword}"
+Target language: {target_language}
 Target: {shard_limit} items
 Dimension: {dimension_name}
 Search Focus: {dimension_focus}
@@ -67,6 +70,11 @@ Identify {shard_limit} unique, high-signal tweets that best represent the \
 assigned 'Dimension'.
 Prioritize variety in authors and specific, detailed content over generic reactions.
 </task>
+
+<language_requirement>
+Tweets must be primarily written in {target_language}.
+Discard tweets whose main content is clearly in another language.
+</language_requirement>
 
 <instruction>
 Generate the JSON array of {shard_limit} objects now.
@@ -93,6 +101,13 @@ def _compute_shard_limit(limit: int) -> int:
     """Round up shard size so total shard budget can satisfy the requested limit."""
     shard_count = len(_SHARDS)
     return max(1, (limit + shard_count - 1) // shard_count)
+
+
+def _target_language_name(language: str) -> str:
+    """Return a human-readable language hint for Grok prompts."""
+    if language == "zh":
+        return "Simplified Chinese"
+    return "English"
 
 
 def _message_content_to_str(content: object) -> str:
@@ -379,6 +394,7 @@ class XAdapter(BaseAdapter):
         """Execute a single Grok shard request and parse the response."""
         user_prompt = _USER_PROMPT_TEMPLATE.format(
             keyword=keyword,
+            target_language=_target_language_name(language),
             shard_limit=shard_limit,
             dimension_name=dimension_name,
             dimension_focus=dimension_focus,
@@ -403,12 +419,13 @@ class XAdapter(BaseAdapter):
                 f"Grok returned an empty completion for shard {dimension_name}",
             )
         try:
-            return self._parse_response(raw_text, dimension_name)
+            posts = self._parse_response(raw_text, dimension_name)
         except ValueError as exc:
             raise SourceCollectionError(
                 "grok_invalid_payload",
                 str(exc),
             ) from exc
+        return self._filter_posts_by_language(posts, language)
 
     def _parse_response(self, raw_text: str, dimension_name: str) -> list[RawPost]:
         """Strip <think> tags and parse JSON array into RawPost objects."""
@@ -448,6 +465,34 @@ class XAdapter(BaseAdapter):
                 logger.debug("Skipping malformed item in shard %r", dimension_name)
 
         return posts
+
+    @staticmethod
+    def _matches_target_language(text: str, language: str) -> bool:
+        """Keep mixed-language content while dropping obvious en/zh mismatches."""
+        cjk_count = len(_CJK_RE.findall(text))
+        ascii_count = len(_ASCII_ALPHA_RE.findall(text))
+
+        if language == "en":
+            return not (cjk_count >= 2 and ascii_count == 0)
+        if language == "zh":
+            return not (ascii_count >= 6 and cjk_count == 0)
+        return True
+
+    def _filter_posts_by_language(
+        self, posts: list[RawPost], language: str
+    ) -> list[RawPost]:
+        """Drop posts that are obviously in the wrong content language."""
+        filtered_posts: list[RawPost] = []
+        for post in posts:
+            if not self._matches_target_language(post.content, language):
+                logger.debug(
+                    "Skipping X post id=%s for obvious language mismatch target=%s",
+                    post.source_id,
+                    language,
+                )
+                continue
+            filtered_posts.append(post)
+        return filtered_posts
 
     @staticmethod
     def _normalize_error(error: BaseException) -> SourceCollectionError:

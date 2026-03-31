@@ -74,7 +74,7 @@ class YouTubeAdapter(BaseAdapter):
         posts: list[RawPost] = []
         transcript_status_counts: Counter[str] = Counter()
         try:
-            videos = await asyncio.to_thread(self._search_videos, keyword, limit)
+            videos = await asyncio.to_thread(self._search_videos, keyword, language, limit)
             for video in videos:
                 post, transcript_result = await asyncio.to_thread(
                     self._process_video,
@@ -113,13 +113,24 @@ class YouTubeAdapter(BaseAdapter):
     # Private helpers (synchronous — YouTube client lib is sync)
     # ------------------------------------------------------------------
 
-    def _search_videos(self, keyword: str, limit: int) -> list[dict[str, Any]]:
+    def _search_videos(
+        self, keyword: str, language: str, limit: int
+    ) -> list[dict[str, Any]]:
         """Call YouTube Data API v3 search + videos.list for statistics."""
         youtube = build("youtube", "v3", developerKey=settings.youtube_api_key)
+        search_kwargs: dict[str, Any] = {
+            "q": keyword,
+            "part": "snippet",
+            "type": "video",
+            "maxResults": limit,
+        }
+        relevance_language = self._map_relevance_language(language)
+        if relevance_language is not None:
+            search_kwargs["relevanceLanguage"] = relevance_language
 
         search_resp = (
             youtube.search()
-            .list(q=keyword, part="snippet", type="video", maxResults=limit)
+            .list(**search_kwargs)
             .execute()
         )
         items: list[dict[str, Any]] = search_resp.get("items", [])
@@ -152,12 +163,40 @@ class YouTubeAdapter(BaseAdapter):
             )
         return results
 
+    @staticmethod
+    def _map_relevance_language(language: str) -> str | None:
+        """Map supported content languages to YouTube search.list values."""
+        if language == "zh":
+            return "zh-Hans"
+        if language == "en":
+            return "en"
+        return None
+
+    @staticmethod
+    def _preferred_transcript_language_codes(language: str) -> list[str]:
+        """Return transcript language candidates ordered by product preference."""
+        if language == "zh":
+            return [
+                "zh-Hans",
+                "zh-CN",
+                "zh-SG",
+                "zh",
+                "zh-Hant",
+                "zh-TW",
+                "zh-HK",
+            ]
+        if language == "en":
+            return ["en"]
+        return [language, "en"]
+
     def _fetch_transcript(self, video_id: str, language: str) -> _TranscriptResult:
         """Attempt to fetch and classify a video transcript result."""
         try:
             transcript_api = YouTubeTranscriptApi()
             transcript_list = transcript_api.list(video_id)
-            transcript = transcript_list.find_transcript([language, "en"])
+            transcript = transcript_list.find_transcript(
+                self._preferred_transcript_language_codes(language)
+            )
             fetched = transcript.fetch()
             full_text = " ".join(snippet.text for snippet in fetched)
             return _TranscriptResult(

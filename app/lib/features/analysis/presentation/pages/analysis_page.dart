@@ -14,6 +14,7 @@ import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
+import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
 class AnalysisPage extends ConsumerStatefulWidget {
@@ -34,7 +35,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   bool _sourcesHydrated = false;
   bool _hasCustomSourceSelection = false;
 
-  String _language = 'en';
+  String _contentLanguage = 'en';
   Set<String> _sources = {'reddit', 'youtube', 'x'};
   double _maxItems = 50;
 
@@ -94,9 +95,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       }
 
       final repo = ref.read(analysisRepositoryProvider);
+      final reportLanguage = ref.read(defaultLanguageProvider);
       final task = await repo.createTask(
         keyword: keyword,
-        language: _language,
+        contentLanguage: _contentLanguage,
+        reportLanguage: reportLanguage,
         maxItems: _maxItems.round(),
         sources: effectiveSources.toList(),
       );
@@ -190,6 +193,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final sourceAvailabilityAsync = ref.watch(sourceAvailabilityProvider);
+    ref.watch(defaultLanguageProvider);
     ref.listen<AsyncValue<List<AnalysisSourceAvailability>>>(
       sourceAvailabilityProvider,
       (_, next) {
@@ -288,13 +292,13 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                             ),
                             _ConfigPanel(
                               expanded: _configExpanded,
-                              language: _language,
+                              contentLanguage: _contentLanguage,
                               sources: _sources,
                               sourceAvailability:
                                   sourceAvailabilityAsync.valueOrNull ?? const [],
                               maxItems: _maxItems,
-                              onLanguageChanged: (v) =>
-                                  setState(() => _language = v),
+                              onContentLanguageChanged: (v) =>
+                                  setState(() => _contentLanguage = v),
                               onSourcesChanged: (v) => setState(() {
                                 _sources = v;
                                 _hasCustomSourceSelection = true;
@@ -449,21 +453,21 @@ class _EditorialSearchBar extends StatelessWidget {
 
 class _ConfigPanel extends StatelessWidget {
   final bool expanded;
-  final String language;
+  final String contentLanguage;
   final Set<String> sources;
   final List<AnalysisSourceAvailability> sourceAvailability;
   final double maxItems;
-  final ValueChanged<String> onLanguageChanged;
+  final ValueChanged<String> onContentLanguageChanged;
   final ValueChanged<Set<String>> onSourcesChanged;
   final ValueChanged<double> onMaxItemsChanged;
 
   const _ConfigPanel({
     required this.expanded,
-    required this.language,
+    required this.contentLanguage,
     required this.sources,
     required this.sourceAvailability,
     required this.maxItems,
-    required this.onLanguageChanged,
+    required this.onContentLanguageChanged,
     required this.onSourcesChanged,
     required this.onMaxItemsChanged,
   });
@@ -508,9 +512,9 @@ class _ConfigPanel extends StatelessWidget {
           ),
           const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
           
-          // Language
+          // Content language
           Text(
-            l10n.language.toUpperCase(),
+            l10n.contentLanguageLabel.toUpperCase(),
             style: theme.textTheme.labelSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -519,8 +523,8 @@ class _ConfigPanel extends StatelessWidget {
               ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
               ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
             ],
-            selected: {language},
-            onSelectionChanged: (v) => onLanguageChanged(v.first),
+            selected: {contentLanguage},
+            onSelectionChanged: (v) => onContentLanguageChanged(v.first),
             showSelectedIcon: false,
           ),
           const SizedBox(height: AppSpacing.lg),

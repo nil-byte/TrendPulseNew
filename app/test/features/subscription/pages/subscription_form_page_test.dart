@@ -156,7 +156,7 @@ void main() {
             const Subscription(
               id: 'sub-1',
               keyword: 'AI Watch',
-              language: 'en',
+              contentLanguage: 'en',
               interval: 'daily',
               maxItems: 50,
               sources: ['reddit'],
@@ -184,7 +184,7 @@ void main() {
         const Subscription(
           id: 'sub-created',
           keyword: 'AI Watch',
-          language: 'en',
+          contentLanguage: 'en',
           interval: 'daily',
           maxItems: 50,
           sources: ['reddit'],
@@ -216,6 +216,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.createdRequest, isNotNull);
+      expect(repository.createdRequest!.contentLanguage, 'en');
+      expect(repository.createdRequest!.toJson(), containsPair('content_language', 'en'));
+      expect(repository.createdRequest!.toJson().containsKey('language'), isFalse);
+      expect(
+        repository.createdRequest!.toJson().containsKey('report_language'),
+        isFalse,
+      );
       expect(repository.createdRequest!.notify, isTrue);
     },
   );

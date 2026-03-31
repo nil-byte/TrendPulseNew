@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from src import main as main_module
-from src.models.database import _resolve_db_path, get_db
+from src.models.database import _resolve_db_path, get_db, init_db
 from src.services.subscription_service import SubscriptionService
 
 
@@ -27,7 +27,7 @@ async def test_delete_subscription_nulls_task_fk_preserves_task() -> None:
         await db.execute(
             """
             INSERT INTO subscriptions
-                (id, keyword, language, max_items, sources, interval,
+                (id, keyword, content_language, max_items, sources, interval,
                  is_active, notify, created_at, updated_at, next_run_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -48,11 +48,11 @@ async def test_delete_subscription_nulls_task_fk_preserves_task() -> None:
         await db.execute(
             """
             INSERT INTO tasks
-                (id, keyword, language, max_items, status, sources,
+                (id, keyword, content_language, report_language, max_items, status, sources,
                  created_at, updated_at, subscription_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (task_id, "k", "en", 10, "completed", sources, now, now, sub_id),
+            (task_id, "k", "en", "en", 10, "completed", sources, now, now, sub_id),
         )
         await db.commit()
     finally:
@@ -87,3 +87,68 @@ async def test_scheduler_not_started_when_disabled_via_env() -> None:
 async def test_each_test_uses_an_isolated_temp_database(tmp_path: Path) -> None:
     """The test DB should live under pytest's per-test temp directory."""
     assert Path(_resolve_db_path()).parent == tmp_path
+
+
+@pytest.mark.asyncio
+async def test_init_db_raises_clear_error_for_legacy_language_schema() -> None:
+    """Legacy language-schema tables should raise a clear contract error."""
+    db = await get_db()
+    try:
+        for table in (
+            "subscription_alerts",
+            "analysis_reports",
+            "raw_posts",
+            "tasks",
+            "subscriptions",
+            "app_settings",
+        ):
+            await db.execute(f"DROP TABLE IF EXISTS {table}")
+        await db.execute(
+            """
+            CREATE TABLE tasks (
+                id TEXT PRIMARY KEY,
+                keyword TEXT NOT NULL,
+                language TEXT NOT NULL DEFAULT 'en',
+                max_items INTEGER NOT NULL DEFAULT 50,
+                status TEXT NOT NULL DEFAULT 'pending',
+                sources TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                error_message TEXT
+            )
+            """
+        )
+        await db.execute(
+            """
+            CREATE TABLE subscriptions (
+                id TEXT PRIMARY KEY,
+                keyword TEXT NOT NULL,
+                language TEXT NOT NULL DEFAULT 'en',
+                max_items INTEGER NOT NULL DEFAULT 50,
+                sources TEXT NOT NULL,
+                interval TEXT NOT NULL DEFAULT 'daily',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                notify INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_run_at TEXT,
+                next_run_at TEXT
+            )
+            """
+        )
+        await db.execute(
+            """
+            CREATE TABLE app_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                default_subscription_notify INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+    with pytest.raises(RuntimeError, match="legacy.+language.+delete.+database"):
+        await init_db()

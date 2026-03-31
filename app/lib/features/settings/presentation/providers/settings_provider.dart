@@ -30,6 +30,14 @@ final initialInAppNotifyProvider = Provider<bool>((ref) {
   return true;
 });
 
+final initialLanguageProvider = Provider<String>((ref) {
+  return 'en';
+});
+
+final initialLanguagePreloadedProvider = Provider<bool>((ref) {
+  return false;
+});
+
 final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
   ref,
 ) {
@@ -53,7 +61,14 @@ final baseUrlProvider = StateNotifierProvider<BaseUrlNotifier, String>((ref) {
 final defaultLanguageProvider =
     StateNotifierProvider<DefaultLanguageNotifier, String>((ref) {
       final repo = ref.watch(settingsRepositoryProvider);
-      return DefaultLanguageNotifier(repo);
+      final initialLanguage = ref.watch(initialLanguageProvider);
+      final languagePreloaded = ref.watch(initialLanguagePreloadedProvider);
+      return DefaultLanguageNotifier(
+        repo,
+        initialLanguage: initialLanguage,
+        isPreloaded: languagePreloaded,
+        readBaseUrl: () => ref.read(baseUrlProvider),
+      );
     });
 
 final defaultMaxItemsProvider =
@@ -206,18 +221,100 @@ class BaseUrlNotifier extends StateNotifier<String> {
 
 class DefaultLanguageNotifier extends StateNotifier<String> {
   final SettingsRepository _repo;
+  final String Function() _readBaseUrl;
+  Future<void> _reportLanguageSyncChain = Future<void>.value();
 
-  DefaultLanguageNotifier(this._repo) : super('en') {
+  DefaultLanguageNotifier(
+    this._repo, {
+    required String initialLanguage,
+    required bool isPreloaded,
+    required String Function() readBaseUrl,
+  }) : _readBaseUrl = readBaseUrl,
+       super(initialLanguage) {
+    if (isPreloaded) {
+      _enqueueReportLanguageSync(
+        () => _syncReportLanguage(initialLanguage, checkRemoteFirst: true),
+      );
+      return;
+    }
     _load();
   }
 
   Future<void> _load() async {
-    state = await _repo.getLanguage();
+    final language = await _repo.getLanguage();
+    state = language;
+    await _enqueueReportLanguageSync(
+      () => _syncReportLanguage(language, checkRemoteFirst: true),
+    );
   }
 
   Future<void> setLanguage(String language) async {
+    final previousLanguage = state;
+    if (language == previousLanguage) {
+      return;
+    }
     state = language;
     await _repo.setLanguage(language);
+    try {
+      await _enqueueReportLanguageSync(
+        () => _syncReportLanguage(language, rethrowOnFailure: true),
+      );
+    } catch (error) {
+      state = previousLanguage;
+      await _repo.setLanguage(previousLanguage);
+      rethrow;
+    }
+  }
+
+  Future<void> syncCurrentReportLanguage({
+    String? baseUrl,
+    bool rethrowOnFailure = false,
+  }) async {
+    await _enqueueReportLanguageSync(
+      () => _syncReportLanguage(
+        state,
+        baseUrl: baseUrl,
+        rethrowOnFailure: rethrowOnFailure,
+      ),
+    );
+  }
+
+  Future<void> _enqueueReportLanguageSync(
+    Future<void> Function() action,
+  ) {
+    final nextSync = _reportLanguageSyncChain.then((_) => action());
+    _reportLanguageSyncChain = nextSync.catchError((_) {});
+    return nextSync;
+  }
+
+  Future<void> _syncReportLanguage(
+    String language, {
+    bool checkRemoteFirst = false,
+    String? baseUrl,
+    bool rethrowOnFailure = false,
+  }) async {
+    final targetBaseUrl = baseUrl ?? _readBaseUrl();
+    if (checkRemoteFirst) {
+      try {
+        final remoteLanguage = await _repo.getReportLanguage(
+          baseUrl: targetBaseUrl,
+        );
+        if (remoteLanguage == language) {
+          return;
+        }
+      } catch (error) {
+        debugPrint('Failed to precheck report language: $error');
+      }
+    }
+
+    try {
+      await _repo.setReportLanguage(language, baseUrl: targetBaseUrl);
+    } catch (error) {
+      if (rethrowOnFailure) {
+        rethrow;
+      }
+      debugPrint('Failed to sync report language: $error');
+    }
   }
 }
 

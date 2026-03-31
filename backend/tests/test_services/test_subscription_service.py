@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from src.models.database import get_db
-from src.models.schemas import CreateSubscriptionRequest, UpdateNotificationSettingsRequest
+from src.models.schemas import (
+    CreateSubscriptionRequest,
+    TaskResponse,
+    UpdateNotificationSettingsRequest,
+    UpdateSubscriptionRequest,
+)
 from src.services.app_settings_service import AppSettingsService
 from src.services.subscription_service import SubscriptionService
 
@@ -46,9 +54,27 @@ class TestAppSettingsService:
         with pytest.raises(RuntimeError, match="app_settings"):
             await service.get_notification_settings()
 
+    async def test_get_report_language_defaults_to_english(self) -> None:
+        """Fresh databases should default the app report language to English."""
+        service = AppSettingsService()
+
+        assert await service.get_report_language() == "en"
+
+    async def test_update_report_language_persists(self) -> None:
+        """Updating report_language should persist across reads."""
+        service = AppSettingsService()
+
+        assert await service.update_report_language("zh") == "zh"
+        assert await service.get_report_language() == "zh"
+
 
 class TestSubscriptionService:
     """Regression tests for subscription creation semantics."""
+
+    def test_update_subscription_request_rejects_legacy_language_field(self) -> None:
+        """UpdateSubscriptionRequest should reject the removed language field."""
+        with pytest.raises(ValidationError):
+            UpdateSubscriptionRequest.model_validate({"language": "zh"})
 
     async def test_create_subscription_omitted_notify_serializes_with_bulk_sync(
         self,
@@ -79,7 +105,11 @@ class TestSubscriptionService:
 
         create_task = asyncio.create_task(
             subscription_service.create_subscription(
-                CreateSubscriptionRequest(keyword="openai", sources=["reddit"])
+                CreateSubscriptionRequest(
+                    keyword="openai",
+                    content_language="zh",
+                    sources=["reddit"],
+                )
             )
         )
         await default_read.wait()
@@ -107,3 +137,46 @@ class TestSubscriptionService:
 
         assert update_finished_before_insert is False
         assert await _fetch_subscription_notify(created_subscription.id) is True
+
+    async def test_run_subscription_now_defers_report_language_to_task_service(
+        self,
+    ) -> None:
+        """Manual subscription runs should let TaskService resolve report_language."""
+        app_settings_service = AppSettingsService()
+        subscription_service = SubscriptionService()
+        subscription = await subscription_service.create_subscription(
+            CreateSubscriptionRequest(
+                keyword="openai",
+                content_language="zh",
+                sources=["reddit"],
+                interval="daily",
+            )
+        )
+        await app_settings_service.update_report_language("en")
+        now = datetime.now(timezone.utc).isoformat()
+        subscription_service._task_service.create_task = AsyncMock(  # type: ignore[method-assign]
+            return_value=TaskResponse(
+                id="task-1",
+                keyword="openai",
+                content_language="zh",
+                report_language="en",
+                max_items=50,
+                status="pending",
+                sources=["reddit"],
+                created_at=now,
+                updated_at=now,
+                subscription_id=subscription.id,
+                sentiment_score=None,
+                post_count=None,
+            )
+        )
+
+        task = await subscription_service.run_subscription_now(subscription.id)
+
+        assert task is not None
+        subscription_service._task_service.create_task.assert_awaited_once()
+        await_args = subscription_service._task_service.create_task.await_args
+        request = await_args.args[0]
+        assert request.content_language == "zh"
+        assert request.report_language is None
+        assert await_args.kwargs["subscription_id"] == subscription.id

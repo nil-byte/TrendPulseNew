@@ -22,6 +22,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   late final TextEditingController _urlController;
+  bool _isBaseUrlSaving = false;
   bool _isSubscriptionNotifySaving = false;
 
   @override
@@ -151,10 +152,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                   ],
                   selected: {language},
-                  onSelectionChanged: (values) {
-                    ref
-                        .read(defaultLanguageProvider.notifier)
-                        .setLanguage(values.first);
+                  onSelectionChanged: (values) async {
+                    await _changeLanguage(values.first);
                   },
                   showSelectedIcon: false,
                 ),
@@ -205,9 +204,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   height: 52,
                   width: 52,
                   child: IconButton.filled(
-                    onPressed: () {
-                      _saveBaseUrl();
-                    },
+                    onPressed: _isBaseUrlSaving ? null : _saveBaseUrl,
                     icon: const Icon(Icons.save_outlined),
                     style: IconButton.styleFrom(
                       backgroundColor: colorScheme.primary,
@@ -221,9 +218,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
-                onPressed: () {
-                  _resetBaseUrl();
-                },
+                onPressed: _isBaseUrlSaving ? null : _resetBaseUrl,
                 icon: const Icon(Icons.restart_alt_rounded),
                 label: Text(l10n.settingsServerUrlUseDefault.toUpperCase()),
               ),
@@ -363,6 +358,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _saveBaseUrl() async {
+    if (_isBaseUrlSaving) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final rawUrl = _urlController.text;
     final trimmedUrl = rawUrl.trim();
@@ -383,20 +381,78 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    await ref.read(baseUrlProvider.notifier).setBaseUrl(trimmedUrl);
-    if (!mounted) {
-      return;
-    }
-    _showBaseUrlSnackBar(l10n.settingsServerUrlSaved);
+    await _runExclusiveBaseUrlSave(
+      () => _updateBaseUrlAndSync(
+        trimmedUrl,
+        successMessage: l10n.settingsServerUrlSaved,
+      ),
+    );
   }
 
   Future<void> _resetBaseUrl() async {
+    if (_isBaseUrlSaving) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
-    await ref.read(baseUrlProvider.notifier).setBaseUrl('');
+    await _runExclusiveBaseUrlSave(
+      () => _updateBaseUrlAndSync(
+        '',
+        successMessage: l10n.settingsServerUrlResetToDefault,
+      ),
+    );
+  }
+
+  Future<void> _runExclusiveBaseUrlSave(
+    Future<void> Function() action,
+  ) async {
+    if (_isBaseUrlSaving) {
+      return;
+    }
+
+    setState(() {
+      _isBaseUrlSaving = true;
+    });
+
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBaseUrlSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateBaseUrlAndSync(
+    String url, {
+    required String successMessage,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final previousBaseUrl = ref.read(baseUrlProvider);
+    await ref.read(baseUrlProvider.notifier).setBaseUrl(url);
+    final nextBaseUrl = ref.read(baseUrlProvider);
+
+    try {
+      await ref
+          .read(defaultLanguageProvider.notifier)
+          .syncCurrentReportLanguage(
+            baseUrl: nextBaseUrl,
+            rethrowOnFailure: true,
+          );
+    } catch (_) {
+      await ref.read(baseUrlProvider.notifier).setBaseUrl(previousBaseUrl);
+      if (!mounted) {
+        return;
+      }
+      _showBaseUrlSnackBar(l10n.settingsServerUrlSyncFailed);
+      return;
+    }
+
     if (!mounted) {
       return;
     }
-    _showBaseUrlSnackBar(l10n.settingsServerUrlResetToDefault);
+    _showBaseUrlSnackBar(successMessage);
   }
 
   Future<void> _setSubscriptionNotifyDefault(bool value) async {
@@ -424,6 +480,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _isSubscriptionNotifySaving = false;
         });
       }
+    }
+  }
+
+  Future<void> _changeLanguage(String language) async {
+    try {
+      await ref.read(defaultLanguageProvider.notifier).setLanguage(language);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showBaseUrlSnackBar(
+        AppLocalizations.of(context)!.settingsLanguageSyncFailed,
+      );
     }
   }
 

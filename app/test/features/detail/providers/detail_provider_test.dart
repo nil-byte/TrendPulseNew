@@ -12,7 +12,8 @@ AnalysisTask _taskWithStatus(String status) {
   return AnalysisTask(
     id: 'task-1',
     keyword: 'Macro AI Sentiment Outlook',
-    language: 'en',
+    contentLanguage: 'en',
+    reportLanguage: 'en',
     maxItems: 50,
     status: status,
     sources: const ['reddit', 'youtube', 'x'],

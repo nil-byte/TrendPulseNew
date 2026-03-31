@@ -1,7 +1,7 @@
 class Subscription {
   final String id;
   final String keyword;
-  final String language;
+  final String contentLanguage;
   final String interval;
   final int maxItems;
   final List<String> sources;
@@ -18,7 +18,7 @@ class Subscription {
   const Subscription({
     required this.id,
     required this.keyword,
-    required this.language,
+    required this.contentLanguage,
     required this.interval,
     required this.maxItems,
     required this.sources,
@@ -37,7 +37,11 @@ class Subscription {
     return Subscription(
       id: json['id'] as String,
       keyword: json['keyword'] as String,
-      language: json['language'] as String? ?? 'en',
+      contentLanguage: _requireSubscriptionString(
+        json,
+        'content_language',
+        context: 'Subscription',
+      ),
       interval: json['interval'] as String? ?? 'daily',
       maxItems: (json['max_items'] as num?)?.toInt() ?? 50,
       sources:
@@ -60,7 +64,7 @@ class Subscription {
 
   Map<String, dynamic> toJson() => {
     'keyword': keyword,
-    'language': language,
+    'content_language': contentLanguage,
     'interval': interval,
     'max_items': maxItems,
     'sources': sources,
@@ -85,6 +89,8 @@ class Subscription {
 class SubscriptionTask {
   final String id;
   final String keyword;
+  final String contentLanguage;
+  final String reportLanguage;
   final String status;
   final String createdAt;
   final double? sentimentScore;
@@ -94,6 +100,8 @@ class SubscriptionTask {
   const SubscriptionTask({
     required this.id,
     required this.keyword,
+    this.contentLanguage = 'en',
+    this.reportLanguage = 'en',
     required this.status,
     required this.createdAt,
     this.sentimentScore,
@@ -105,6 +113,16 @@ class SubscriptionTask {
     return SubscriptionTask(
       id: json['id'] as String,
       keyword: json['keyword'] as String? ?? '',
+      contentLanguage: _requireSubscriptionString(
+        json,
+        'content_language',
+        context: 'SubscriptionTask',
+      ),
+      reportLanguage: _requireSubscriptionString(
+        json,
+        'report_language',
+        context: 'SubscriptionTask',
+      ),
       status: json['status'] as String? ?? 'pending',
       createdAt: json['created_at'] as String? ?? '',
       sentimentScore: (json['sentiment_score'] as num?)?.toDouble(),
@@ -122,4 +140,16 @@ class SubscriptionTask {
   bool get isInProgress => isPending || isCollecting || isAnalyzing;
   bool get isRunning => isInProgress;
   bool get canViewReport => isCompleted || isPartial;
+}
+
+String _requireSubscriptionString(
+  Map<String, dynamic> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('Missing or invalid "$key" in $context JSON.');
 }

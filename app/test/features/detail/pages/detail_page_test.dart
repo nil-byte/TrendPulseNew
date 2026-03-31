@@ -69,7 +69,8 @@ void main() {
   const task = AnalysisTask(
     id: 'task-1',
     keyword: 'Macro AI Sentiment Outlook',
-    language: 'en',
+    contentLanguage: 'en',
+    reportLanguage: 'en',
     maxItems: 50,
     status: 'completed',
     sources: ['reddit', 'youtube', 'x'],
@@ -99,7 +100,8 @@ void main() {
   const zhTask = AnalysisTask(
     id: 'task-1',
     keyword: '人工智能舆情长期趋势观察',
-    language: 'zh',
+    contentLanguage: 'zh',
+    reportLanguage: 'zh',
     maxItems: 50,
     status: 'completed',
     sources: ['reddit', 'youtube', 'x'],
@@ -111,7 +113,8 @@ void main() {
   const partialTask = AnalysisTask(
     id: 'task-1',
     keyword: 'Macro AI Sentiment Outlook',
-    language: 'en',
+    contentLanguage: 'en',
+    reportLanguage: 'en',
     maxItems: 50,
     status: 'partial',
     sources: ['reddit', 'youtube', 'x'],

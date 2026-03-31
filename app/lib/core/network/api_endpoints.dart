@@ -11,6 +11,7 @@ abstract final class ApiEndpoints {
   // Settings
   static const String notificationSettings =
       '$apiPrefix/settings/notifications';
+  static const String reportLanguage = '$apiPrefix/settings/report-language';
   static const String sourceAvailability = '$apiPrefix/settings/sources';
 
   // Tasks

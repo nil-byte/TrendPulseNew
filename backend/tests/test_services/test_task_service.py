@@ -15,8 +15,9 @@ import pytest
 from src.adapters.base import SourceFailure
 from src.models.database import get_db
 from src.models.schemas import CreateTaskRequest, KeyInsight, RawPost
-from src.services.source_availability_service import source_availability_service
 from src.services.analyzer_service import AnalysisResult
+from src.services.app_settings_service import AppSettingsService
+from src.services.source_availability_service import source_availability_service
 from src.services.task_service import TaskService
 
 
@@ -87,7 +88,8 @@ async def _insert_task(
                 (
                     id,
                     keyword,
-                    language,
+                    content_language,
+                    report_language,
                     max_items,
                     status,
                     sources,
@@ -95,12 +97,13 @@ async def _insert_task(
                     updated_at,
                     subscription_id
                 )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task_id,
                 request.keyword,
-                request.language,
+                request.content_language,
+                request.report_language or "en",
                 request.max_items,
                 "pending",
                 json.dumps(request.sources),
@@ -125,7 +128,7 @@ async def _insert_subscription(subscription_id: str, *, notify: bool) -> None:
                 (
                     id,
                     keyword,
-                    language,
+                    content_language,
                     max_items,
                     sources,
                     interval,
@@ -234,6 +237,27 @@ async def _get_alert_rows(task_id: str) -> list[object]:
 class TestTaskServiceProcessTask:
     """Regression tests for task completion semantics."""
 
+    async def test_create_task_defaults_report_language_from_app_settings(
+        self,
+    ) -> None:
+        """Omitted report_language should resolve from app settings inside create_task."""
+        await AppSettingsService().update_report_language("zh")
+        request = CreateTaskRequest(
+            keyword="openai",
+            content_language="en",
+            sources=["reddit"],
+        )
+        service = TaskService()
+        service._process_task = AsyncMock()  # type: ignore[method-assign]
+
+        response = await service.create_task(request)
+        await asyncio.sleep(0)
+
+        assert response.report_language == "zh"
+        service._process_task.assert_awaited_once()
+        await_args = service._process_task.await_args
+        assert await_args.args[1].report_language == "zh"
+
     async def test_create_task_preserves_requested_sources_but_processes_only_runnable(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -245,7 +269,8 @@ class TestTaskServiceProcessTask:
 
         request = CreateTaskRequest(
             keyword="openai",
-            language="zh",
+            content_language="zh",
+            report_language="en",
             max_items=20,
             sources=["youtube", "x"],
         )
@@ -256,10 +281,14 @@ class TestTaskServiceProcessTask:
         await asyncio.sleep(0)
 
         assert response.sources == ["youtube", "x"]
+        assert response.content_language == "zh"
+        assert response.report_language == "en"
         assert await _get_task_sources(response.id) == ["youtube", "x"]
         service._process_task.assert_awaited_once()
         await_args = service._process_task.await_args
         assert await_args.args[1].sources == ["youtube"]
+        assert await_args.args[1].content_language == "zh"
+        assert await_args.args[1].report_language == "en"
         initial_source_errors = await_args.kwargs["initial_source_errors"]
         assert initial_source_errors["x"].reason_code == "grok_api_key_missing"
 
@@ -269,7 +298,8 @@ class TestTaskServiceProcessTask:
         """Known-unavailable sources from task creation must survive to final status."""
         stored_request = CreateTaskRequest(
             keyword="openai",
-            language="zh",
+            content_language="zh",
+            report_language="en",
             sources=["youtube", "x"],
         )
         runnable_request = stored_request.model_copy(update={"sources": ["youtube"]})
@@ -313,7 +343,11 @@ class TestTaskServiceProcessTask:
 
     async def test_process_task_fails_when_collection_returns_no_posts(self) -> None:
         """No collected posts must fail instead of reporting success."""
-        request = CreateTaskRequest(keyword="openai", sources=["reddit"])
+        request = CreateTaskRequest(
+            keyword="openai",
+            report_language="en",
+            sources=["reddit"],
+        )
         task_id = str(uuid.uuid4())
         await _insert_task(task_id, request)
 
@@ -341,11 +375,44 @@ class TestTaskServiceProcessTask:
         assert await _count_reports(task_id) == 0
         service._analyzer.analyze.assert_not_awaited()
 
+    async def test_process_task_fails_when_collection_returns_no_posts_without_source_errors(
+        self,
+    ) -> None:
+        """Zero posts from all sources should fail even when no source failed."""
+        request = CreateTaskRequest(
+            keyword="openai",
+            report_language="en",
+            sources=["reddit", "youtube"],
+        )
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, request)
+
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            return_value=FakeCollectionResult(
+                posts=[],
+                source_errors={},
+            )
+        )
+        service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
+            return_value=_make_analysis_result()
+        )
+
+        await service._process_task(task_id, request)
+
+        status, error_message = await _get_task_state(task_id)
+        assert status == "failed"
+        assert error_message == "No posts were collected from the requested sources."
+        assert await _count_raw_posts(task_id) == 0
+        assert await _count_reports(task_id) == 0
+        service._analyzer.analyze.assert_not_awaited()
+
     async def test_process_task_marks_partial_when_some_sources_fail(self) -> None:
         """Partial source failures must surface as partial, not completed."""
         request = CreateTaskRequest(
             keyword="openai",
-            language="zh",
+            content_language="zh",
+            report_language="en",
             sources=["reddit", "youtube"],
         )
         task_id = str(uuid.uuid4())
@@ -375,15 +442,63 @@ class TestTaskServiceProcessTask:
         assert error_message == "Completed with source failures: youtube (API down)."
         assert await _count_raw_posts(task_id) == 1
         assert await _count_reports(task_id) == 1
+        service._collector.collect.assert_awaited_once_with(
+            keyword=request.keyword,
+            language="zh",
+            limit=request.max_items,
+            sources=request.sources,
+        )
         service._analyzer.analyze.assert_awaited_once_with(
             collected_posts,
             request.keyword,
-            language="zh",
+            language="en",
         )
+
+    async def test_process_task_completes_when_only_some_sources_return_zero_posts(
+        self,
+    ) -> None:
+        """Zero-result sources without source_errors must not force partial status."""
+        request = CreateTaskRequest(
+            keyword="openai",
+            content_language="zh",
+            report_language="en",
+            sources=["reddit", "youtube"],
+        )
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, request)
+
+        collected_posts = [
+            _make_post(
+                "reddit",
+                "A real post with enough text to analyze",
+            )
+        ]
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            return_value=FakeCollectionResult(
+                posts=collected_posts,
+                source_errors={},
+            )
+        )
+        service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
+            return_value=_make_analysis_result()
+        )
+
+        await service._process_task(task_id, request)
+
+        status, error_message = await _get_task_state(task_id)
+        assert status == "completed"
+        assert error_message is None
+        assert await _count_raw_posts(task_id) == 1
+        assert await _count_reports(task_id) == 1
 
     async def test_process_task_fails_when_analysis_has_no_valid_content(self) -> None:
         """Empty analysis after cleaning must fail instead of saving a report."""
-        request = CreateTaskRequest(keyword="openai", sources=["reddit"])
+        request = CreateTaskRequest(
+            keyword="openai",
+            report_language="en",
+            sources=["reddit"],
+        )
         task_id = str(uuid.uuid4())
         await _insert_task(task_id, request)
 
@@ -427,6 +542,7 @@ class TestTaskServiceProcessTask:
         """Low-score subscription runs must create a new unread alert."""
         request = CreateTaskRequest(
             keyword="openai",
+            report_language="en",
             sources=["reddit", "youtube"],
         )
         task_id = str(uuid.uuid4())
@@ -470,7 +586,11 @@ class TestTaskServiceProcessTask:
         notify: bool,
     ) -> None:
         """Alerts must not be created when the task is not an opted-in subscription."""
-        request = CreateTaskRequest(keyword="openai", sources=["reddit"])
+        request = CreateTaskRequest(
+            keyword="openai",
+            report_language="en",
+            sources=["reddit"],
+        )
         task_id = str(uuid.uuid4())
         subscription_id = str(uuid.uuid4()) if has_subscription else None
         if subscription_id is not None:
@@ -505,7 +625,11 @@ class TestTaskServiceProcessTask:
         sentiment_score: float,
     ) -> None:
         """Scores at or above threshold must not create subscription alerts."""
-        request = CreateTaskRequest(keyword="openai", sources=["reddit"])
+        request = CreateTaskRequest(
+            keyword="openai",
+            report_language="en",
+            sources=["reddit"],
+        )
         task_id = str(uuid.uuid4())
         subscription_id = str(uuid.uuid4())
         await _insert_subscription(subscription_id, notify=True)

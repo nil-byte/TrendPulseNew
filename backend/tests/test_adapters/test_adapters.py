@@ -60,6 +60,54 @@ class TestRedditAdapter:
         assert posts[0].engagement == 42
 
     @patch("src.adapters.reddit_adapter.settings")
+    @patch("src.adapters.reddit_adapter.asyncpraw")
+    async def test_reddit_adapter_filters_obvious_language_mismatches(
+        self, mock_asyncpraw: MagicMock, mock_settings: MagicMock
+    ) -> None:
+        """Reddit should drop obviously non-English posts when content_language=en."""
+        mock_settings.reddit_client_id = "test_id"
+        mock_settings.reddit_client_secret = "test_secret"
+        mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = ""
+        mock_settings.reddit_ssl_ca_file = ""
+
+        english_submission = SimpleNamespace(
+            id="en123",
+            title="AI launch discussion",
+            selftext="Users are debating the new roadmap in detail.",
+            author="english_user",
+            score=42,
+            created_utc=1700000000.0,
+            permalink="/r/test/comments/en123/test/",
+        )
+        chinese_submission = SimpleNamespace(
+            id="zh123",
+            title="人工智能趋势",
+            selftext="这个话题在中文社区非常热门。",
+            author="chinese_user",
+            score=30,
+            created_utc=1700000001.0,
+            permalink="/r/test/comments/zh123/test/",
+        )
+
+        mock_subreddit = AsyncMock()
+        mock_subreddit.search = MagicMock(
+            return_value=_async_iter([english_submission, chinese_submission])
+        )
+
+        mock_reddit_instance = AsyncMock()
+        mock_reddit_instance.subreddit = AsyncMock(return_value=mock_subreddit)
+        mock_reddit_instance.__aenter__ = AsyncMock(return_value=mock_reddit_instance)
+        mock_reddit_instance.__aexit__ = AsyncMock(return_value=False)
+
+        mock_asyncpraw.Reddit.return_value = mock_reddit_instance
+
+        adapter = RedditAdapter()
+        posts = await adapter.collect("artificial intelligence", "en", 10)
+
+        assert [post.source_id for post in posts] == ["en123"]
+
+    @patch("src.adapters.reddit_adapter.settings")
     @patch("src.adapters.reddit_adapter.aiohttp.ClientSession")
     def test_reddit_build_client_session_applies_https_proxy_from_settings(
         self,
@@ -190,6 +238,29 @@ class TestYouTubeAdapter:
     """Tests for YouTubeAdapter.collect()."""
 
     @patch("src.adapters.youtube_adapter.YouTubeTranscriptApi")
+    def test_youtube_fetch_transcript_uses_prioritized_chinese_language_codes(
+        self,
+        mock_transcript_api: MagicMock,
+    ) -> None:
+        """Chinese transcript lookup should only try zh transcript variants."""
+        mock_transcript = MagicMock()
+        mock_transcript.language = "Chinese (Simplified)"
+        mock_transcript.language_code = "zh-Hans"
+        mock_transcript.is_generated = False
+        mock_transcript.fetch.return_value = [SimpleNamespace(text="中文字幕")]
+        mock_transcript_api.return_value.list.return_value.find_transcript.return_value = (
+            mock_transcript
+        )
+
+        adapter = YouTubeAdapter()
+        result = adapter._fetch_transcript("vid001", "zh")
+
+        assert result.status == "fetched"
+        mock_transcript_api.return_value.list.return_value.find_transcript.assert_called_once_with(
+            ["zh-Hans", "zh-CN", "zh-SG", "zh", "zh-Hant", "zh-TW", "zh-HK"]
+        )
+
+    @patch("src.adapters.youtube_adapter.YouTubeTranscriptApi")
     @patch("src.adapters.youtube_adapter.build")
     @patch("src.adapters.youtube_adapter.asyncio.to_thread")
     @patch("src.adapters.youtube_adapter.settings")
@@ -259,6 +330,35 @@ class TestYouTubeAdapter:
             "transcript_is_generated": False,
         }
         assert mock_to_thread.await_count == 2
+        assert (
+            mock_youtube.search().list.call_args.kwargs.get("relevanceLanguage") == "en"
+        )
+
+    @patch("src.adapters.youtube_adapter.build")
+    @patch("src.adapters.youtube_adapter.asyncio.to_thread")
+    @patch("src.adapters.youtube_adapter.settings")
+    async def test_youtube_search_uses_simplified_chinese_relevance_language(
+        self,
+        mock_settings: MagicMock,
+        mock_to_thread: AsyncMock,
+        mock_build: MagicMock,
+    ) -> None:
+        """Chinese collection should ask YouTube search.list for zh-Hans relevance."""
+        mock_settings.youtube_api_key = "test_key"
+        mock_to_thread.side_effect = lambda func, *args: func(*args)
+
+        mock_youtube = MagicMock()
+        mock_youtube.search().list().execute.return_value = {"items": []}
+        mock_build.return_value = mock_youtube
+
+        adapter = YouTubeAdapter()
+        posts = await adapter.collect("人工智能", "zh", 5)
+
+        assert posts == []
+        assert (
+            mock_youtube.search().list.call_args.kwargs.get("relevanceLanguage")
+            == "zh-Hans"
+        )
 
     @patch("src.adapters.youtube_adapter.settings")
     async def test_youtube_raises_when_api_key_missing(
@@ -373,6 +473,84 @@ class TestXAdapter:
         kwargs = mock_client.chat.completions.create.await_args.kwargs
         assert kwargs["model"] == mock_settings.grok_model
         assert kwargs.get("stream") is False
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_includes_target_language_requirement_in_messages(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Grok prompts should explicitly require the requested content language."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="[]"))]
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        adapter = XAdapter()
+        await adapter._query_shard(
+            mock_client,
+            keyword="人工智能",
+            language="zh",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=1,
+        )
+
+        kwargs = mock_client.chat.completions.create.await_args.kwargs
+        joined_messages = "\n".join(
+            str(message["content"]) for message in kwargs["messages"]
+        )
+        assert "Simplified Chinese" in joined_messages
+        assert "Tweets must be primarily written in Simplified Chinese." in joined_messages
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_filters_obvious_language_mismatches_from_results(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Result parsing should drop obviously wrong-language tweets."""
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+
+        tweets = [
+            {
+                "id": "t1",
+                "username": "user1",
+                "content": "Detailed product feedback from English users",
+                "perspective": "Bullish",
+                "created_at": "2024-01-01T00:00:00Z",
+                "engagement": 100,
+                "url": "https://x.com/user1/status/t1",
+            },
+            {
+                "id": "t2",
+                "username": "user2",
+                "content": "这个产品在中文社区讨论很多",
+                "perspective": "Neutral",
+                "created_at": "2024-01-01T01:00:00Z",
+                "engagement": 20,
+                "url": "https://x.com/user2/status/t2",
+            },
+        ]
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content=json.dumps(tweets)))]
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        adapter = XAdapter()
+        posts = await adapter._query_shard(
+            mock_client,
+            keyword="product feedback",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=2,
+        )
+
+        assert [post.source_id for post in posts] == ["t1"]
 
     @patch("src.adapters.x_adapter.settings")
     async def test_x_query_shard_rejects_empty_choices_json_string(
