@@ -6,9 +6,17 @@ import 'package:trendpulse/core/network/api_exception.dart';
 import 'api_endpoints.dart';
 
 class ApiClient {
+  static const _defaultEnableLogging = bool.fromEnvironment(
+    'TRENDPULSE_ENABLE_API_HTTP_LOGS',
+    defaultValue: false,
+  );
+
   late final Dio _dio;
 
-  ApiClient({String? baseUrl}) {
+  ApiClient({
+    String? baseUrl,
+    bool enableLogging = _defaultEnableLogging,
+  }) {
     final configuredBaseUrl = baseUrl ?? ApiEndpoints.baseUrl;
     final effectiveBaseUrl = ApiBaseUrlResolver.resolve(configuredBaseUrl);
     _dio = Dio(
@@ -23,13 +31,15 @@ class ApiClient {
       ),
     );
 
-    _dio.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (obj) => debugPrint('[API] $obj'),
-      ),
-    );
+    if (enableLogging) {
+      _dio.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          logPrint: (obj) => debugPrint('[API] $obj'),
+        ),
+      );
+    }
   }
 
   Future<Response<T>> get<T>(
@@ -56,4 +66,7 @@ class ApiClient {
 
   /// Effective HTTP base URL (from constructor or [BaseOptions]).
   String get baseUrl => _dio.options.baseUrl;
+
+  /// Exposed for tests that validate debug logging behavior.
+  Iterable<Interceptor> get interceptors => _dio.interceptors;
 }

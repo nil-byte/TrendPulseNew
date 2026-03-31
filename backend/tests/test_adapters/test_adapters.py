@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -152,7 +153,9 @@ class TestRedditAdapter:
 
     @patch("src.adapters.reddit_adapter.settings")
     async def test_reddit_raises_typed_error_when_ssl_ca_file_is_invalid(
-        self, mock_settings: MagicMock, tmp_path
+        self,
+        mock_settings: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """A malformed CA file should be rejected before the session is created."""
         invalid_ca = tmp_path / "invalid-ca.pem"
@@ -175,12 +178,13 @@ class TestRedditAdapter:
     def test_reddit_prefers_proxy_error_code_for_proxy_host(
         self, mock_settings: MagicMock
     ) -> None:
-        """Proxy connectivity failures should not be misclassified as generic network."""
+        """Proxy failures should not be misclassified as generic network."""
         mock_settings.reddit_https_proxy = "http://proxy.internal:3128"
 
         error = RedditAdapter._map_collection_error(
             RuntimeError(
-                "Cannot connect to host proxy.internal:3128 ssl:default [Connect call failed]"
+                "Cannot connect to host proxy.internal:3128 "
+                "ssl:default [Connect call failed]"
             )
         )
 
@@ -248,9 +252,8 @@ class TestYouTubeAdapter:
         mock_transcript.language_code = "zh-Hans"
         mock_transcript.is_generated = False
         mock_transcript.fetch.return_value = [SimpleNamespace(text="中文字幕")]
-        mock_transcript_api.return_value.list.return_value.find_transcript.return_value = (
-            mock_transcript
-        )
+        transcript_list = mock_transcript_api.return_value.list.return_value
+        transcript_list.find_transcript.return_value = mock_transcript
 
         adapter = YouTubeAdapter()
         result = adapter._fetch_transcript("vid001", "zh")
@@ -308,9 +311,8 @@ class TestYouTubeAdapter:
         mock_transcript.fetch.return_value = [
             SimpleNamespace(text="Hello world this is a transcript")
         ]
-        mock_transcript_api.return_value.list.return_value.find_transcript.return_value = (
-            mock_transcript
-        )
+        transcript_list = mock_transcript_api.return_value.list.return_value
+        transcript_list.find_transcript.return_value = mock_transcript
 
         adapter = YouTubeAdapter()
         posts = await adapter.collect("test", "en", 5)
@@ -503,7 +505,10 @@ class TestXAdapter:
             str(message["content"]) for message in kwargs["messages"]
         )
         assert "Simplified Chinese" in joined_messages
-        assert "Tweets must be primarily written in Simplified Chinese." in joined_messages
+        assert (
+            "Tweets must be primarily written in Simplified Chinese."
+            in joined_messages
+        )
 
     @patch("src.adapters.x_adapter.settings")
     async def test_x_query_shard_filters_obvious_language_mismatches_from_results(
@@ -535,7 +540,9 @@ class TestXAdapter:
         ]
 
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content=json.dumps(tweets)))]
+        mock_response.choices = [
+            MagicMock(message=MagicMock(content=json.dumps(tweets))),
+        ]
 
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
@@ -662,7 +669,10 @@ class TestXAdapter:
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             return_value={
-                "error": {"message": "Argument not supported: stream_options", "type": "invalid"}
+                "error": {
+                    "message": "Argument not supported: stream_options",
+                    "type": "invalid",
+                }
             }
         )
 
@@ -803,7 +813,7 @@ class TestXAdapter:
     async def test_x_collect_raises_partial_error_when_a_shard_fails(
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
-        """Partial shard failures should be surfaced instead of silently marked successful."""
+        """Partial shard failures should be surfaced, not silently ignored."""
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
@@ -858,9 +868,8 @@ class TestXAdapter:
                     ],
                 ]
             ),
-        ):
-            with pytest.raises(PartialSourceCollectionError) as exc_info:
-                await adapter.collect("test", "en", 10)
+        ), pytest.raises(PartialSourceCollectionError) as exc_info:
+            await adapter.collect("test", "en", 10)
 
         assert len(exc_info.value.partial_posts) == 2
         assert exc_info.value.reason_code == "grok_collection_failed"

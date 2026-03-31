@@ -6,6 +6,8 @@ import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from src.adapters.base import (
     PartialSourceCollectionError,
     SourceCollectionError,
@@ -85,7 +87,7 @@ class TestCollectorService:
 
     async def test_collect_logs_search_query_fallback_status_and_reason(
         self,
-        caplog,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Collector should log localization fallback metadata for observability."""
         source_availability_service.reset_runtime_state()
@@ -120,7 +122,7 @@ class TestCollectorService:
 
     async def test_collect_logs_zero_post_success_with_posts_count(
         self,
-        caplog,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Successful zero-post collections should still log posts=0."""
         source_availability_service.reset_runtime_state()
@@ -152,7 +154,7 @@ class TestCollectorService:
 
     async def test_collect_logs_source_and_reason_code_when_source_fails(
         self,
-        caplog,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Failed collections should log both source and stable reason_code."""
         source_availability_service.reset_runtime_state()

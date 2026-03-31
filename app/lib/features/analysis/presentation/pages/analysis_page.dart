@@ -5,16 +5,14 @@ import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/network/api_exception.dart';
-import 'package:trendpulse/core/theme/app_borders.dart';
-import 'package:trendpulse/core/theme/app_colors.dart';
-import 'package:trendpulse/core/theme/app_motion.dart';
-import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
-import 'package:trendpulse/core/theme/app_typography.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/providers/analysis_provider.dart';
+import 'package:trendpulse/features/analysis/presentation/widgets/analysis_config_panel.dart';
+import 'package:trendpulse/features/analysis/presentation/widgets/analysis_editorial_search_bar.dart';
+import 'package:trendpulse/features/analysis/presentation/widgets/analysis_marketing_sections.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -26,8 +24,7 @@ class AnalysisPage extends ConsumerStatefulWidget {
 }
 
 class _AnalysisPageState extends ConsumerState<AnalysisPage> {
-  static const _noAvailableSourcesDetail =
-      'no requested sources are currently available';
+  static const _noAvailableSourcesCode = 'no_available_sources';
   static const _defaultSources = {'reddit', 'youtube', 'x'};
   final _keywordController = TextEditingController();
   final _searchFocusNode = FocusNode();
@@ -164,11 +161,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   }
 
   bool _isNoAvailableSourcesError(ApiException error) {
-    if (error.statusCode != 422) {
-      return false;
-    }
-    final detail = error.debugMessage?.toLowerCase().trim();
-    return detail?.contains(_noAvailableSourcesDetail) ?? false;
+    return error.statusCode == 422 && error.errorCode == _noAvailableSourcesCode;
   }
 
   Set<String> _resolveEffectiveSources({
@@ -193,7 +186,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final sourceAvailabilityAsync = ref.watch(sourceAvailabilityProvider);
     ref.watch(defaultLanguageProvider);
@@ -222,65 +214,17 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      StaggeredListItem(
+                      const StaggeredListItem(
                         index: 0,
-                        child: Column(
-                          children: [
-                            Text(
-                              l10n.analysisMastheadTop.toUpperCase(),
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                letterSpacing: 4.0,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                l10n.appTitle.toUpperCase(),
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.displayLarge?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -2.0,
-                                  height: 1.0,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              l10n.analysisMastheadSubtitle.toUpperCase(),
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                letterSpacing: 2.0,
-                              ),
-                            ),
-                            EditorialDivider.doubleLine(
-                              topSpace: AppSpacing.xl,
-                              bottomSpace: AppSpacing.xl,
-                            ),
-                          ],
-                        ),
-                      ),
-                      StaggeredListItem(
-                        index: 1,
-                        child: Text(
-                          l10n.analysisIntro,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontStyle: FontStyle.italic,
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.8,
-                            ),
-                          ),
-                        ),
+                        child: AnalysisMastheadSection(),
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       StaggeredListItem(
-                        index: 2,
+                        index: 1,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _EditorialSearchBar(
+                            AnalysisEditorialSearchBar(
                               controller: _keywordController,
                               focusNode: _searchFocusNode,
                               isSearching: _isSearching,
@@ -293,7 +237,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                                 );
                               },
                             ),
-                            _ConfigPanel(
+                            AnalysisConfigPanel(
                               expanded: _configExpanded,
                               contentLanguage: _contentLanguage,
                               sources: _sources,
@@ -317,13 +261,15 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                         bottomSpace: AppSpacing.lg,
                       ),
                       StaggeredListItem(
-                        index: 3,
-                        child: _TrendingTopicsSection(onTopicTap: _fillSearchBar),
+                        index: 2,
+                        child: AnalysisTrendingTopicsSection(
+                          onTopicTap: _fillSearchBar,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xxl),
                       const StaggeredListItem(
-                        index: 4,
-                        child: _PoweredByFooter(),
+                        index: 3,
+                        child: AnalysisPoweredByFooter(),
                       ),
                     ],
                   ),
@@ -333,560 +279,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
           },
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Editorial Search Bar
-// ---------------------------------------------------------------------------
-
-class _EditorialSearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool isSearching;
-  final bool configExpanded;
-  final String searchHint;
-  final VoidCallback onSearch;
-  final VoidCallback onToggleConfig;
-
-  const _EditorialSearchBar({
-    required this.controller,
-    required this.focusNode,
-    required this.isSearching,
-    required this.configExpanded,
-    required this.searchHint,
-    required this.onSearch,
-    required this.onToggleConfig,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: colors.onSurface, width: AppBorders.thick),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => onSearch(),
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                fontWeight: FontWeight.w700,
-              ),
-              decoration: InputDecoration(
-                hintText: searchHint,
-                hintStyle: theme.textTheme.titleLarge?.copyWith(
-                  fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                  color: colors.onSurface.withValues(alpha: AppOpacity.divider),
-                  fontStyle: FontStyle.italic,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
-              ),
-            ),
-          ),
-          Container(
-            width: AppBorders.thick,
-            height: 56.0,
-            color: colors.onSurface,
-          ),
-          IconButton(
-            onPressed: onToggleConfig,
-            icon: Icon(
-              configExpanded ? Icons.close : Icons.tune_rounded,
-              color: colors.onSurface,
-            ),
-            style: IconButton.styleFrom(
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          Container(
-            width: AppBorders.thick,
-            height: 56.0,
-            color: colors.onSurface,
-          ),
-          Semantics(
-            button: true,
-            child: InkWell(
-              onTap: isSearching ? null : onSearch,
-              child: Container(
-                width: 56,
-                height: 56.0,
-                color: colors.primary,
-                alignment: Alignment.center,
-                child: isSearching
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colors.onPrimary,
-                        ),
-                      )
-                    : Icon(
-                        Icons.arrow_forward_rounded,
-                        color: colors.onPrimary,
-                      ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Config Panel
-// ---------------------------------------------------------------------------
-
-class _ConfigPanel extends StatelessWidget {
-  final bool expanded;
-  final String contentLanguage;
-  final Set<String> sources;
-  final List<AnalysisSourceAvailability> sourceAvailability;
-  final double maxItems;
-  final ValueChanged<String> onContentLanguageChanged;
-  final ValueChanged<Set<String>> onSourcesChanged;
-  final ValueChanged<double> onMaxItemsChanged;
-
-  const _ConfigPanel({
-    required this.expanded,
-    required this.contentLanguage,
-    required this.sources,
-    required this.sourceAvailability,
-    required this.maxItems,
-    required this.onContentLanguageChanged,
-    required this.onSourcesChanged,
-    required this.onMaxItemsChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: AppMotion.slow,
-      curve: AppMotion.emphasized,
-      alignment: Alignment.topCenter,
-      child: expanded ? _buildPanel(context) : const SizedBox.shrink(),
-    );
-  }
-
-  Widget _buildPanel(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final colors = theme.colorScheme;
-    final availabilityBySource = {
-      for (final item in sourceAvailability) item.source: item,
-    };
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: colors.onSurface, width: AppBorders.thick),
-          right: BorderSide(color: colors.onSurface, width: AppBorders.thick),
-          bottom: BorderSide(color: colors.onSurface, width: AppBorders.thick),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.analysisParametersTitle.toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
-          
-          // Content language
-          Text(
-            l10n.contentLanguageLabel.toUpperCase(),
-            style: theme.textTheme.labelSmall,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SegmentedButton<String>(
-            segments: [
-              ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
-              ButtonSegment(value: 'zh', label: Text(l10n.languageChinese)),
-            ],
-            selected: {contentLanguage},
-            onSelectionChanged: (v) => onContentLanguageChanged(v.first),
-            showSelectedIcon: false,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // Data Sources
-          Text(
-            l10n.dataSources,
-            style: theme.textTheme.labelSmall,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Builder(builder: (context) {
-            final tpColors = Theme.of(context).trendPulseColors;
-            return Row(
-              children: [
-                Expanded(
-                  child: _SourceChip(
-                    label: l10n.platformReddit,
-                    color: tpColors.reddit,
-                    selected: sources.contains('reddit'),
-                    status: availabilityBySource['reddit']?.status ?? 'available',
-                    reason: availabilityBySource['reddit']?.reason,
-                    enabled: availabilityBySource['reddit']?.isAvailable ?? true,
-                    onSelected: (v) => _toggleSource('reddit', v),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _SourceChip(
-                    label: l10n.platformYouTube,
-                    color: tpColors.youtube,
-                    selected: sources.contains('youtube'),
-                    status: availabilityBySource['youtube']?.status ?? 'available',
-                    reason: availabilityBySource['youtube']?.reason,
-                    enabled: availabilityBySource['youtube']?.isAvailable ?? true,
-                    onSelected: (v) => _toggleSource('youtube', v),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _SourceChip(
-                    label: l10n.platformX,
-                    color: tpColors.xPlatform,
-                    selected: sources.contains('x'),
-                    status: availabilityBySource['x']?.status ?? 'available',
-                    reason: availabilityBySource['x']?.reason,
-                    enabled: availabilityBySource['x']?.isAvailable ?? true,
-                    onSelected: (v) => _toggleSource('x', v),
-                  ),
-                ),
-              ],
-            );
-          }),
-          if (sourceAvailability.any((item) => item.reason?.trim().isNotEmpty ?? false))
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.analysisSourceStatusHint,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.72),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  ...sourceAvailability
-                      .where((item) => item.reason?.trim().isNotEmpty ?? false)
-                      .map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                          child: Text(
-                            '${_sourceLabel(item.source, l10n)} · ${_statusLabel(item, l10n)} · ${item.reason}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: item.isAvailable
-                                  ? colors.onSurface.withValues(alpha: 0.72)
-                                  : colors.error,
-                            ),
-                          ),
-                        ),
-                      ),
-                ],
-              ),
-            ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // Max Items
-          Row(
-            children: [
-              Text(
-                l10n.analysisMaxItemsPerSource.toUpperCase(),
-                style: theme.textTheme.labelSmall,
-              ),
-              const Spacer(),
-              Text(
-                maxItems.round().toString(),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontFamily: AppTypography.editorialSansFamily,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            l10n.analysisPerSourceLimitHint,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.72),
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          Slider(
-            value: maxItems,
-            min: 10,
-            max: 100,
-            divisions: 9,
-            onChanged: onMaxItemsChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _toggleSource(String source, bool selected) {
-    final next = Set<String>.from(sources);
-    if (selected) {
-      next.add(source);
-    } else if (next.length > 1) {
-      next.remove(source);
-    }
-    onSourcesChanged(next);
-  }
-
-  String _sourceLabel(String source, AppLocalizations l10n) {
-    switch (source) {
-      case 'reddit':
-        return l10n.platformReddit;
-      case 'youtube':
-        return l10n.platformYouTube;
-      case 'x':
-        return l10n.platformX;
-      default:
-        return source;
-    }
-  }
-
-  String _statusLabel(
-    AnalysisSourceAvailability availability,
-    AppLocalizations l10n,
-  ) {
-    switch (availability.status) {
-      case 'degraded':
-        return l10n.analysisSourceDegradedLabel;
-      case 'unconfigured':
-        return l10n.analysisSourceUnavailableLabel;
-      default:
-        return availability.status;
-    }
-  }
-}
-
-/// Equal-width source toggle — fills its [Expanded] parent, pill shape,
-/// brand colour when selected. Preserves tooltip and degraded-status icon.
-class _SourceChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool selected;
-  final String status;
-  final bool enabled;
-  final String? reason;
-  final ValueChanged<bool>? onSelected;
-
-  const _SourceChip({
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.status,
-    required this.enabled,
-    this.reason,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final isDegraded = status == 'degraded';
-    final effectiveAlpha = enabled ? 1.0 : 0.48;
-    final textColor = selected
-        ? AppColors.onBrandFill(color)
-        : colors.onSurface.withValues(alpha: effectiveAlpha);
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-    );
-    final chipLabel = Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isDegraded) ...[
-          Icon(
-            Icons.warning_amber_rounded,
-            size: 14,
-            color: textColor,
-          ),
-          const SizedBox(width: AppSpacing.xxs),
-        ],
-        Flexible(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-
-    Widget button = SizedBox(
-      width: double.infinity,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: FilterChip(
-          label: chipLabel,
-          selected: selected,
-          onSelected: enabled ? onSelected : null,
-          showCheckmark: false,
-          selectedColor: color.withValues(alpha: effectiveAlpha),
-          disabledColor: Colors.transparent,
-          backgroundColor: Colors.transparent,
-          materialTapTargetSize: MaterialTapTargetSize.padded,
-          visualDensity: VisualDensity.standard,
-          labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
-          ),
-          shape: shape,
-          side: BorderSide(
-            color: selected
-                ? color.withValues(alpha: effectiveAlpha)
-                : colors.outline.withValues(alpha: effectiveAlpha),
-            width: selected ? 1.5 : 1.0,
-          ),
-        ),
-      ),
-    );
-
-    final tooltipMessage = reason?.trim();
-    if (tooltipMessage != null && tooltipMessage.isNotEmpty) {
-      button = Tooltip(message: tooltipMessage, child: button);
-    }
-    return button;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Trending Topics
-// ---------------------------------------------------------------------------
-
-class _TrendingTopicsSection extends StatelessWidget {
-  final ValueChanged<String> onTopicTap;
-
-  const _TrendingTopicsSection({required this.onTopicTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final topics = [
-      l10n.analysisStarterTopicAi,
-      l10n.analysisStarterTopicCrypto,
-      l10n.analysisStarterTopicEv,
-      l10n.analysisStarterTopicMarkets,
-      l10n.analysisStarterTopicLayoffs,
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.analysisStarterTopicsTitle.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const EditorialDivider(topSpace: AppSpacing.xs, bottomSpace: AppSpacing.md),
-        Text(
-          l10n.analysisStarterTopicsDescription,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(
-              alpha: AppOpacity.secondaryStrong,
-            ),
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ...List.generate(topics.length, (index) {
-          final topic = topics[index];
-          return InkWell(
-            onTap: () => onTopicTap(topic),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Row(
-                children: [
-                  Text(
-                    (index + 1).toString().padLeft(2, '0'),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      topic,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontFamily: theme.textTheme.displayLarge?.fontFamily,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_rounded, size: 16),
-                ],
-              ),
-            ),
-          );
-        }),
-        const EditorialDivider(topSpace: AppSpacing.sm, bottomSpace: 0),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Footer
-// ---------------------------------------------------------------------------
-
-class _PoweredByFooter extends StatelessWidget {
-  const _PoweredByFooter();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final style = theme.textTheme.labelSmall?.copyWith(
-      letterSpacing: 1.0,
-      fontWeight: FontWeight.w700,
-    );
-
-    return Column(
-      children: [
-        Text(l10n.analysisDataSourcesTitle.toUpperCase(), style: style),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          l10n.analysisDataSourcesList.toUpperCase(),
-          style: theme.textTheme.bodySmall?.copyWith(
-            letterSpacing: 2.0,
-          ),
-        ),
-      ],
     );
   }
 }

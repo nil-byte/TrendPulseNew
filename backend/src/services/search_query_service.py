@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 
 from src.adapters.llm_adapter import LLMAdapter
+from src.common.language_utils import target_language_name
 from src.config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -81,11 +82,11 @@ class SearchQueryService:
         try:
             localized = await self._llm.chat_completion(
                 system_prompt=_SYSTEM_PROMPT.format(
-                    target_language=self._target_language_name(language)
+                    target_language=target_language_name(language)
                 ),
                 user_prompt=_USER_PROMPT.format(
                     keyword=original_keyword,
-                    target_language=self._target_language_name(language),
+                    target_language=target_language_name(language),
                 ),
                 temperature=0.1,
                 max_tokens=64,
@@ -111,13 +112,6 @@ class SearchQueryService:
             status="localized",
             reason=None,
         )
-
-    @staticmethod
-    def _target_language_name(language: str) -> str:
-        """Return a human-readable target language label for prompts."""
-        if language == "zh":
-            return "Simplified Chinese"
-        return "English"
 
     @staticmethod
     def _llm_configured() -> bool:

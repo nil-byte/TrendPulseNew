@@ -9,10 +9,14 @@ class SettingsRepository {
   static const _keyMaxItems = 'settings_max_items';
   static const _keyThemeMode = 'settings_theme_mode';
   static const _keyInAppNotify = 'in_app_notify';
-  final ApiClient _apiClient;
+  final ApiClient? _apiClient;
+  final ApiClient Function(String? baseUrl)? _readApiClient;
 
-  SettingsRepository({ApiClient? apiClient})
-    : _apiClient = apiClient ?? ApiClient();
+  SettingsRepository({
+    ApiClient? apiClient,
+    ApiClient Function(String? baseUrl)? readApiClient,
+  }) : _apiClient = apiClient,
+       _readApiClient = readApiClient;
 
   Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -91,10 +95,14 @@ class SettingsRepository {
   }
 
   ApiClient _clientForBaseUrl(String? baseUrl) {
-    if (baseUrl == null || baseUrl == _apiClient.baseUrl) {
+    final sharedClient = _readApiClient?.call(baseUrl);
+    if (sharedClient != null) {
+      return sharedClient;
+    }
+    if (_apiClient != null) {
       return _apiClient;
     }
-    return ApiClient(baseUrl: baseUrl);
+    return ApiClient(baseUrl: baseUrl, enableLogging: false);
   }
 
   String _requireReportLanguage(Map<String, dynamic> data) {

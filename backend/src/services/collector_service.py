@@ -126,7 +126,8 @@ class CollectorService:
                 source_error = self._normalize_error(result)
                 partial_posts = self._extract_partial_posts(result)
                 logger.error(
-                    "Collection failed source=%s reason_code=%s reason=%s partial_posts=%d",
+                    "Collection failed "
+                    "source=%s reason_code=%s reason=%s partial_posts=%d",
                     source_name,
                     source_error.reason_code,
                     source_error.message,

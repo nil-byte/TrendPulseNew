@@ -10,8 +10,11 @@ import 'package:trendpulse/features/settings/data/notification_settings.dart';
 import 'package:trendpulse/features/settings/data/notification_settings_repository.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
 
-final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepository();
+final Provider<SettingsRepository> settingsRepositoryProvider =
+    Provider<SettingsRepository>((ref) {
+  return SettingsRepository(
+    readApiClient: (_) => ref.read(apiClientProvider),
+  );
 });
 
 final initialBaseUrlProvider = Provider<String>((ref) {
@@ -46,6 +49,10 @@ final initialThemeModePreloadedProvider = Provider<bool>((ref) {
   return false;
 });
 
+final reportLanguageSyncStateProvider = StateProvider<AsyncValue<void>>((ref) {
+  return const AsyncData<void>(null);
+});
+
 final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
   ref,
 ) {
@@ -72,6 +79,11 @@ final baseUrlProvider = StateNotifierProvider<BaseUrlNotifier, String>((ref) {
   );
 });
 
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
+  final baseUrl = ref.watch(baseUrlProvider);
+  return ApiClient(baseUrl: baseUrl);
+});
+
 final defaultLanguageProvider =
     StateNotifierProvider<DefaultLanguageNotifier, String>((ref) {
       final repo = ref.watch(settingsRepositoryProvider);
@@ -82,6 +94,9 @@ final defaultLanguageProvider =
         initialLanguage: initialLanguage,
         isPreloaded: languagePreloaded,
         readBaseUrl: () => ref.read(baseUrlProvider),
+        setSyncState: (status) {
+          ref.read(reportLanguageSyncStateProvider.notifier).state = status;
+        },
       );
     });
 
@@ -101,10 +116,8 @@ final inAppNotifyProvider = StateNotifierProvider<InAppNotifyNotifier, bool>((
 
 final notificationSettingsRepositoryProvider =
     Provider<NotificationSettingsRepository>((ref) {
-      final baseUrl = ref.watch(baseUrlProvider);
-      return NotificationSettingsRepository(
-        apiClient: ApiClient(baseUrl: baseUrl),
-      );
+      final apiClient = ref.watch(apiClientProvider);
+      return NotificationSettingsRepository(apiClient: apiClient);
     });
 
 final notificationSettingsProvider = FutureProvider<NotificationSettings>((
@@ -242,6 +255,7 @@ class BaseUrlNotifier extends StateNotifier<String> {
 class DefaultLanguageNotifier extends StateNotifier<String> {
   final SettingsRepository _repo;
   final String Function() _readBaseUrl;
+  final void Function(AsyncValue<void> status) _setSyncState;
   Future<void> _reportLanguageSyncChain = Future<void>.value();
 
   DefaultLanguageNotifier(
@@ -249,7 +263,9 @@ class DefaultLanguageNotifier extends StateNotifier<String> {
     required String initialLanguage,
     required bool isPreloaded,
     required String Function() readBaseUrl,
+    required void Function(AsyncValue<void> status) setSyncState,
   }) : _readBaseUrl = readBaseUrl,
+       _setSyncState = setSyncState,
        super(initialLanguage) {
     if (isPreloaded) {
       _enqueueReportLanguageSync(
@@ -302,9 +318,19 @@ class DefaultLanguageNotifier extends StateNotifier<String> {
   Future<void> _enqueueReportLanguageSync(
     Future<void> Function() action,
   ) {
+    _publishSyncState(const AsyncLoading<void>());
     final nextSync = _reportLanguageSyncChain.then((_) => action());
     _reportLanguageSyncChain = nextSync.catchError((_) {});
     return nextSync;
+  }
+
+  void _publishSyncState(AsyncValue<void> status) {
+    Future<void>.microtask(() {
+      if (!mounted) {
+        return;
+      }
+      _setSyncState(status);
+    });
   }
 
   Future<void> _syncReportLanguage(
@@ -320,20 +346,27 @@ class DefaultLanguageNotifier extends StateNotifier<String> {
           baseUrl: targetBaseUrl,
         );
         if (remoteLanguage == language) {
+          _publishSyncState(const AsyncData<void>(null));
           return;
         }
       } catch (error) {
-        debugPrint('Failed to precheck report language: $error');
+        if (kDebugMode) {
+          debugPrint('Failed to precheck report language: $error');
+        }
       }
     }
 
     try {
       await _repo.setReportLanguage(language, baseUrl: targetBaseUrl);
-    } catch (error) {
+      _publishSyncState(const AsyncData<void>(null));
+    } catch (error, stackTrace) {
+      _publishSyncState(AsyncError<void>(error, stackTrace));
       if (rethrowOnFailure) {
         rethrow;
       }
-      debugPrint('Failed to sync report language: $error');
+      if (kDebugMode) {
+        debugPrint('Failed to sync report language: $error');
+      }
     }
   }
 }

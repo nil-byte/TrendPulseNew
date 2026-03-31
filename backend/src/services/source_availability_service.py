@@ -2,26 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import logging
+from dataclasses import dataclass
 from threading import Lock
 
 from src.adapters.base import SourceCollectionError
 from src.adapters.reddit_adapter import RedditAdapter
 from src.adapters.x_adapter import XAdapter
 from src.adapters.youtube_adapter import YouTubeAdapter
+from src.common.time_utils import utc_now_iso
 from src.config.settings import settings
 from src.models.schemas import SourceAvailability
 
 _SUPPORTED_SOURCES = ("reddit", "youtube", "x")
 logger = logging.getLogger(__name__)
-
-
-def _now_iso() -> str:
-    """Return the current UTC timestamp in ISO-8601 format."""
-    return datetime.now(timezone.utc).isoformat()
-
 
 @dataclass(slots=True)
 class _RuntimeAvailabilityState:
@@ -104,7 +98,7 @@ class SourceAvailabilityService:
 
     def record_success(self, source: str) -> None:
         """Mark a source as healthy after a successful collection attempt."""
-        checked_at = _now_iso()
+        checked_at = utc_now_iso()
         self._set_runtime_state(
             source,
             _RuntimeAvailabilityState(
@@ -123,7 +117,7 @@ class SourceAvailabilityService:
 
     def record_failure(self, source: str, reason_code: str, reason: str) -> None:
         """Mark a source as degraded after a failed collection attempt."""
-        checked_at = _now_iso()
+        checked_at = utc_now_iso()
         public_reason = self._public_runtime_reason(source, reason_code)
         self._set_runtime_state(
             source,
@@ -136,7 +130,8 @@ class SourceAvailabilityService:
             ),
         )
         logger.warning(
-            "Source availability updated source=%s status=degraded reason_code=%s checked_at=%s reason=%s",
+            "Source availability updated "
+            "source=%s status=degraded reason_code=%s checked_at=%s reason=%s",
             source,
             reason_code,
             checked_at,
@@ -160,7 +155,9 @@ class SourceAvailabilityService:
     def _resolve_configuration(source: str) -> tuple[bool, str | None, str | None]:
         """Return whether a source is configured for collection."""
         if source == "reddit":
-            configured = bool(settings.reddit_client_id and settings.reddit_client_secret)
+            configured = bool(
+                settings.reddit_client_id and settings.reddit_client_secret,
+            )
             if configured and settings.reddit_https_proxy:
                 try:
                     RedditAdapter._validate_https_proxy(settings.reddit_https_proxy)
@@ -227,7 +224,9 @@ class SourceAvailabilityService:
             "grok_provider_incompatible": (
                 "The configured X provider returned an incompatible response."
             ),
-            "grok_empty_response": "X returned an empty result during the last attempt.",
+            "grok_empty_response": (
+                "X returned an empty result during the last attempt."
+            ),
             "grok_invalid_payload": (
                 "X returned an invalid payload during the last attempt."
             ),
@@ -242,7 +241,10 @@ class SourceAvailabilityService:
         }
         return known_reasons.get(
             reason_code,
-            f"{SourceAvailabilityService._source_label(source)} is temporarily degraded.",
+            (
+                f"{SourceAvailabilityService._source_label(source)} "
+                "is temporarily degraded."
+            ),
         )
 
     @staticmethod

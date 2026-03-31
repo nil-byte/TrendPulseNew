@@ -251,6 +251,34 @@ void main() {
   );
 
   test(
+    'defaultLanguageProvider exposes startup report language sync failures',
+    () async {
+      final repository = _FakeSettingsRepository();
+      await repository.setLanguage('zh');
+      repository.setReportLanguageError = Exception('report language sync failed');
+      final container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(repository),
+          initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
+          baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
+          baseUrlIsWebProvider.overrideWithValue(false),
+          initialLanguageProvider.overrideWithValue('en'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(reportLanguageSyncStateProvider), isA<AsyncData<void>>());
+      expect(container.read(defaultLanguageProvider), 'en');
+
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(defaultLanguageProvider), 'zh');
+      expect(container.read(reportLanguageSyncStateProvider).hasError, isTrue);
+    },
+  );
+
+  test(
     'defaultLanguageProvider rolls back local language when user-triggered sync fails',
     () async {
       final repository = _FakeSettingsRepository();

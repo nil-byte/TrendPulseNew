@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+import re
 import ssl
 from datetime import datetime, timezone
-import re
+from pathlib import Path
 from urllib.parse import urlparse
 
 import aiohttp  # type: ignore[import-untyped]
@@ -88,7 +88,8 @@ class RedditAdapter(BaseAdapter):
                         continue
                     if not self._matches_target_language(content, language):
                         logger.debug(
-                            "Skipping Reddit post id=%s for obvious language mismatch target=%s",
+                            "Skipping Reddit post id=%s "
+                            "for obvious language mismatch target=%s",
                             submission.id,
                             language,
                         )
@@ -235,9 +236,7 @@ class RedditAdapter(BaseAdapter):
         message = RedditAdapter._exception_chain_message(root)
         lowered = message.lower()
         proxy_host = urlparse(settings.reddit_https_proxy).hostname
-        if proxy_host and proxy_host.lower() in lowered:
-            reason_code = "reddit_proxy_required"
-        elif "proxy" in lowered:
+        if proxy_host and proxy_host.lower() in lowered or "proxy" in lowered:
             reason_code = "reddit_proxy_required"
         elif "cannot connect to host" in lowered:
             reason_code = "reddit_network_unreachable"

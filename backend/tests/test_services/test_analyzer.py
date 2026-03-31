@@ -122,7 +122,10 @@ class TestAnalyze:
         )
         reduce_response = json.dumps(
             {
-                "summary": "Users generally like the product, but performance concerns remain.",
+                "summary": (
+                    "Users generally like the product, "
+                    "but performance concerns remain."
+                ),
                 "key_insights": [
                     {
                         "text": "Great user experience",
@@ -192,7 +195,10 @@ class TestAnalyze:
         )
         reduce_response = json.dumps(
             {
-                "summary": "Support sentiment is deteriorating and users distrust recent updates.",
+                "summary": (
+                    "Support sentiment is deteriorating "
+                    "and users distrust recent updates."
+                ),
                 "key_insights": [
                     {
                         "text": "Support quality dropped",
@@ -360,7 +366,10 @@ class TestAnalyze:
         )
         reduce_response = json.dumps(
             {
-                "summary": "The launch is landing well overall, but export latency is the main complaint.",
+                "summary": (
+                    "The launch is landing well overall, "
+                    "but export latency is the main complaint."
+                ),
                 "key_insights": [
                     {
                         "text": "Faster setup is the clearest win",
@@ -393,7 +402,10 @@ class TestAnalyze:
 
         assert (
             result.summary
-            == "The launch is landing well overall, but export latency is the main complaint."
+            == (
+                "The launch is landing well overall, "
+                "but export latency is the main complaint."
+            )
         )
         assert [insight.text for insight in result.key_insights] == [
             "Faster setup is the clearest win",

@@ -1,8 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/core/network/api_client.dart';
 import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/features/feed/data/feed_repository_provider.dart';
@@ -10,6 +10,28 @@ import 'package:trendpulse/features/settings/data/settings_repository.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';
 
 class _MockSettingsRepository extends Mock implements SettingsRepository {}
+
+class _FakeApiClient extends ApiClient {
+  _FakeApiClient() : super(baseUrl: ApiEndpoints.defaultBaseUrl, enableLogging: false);
+
+  String? lastGetPath;
+  Map<String, dynamic> getResponseData = const {
+    'report_language': 'zh',
+    'subscription_notify_default': true,
+  };
+
+  @override
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    lastGetPath = path;
+    return Response<T>(
+      requestOptions: RequestOptions(path: path),
+      data: getResponseData as T,
+    );
+  }
+}
 
 void main() {
   late _MockSettingsRepository mockRepo;
@@ -45,6 +67,50 @@ void main() {
       verifyNever(() => mockRepo.getBaseUrl());
     },
   );
+
+  test('settingsRepositoryProvider uses shared apiClientProvider for remote sync APIs', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final fakeApiClient = _FakeApiClient();
+
+    final container = ProviderContainer(
+      overrides: [
+        apiClientProvider.overrideWithValue(fakeApiClient),
+        initialBaseUrlProvider.overrideWithValue('http://first:8000'),
+        baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
+        baseUrlIsWebProvider.overrideWithValue(false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final repository = container.read(settingsRepositoryProvider);
+    final reportLanguage = await repository.getReportLanguage();
+
+    expect(reportLanguage, 'zh');
+    expect(fakeApiClient.lastGetPath, ApiEndpoints.reportLanguage);
+  });
+
+  test('notificationSettingsRepositoryProvider uses shared apiClientProvider', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final fakeApiClient = _FakeApiClient();
+
+    final container = ProviderContainer(
+      overrides: [
+        apiClientProvider.overrideWithValue(fakeApiClient),
+        initialBaseUrlProvider.overrideWithValue('http://first:8000'),
+        baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
+        baseUrlIsWebProvider.overrideWithValue(false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final repository = container.read(notificationSettingsRepositoryProvider);
+    final settings = await repository.getNotificationSettings();
+
+    expect(settings.subscriptionNotifyDefault, isTrue);
+    expect(fakeApiClient.lastGetPath, ApiEndpoints.notificationSettings);
+  });
 
   test('apiClientProvider rebuilds when base URL changes', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
@@ -113,6 +179,21 @@ void main() {
     final client = ApiClient(baseUrl: 'http://127.0.0.1:9000');
 
     expect(client.baseUrl, 'http://127.0.0.1:9000');
+  });
+
+  test('ApiClient defaults to body logging disabled', () {
+    final client = ApiClient(baseUrl: 'http://localhost:8000');
+
+    expect(client.interceptors.whereType<LogInterceptor>(), isEmpty);
+  });
+
+  test('ApiClient can disable HTTP body logging explicitly', () {
+    final client = ApiClient(
+      baseUrl: 'http://localhost:8000',
+      enableLogging: false,
+    );
+
+    expect(client.interceptors.whereType<LogInterceptor>(), isEmpty);
   });
 
   test('baseUrlProvider keeps explicit localhost default on Android', () async {

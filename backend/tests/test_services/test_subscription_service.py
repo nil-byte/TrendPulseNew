@@ -9,6 +9,8 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
+from src.api.endpoints.analysis import task_service as analysis_task_service
+from src.api.endpoints.tasks import task_service as tasks_task_service
 from src.models.database import get_db
 from src.models.schemas import (
     CreateSubscriptionRequest,
@@ -17,6 +19,7 @@ from src.models.schemas import (
     UpdateSubscriptionRequest,
 )
 from src.services.app_settings_service import AppSettingsService
+from src.services.scheduler_service import SchedulerService
 from src.services.subscription_service import SubscriptionService
 
 
@@ -71,6 +74,15 @@ class TestAppSettingsService:
 class TestSubscriptionService:
     """Regression tests for subscription creation semantics."""
 
+    async def test_subscription_and_scheduler_share_endpoint_task_service(self) -> None:
+        """TaskService should be app-wide across endpoints and services."""
+        subscription_service = SubscriptionService()
+        scheduler_service = SchedulerService()
+
+        assert subscription_service._task_service is tasks_task_service
+        assert scheduler_service._task_service is tasks_task_service
+        assert analysis_task_service is tasks_task_service
+
     def test_update_subscription_request_rejects_legacy_language_field(self) -> None:
         """UpdateSubscriptionRequest should reject the removed language field."""
         with pytest.raises(ValidationError):
@@ -79,7 +91,7 @@ class TestSubscriptionService:
     async def test_create_subscription_omitted_notify_serializes_with_bulk_sync(
         self,
     ) -> None:
-        """Bulk sync must not miss a concurrent subscription using the default notify."""
+        """Bulk sync must not miss concurrent subscriptions using defaults."""
         settings_service = AppSettingsService()
         subscription_service = SubscriptionService()
         await settings_service.update_notification_settings(
@@ -91,7 +103,9 @@ class TestSubscriptionService:
 
         default_read = asyncio.Event()
         allow_insert = asyncio.Event()
-        real_get_default = subscription_service._app_settings_service.get_default_subscription_notify
+        real_get_default = (
+            subscription_service._app_settings_service.get_default_subscription_notify
+        )
 
         async def blocked_get_default(*args: object, **kwargs: object) -> bool:
             value = await real_get_default(*args, **kwargs)
@@ -140,6 +154,7 @@ class TestSubscriptionService:
 
     async def test_run_subscription_now_defers_report_language_to_task_service(
         self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Manual subscription runs should let TaskService resolve report_language."""
         app_settings_service = AppSettingsService()
@@ -154,7 +169,7 @@ class TestSubscriptionService:
         )
         await app_settings_service.update_report_language("en")
         now = datetime.now(timezone.utc).isoformat()
-        subscription_service._task_service.create_task = AsyncMock(  # type: ignore[method-assign]
+        create_task_mock = AsyncMock(
             return_value=TaskResponse(
                 id="task-1",
                 keyword="openai",
@@ -170,12 +185,17 @@ class TestSubscriptionService:
                 post_count=None,
             )
         )
+        monkeypatch.setattr(
+            subscription_service._task_service,
+            "create_task",
+            create_task_mock,
+        )
 
         task = await subscription_service.run_subscription_now(subscription.id)
 
         assert task is not None
-        subscription_service._task_service.create_task.assert_awaited_once()
-        await_args = subscription_service._task_service.create_task.await_args
+        create_task_mock.assert_awaited_once()
+        await_args = create_task_mock.await_args
         request = await_args.args[0]
         assert request.content_language == "zh"
         assert request.report_language is None

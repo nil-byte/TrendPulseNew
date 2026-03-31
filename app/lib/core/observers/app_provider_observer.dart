@@ -9,6 +9,9 @@ class AppProviderObserver extends ProviderObserver {
     StackTrace stackTrace,
     ProviderContainer container,
   ) {
+    if (!kDebugMode) {
+      return;
+    }
     debugPrint(
       '[Provider:${provider.name ?? provider.runtimeType}] $error',
     );

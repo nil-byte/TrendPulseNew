@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from src.models.schemas import AnalysisReportResponse
-from src.services.task_service import TaskService
+from src.services.task_service import get_task_service
 
 router = APIRouter(prefix="/tasks", tags=["analysis"])
-task_service = TaskService()
+task_service = get_task_service()
 
 
 @router.get("/{task_id}/report", response_model=AnalysisReportResponse)

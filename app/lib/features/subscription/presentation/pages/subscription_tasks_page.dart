@@ -5,14 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
+import 'package:trendpulse/core/network/api_exception.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
-import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
-import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/subscription/data/subscription_model.dart';
 import 'package:trendpulse/features/subscription/presentation/providers/subscription_provider.dart';
+import 'package:trendpulse/features/subscription/presentation/widgets/subscription_tasks_page_sections.dart';
 import 'package:trendpulse/features/subscription/presentation/widgets/task_timeline_item.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
 
@@ -27,8 +27,9 @@ class SubscriptionTasksPage extends ConsumerStatefulWidget {
 }
 
 class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
+  static const _noAvailableSourcesCode = 'no_available_sources';
   bool _isRunningNow = false;
-  _PinnedSubscriptionAlert? _pinnedAlert;
+  SubscriptionPinnedAlert? _pinnedAlert;
   String? _lastRequestedAlertTaskId;
   late final ProviderSubscription<AsyncValue<Subscription>>
   _subscriptionDetailSubscription;
@@ -109,7 +110,7 @@ class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
       body: Column(
         children: [
           if (alertBanner != null)
-            _SubscriptionAlertBanner(
+            SubscriptionAlertBanner(
               alert: alertBanner,
               onTap: alertBannerRoute == null
                   ? null
@@ -134,7 +135,7 @@ class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
               ),
               data: (tasks) {
                 if (tasks.isEmpty) {
-                  return _EmptyTasksView(l10n: l10n);
+                  return SubscriptionTasksEmptyView(l10n: l10n);
                 }
 
                 return RefreshIndicator(
@@ -183,7 +184,7 @@ class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
         latestAlertScore != null &&
         _pinnedAlert?.taskId != latestAlertTaskId) {
       setState(() {
-        _pinnedAlert = _PinnedSubscriptionAlert(
+        _pinnedAlert = SubscriptionPinnedAlert(
           taskId: latestAlertTaskId,
           score: latestAlertScore,
         );
@@ -225,9 +226,17 @@ class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
       }
     } catch (e) {
       if (context.mounted) {
+        final message = switch (e) {
+          ApiException(
+            statusCode: 422,
+            errorCode: _noAvailableSourcesCode,
+          ) =>
+            l10n.analysisNoAvailableSourcesMessage,
+          _ => l10n.subscriptionRunNowError,
+        };
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.subscriptionRunNowError)));
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) {
@@ -263,114 +272,4 @@ class _SubscriptionTasksPageState extends ConsumerState<SubscriptionTasksPage> {
       ref.read(subscriptionDetailProvider(subId).future),
     ]);
   }
-}
-
-class _EmptyTasksView extends StatelessWidget {
-  final AppLocalizations l10n;
-
-  const _EmptyTasksView({required this.l10n});
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyWidget(
-      title: l10n.noExecutions,
-      message: l10n.noRecordsFoundMessage,
-    );
-  }
-}
-
-class _SubscriptionAlertBanner extends StatelessWidget {
-  final _PinnedSubscriptionAlert alert;
-  final VoidCallback? onTap;
-
-  const _SubscriptionAlertBanner({required this.alert, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Semantics(
-      button: onTap != null,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: const ValueKey('subscription-alert-banner'),
-          onTap: onTap,
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              0,
-            ),
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer,
-              border: Border.all(
-                color: colorScheme.error,
-                width: AppBorders.medium,
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: colorScheme.onErrorContainer,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.subscriptionNegativeAlertTitle,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        l10n.subscriptionNegativeAlertMessage(
-                          _formatAlertScore(alert.score),
-                        ),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (onTap != null) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    color: colorScheme.onErrorContainer,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatAlertScore(double score) {
-    final truncatedScore = (score * 100).truncateToDouble() / 100;
-    return truncatedScore
-        .toStringAsFixed(2)
-        .replaceFirst(RegExp(r'\.?0+$'), '');
-  }
-}
-
-class _PinnedSubscriptionAlert {
-  final String taskId;
-  final double score;
-
-  const _PinnedSubscriptionAlert({required this.taskId, required this.score});
 }

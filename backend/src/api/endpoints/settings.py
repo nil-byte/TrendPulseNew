@@ -8,8 +8,8 @@ from src.models.schemas import (
     NotificationSettingsResponse,
     ReportLanguageSettingsResponse,
     SourceAvailabilityListResponse,
-    UpdateReportLanguageRequest,
     UpdateNotificationSettingsRequest,
+    UpdateReportLanguageRequest,
 )
 from src.services.app_settings_service import AppSettingsService
 from src.services.source_availability_service import source_availability_service

@@ -41,25 +41,34 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await _scheduler.stop()
 
 
-app = FastAPI(
-    title="TrendPulse API",
-    description="Multi-source sentiment analysis engine",
-    version="0.1.0",
-    lifespan=lifespan,
-)
+def create_app() -> FastAPI:
+    """Build the FastAPI application with runtime configuration applied."""
+    logging.getLogger().setLevel(logging.DEBUG if settings.debug else logging.INFO)
+    app = FastAPI(
+        title="TrendPulse API",
+        description="Multi-source sentiment analysis engine",
+        version="0.1.0",
+        debug=settings.debug,
+        lifespan=lifespan,
+    )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.parsed_cors_allowed_origins,
+        allow_origin_regex=settings.cors_allowed_origin_regex or None,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-app.include_router(api_router)
+    app.include_router(api_router)
+
+    @app.get("/health")
+    async def health_check() -> dict[str, str]:
+        """Health check endpoint."""
+        return {"status": "ok"}
+
+    return app
 
 
-@app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
-    return {"status": "ok"}
+app = create_app()

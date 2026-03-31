@@ -135,7 +135,9 @@ async def test_tick_reschedules_due_subscription_when_sources_are_unavailable(
 
 
 @pytest.mark.asyncio
-async def test_tick_defers_report_language_resolution_to_task_service() -> None:
+async def test_tick_defers_report_language_resolution_to_task_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Scheduler-created tasks should let TaskService resolve report_language."""
     subscription_id = str(uuid.uuid4())
     await _insert_due_subscription(
@@ -146,12 +148,13 @@ async def test_tick_defers_report_language_resolution_to_task_service() -> None:
     await _update_report_language("zh")
 
     scheduler = SchedulerService()
-    scheduler._task_service.create_task = AsyncMock()  # type: ignore[method-assign]
+    create_task_mock = AsyncMock()
+    monkeypatch.setattr(scheduler._task_service, "create_task", create_task_mock)
 
     await scheduler._tick()
 
-    scheduler._task_service.create_task.assert_awaited_once()
-    await_args = scheduler._task_service.create_task.await_args
+    create_task_mock.assert_awaited_once()
+    await_args = create_task_mock.await_args
     request = await_args.args[0]
     assert request.keyword == "openai"
     assert request.content_language == "en"

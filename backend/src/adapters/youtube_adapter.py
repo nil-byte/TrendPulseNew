@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import Counter
 from dataclasses import dataclass
-import logging
 from typing import Any
 
 from googleapiclient.discovery import build  # type: ignore[import-untyped]
@@ -74,7 +74,12 @@ class YouTubeAdapter(BaseAdapter):
         posts: list[RawPost] = []
         transcript_status_counts: Counter[str] = Counter()
         try:
-            videos = await asyncio.to_thread(self._search_videos, keyword, language, limit)
+            videos = await asyncio.to_thread(
+                self._search_videos,
+                keyword,
+                language,
+                limit,
+            )
             for video in videos:
                 post, transcript_result = await asyncio.to_thread(
                     self._process_video,
@@ -83,7 +88,9 @@ class YouTubeAdapter(BaseAdapter):
                 )
                 transcript_status_counts[transcript_result.status] += 1
                 logger.info(
-                    "YouTube transcript result video_id=%s status=%s error_code=%s language_code=%s is_generated=%s",
+                    "YouTube transcript result "
+                    "video_id=%s status=%s error_code=%s language_code=%s "
+                    "is_generated=%s",
                     video["video_id"],
                     transcript_result.status,
                     transcript_result.error_code,

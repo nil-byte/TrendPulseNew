@@ -141,7 +141,12 @@ def build_mermaid_mindmap(
             )
             lines.extend(
                 [
-                    f"      {_mindmap_heading(language, f'Insight {index}', f'洞察 {index}')}",
+                    "      "
+                    + _mindmap_heading(
+                        language,
+                        f"Insight {index}",
+                        f"洞察 {index}",
+                    ),
                     f"        {insight_label}",
                     f"        {_insight_sentiment_label(insight.sentiment, language)}",
                     "        "
@@ -695,7 +700,11 @@ class AnalyzerService:
                     "frequency": int(opinion.get("frequency", 1)),
                 }
 
-        ranked = sorted(merged.values(), key=lambda item: item["frequency"], reverse=True)
+        ranked = sorted(
+            merged.values(),
+            key=lambda item: item["frequency"],
+            reverse=True,
+        )
         return [
             KeyInsight(
                 text=item["text"],

@@ -96,8 +96,11 @@ run_backend_checks() {
       tests/test_grok_config_guardrails.py \
       tests/test_verify_critical_paths_script.py \
       tests/test_services/test_task_service.py \
+      tests/test_services/test_subscription_service.py \
       tests/test_services/test_analyzer.py \
-      tests/test_api/test_endpoints.py
+      tests/test_api/test_endpoints.py \
+      tests/test_api/test_task_creation_endpoints.py \
+      tests/test_api/test_subscription_mutation_endpoints.py
   )
 }
 
@@ -106,6 +109,13 @@ run_flutter_checks() {
   (
     cd "$APP_DIR"
     "$FLUTTER_BIN" test \
+      test/core/network/api_exception_test.dart \
+      test/core/network/api_client_base_url_test.dart \
+      test/android/android_network_config_test.dart \
+      test/features/analysis/pages/analysis_page_display_test.dart \
+      test/features/analysis/pages/analysis_page_source_availability_test.dart \
+      test/features/analysis/pages/analysis_page_search_refresh_test.dart \
+      test/features/analysis/pages/analysis_page_error_handling_test.dart \
       test/features/subscription/pages/subscription_page_test.dart \
       test/features/subscription/pages/subscription_tasks_page_test.dart \
       test/features/detail/widgets/report_tab_test.dart

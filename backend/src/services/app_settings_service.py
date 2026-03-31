@@ -2,27 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 import aiosqlite
 
+from src.common.time_utils import utc_now_iso
 from src.models.database import close_db, get_db
 from src.models.schemas import (
     NotificationSettingsResponse,
-    UpdateReportLanguageRequest,
     UpdateNotificationSettingsRequest,
+    UpdateReportLanguageRequest,
 )
 
 _APP_SETTINGS_ROW_ID = 1
 _MISSING_APP_SETTINGS_ROW_MESSAGE = (
     "app_settings singleton row is missing; init_db() must seed it."
 )
-
-
-def _now_iso() -> str:
-    """Return the current UTC timestamp in ISO-8601 format."""
-    return datetime.now(timezone.utc).isoformat()
-
 
 class AppSettingsService:
     """Manage persisted application settings."""
@@ -78,7 +71,7 @@ class AppSettingsService:
                 SET report_language = ?, updated_at = ?
                 WHERE id = ?
                 """,
-                (validated.report_language, _now_iso(), _APP_SETTINGS_ROW_ID),
+                (validated.report_language, utc_now_iso(), _APP_SETTINGS_ROW_ID),
             )
             await db.commit()
             return validated.report_language
@@ -92,7 +85,7 @@ class AppSettingsService:
         self, request: UpdateNotificationSettingsRequest
     ) -> NotificationSettingsResponse:
         """Persist notification settings and optionally sync subscriptions."""
-        now = _now_iso()
+        now = utc_now_iso()
         notify_value = int(request.subscription_notify_default)
         db = await get_db()
         try:

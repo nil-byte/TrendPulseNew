@@ -65,7 +65,9 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
-    debug: bool = True
+    debug: bool = False
+    cors_allowed_origins: str = ""
+    cors_allowed_origin_regex: str = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./trendpulse.db"
@@ -107,6 +109,15 @@ class Settings(BaseSettings):
         env_file=_BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
     )
+
+    @property
+    def parsed_cors_allowed_origins(self) -> list[str]:
+        """Return configured CORS origins as a trimmed list."""
+        return [
+            origin.strip()
+            for origin in self.cors_allowed_origins.split(",")
+            if origin.strip()
+        ]
 
 
 settings = Settings()

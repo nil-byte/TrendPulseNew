@@ -7,11 +7,11 @@ the schema, obtain a connection, and tear it down.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
 
+from src.common.time_utils import utc_now_iso
 from src.config.settings import settings
 
 _SQL_CREATE_TASKS = """
@@ -139,12 +139,6 @@ ON subscription_alerts (subscription_id, is_read, created_at DESC);
 class DatabaseSchemaContractError(RuntimeError):
     """Raised when the on-disk SQLite schema no longer matches the backend contract."""
 
-
-def _now_iso() -> str:
-    """Return the current UTC timestamp in ISO-8601 format."""
-    return datetime.now(timezone.utc).isoformat()
-
-
 def _resolve_db_path() -> str:
     """Extract the SQLite file path from the database URL.
 
@@ -180,7 +174,7 @@ async def init_db() -> None:
     """Create all tables and indexes if they do not already exist."""
     db = await get_db()
     try:
-        now = _now_iso()
+        now = utc_now_iso()
         await db.execute(_SQL_CREATE_TASKS)
         await db.execute(_SQL_CREATE_RAW_POSTS)
         await db.execute(_SQL_CREATE_ANALYSIS_REPORTS)

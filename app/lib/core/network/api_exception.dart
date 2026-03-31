@@ -5,12 +5,14 @@ class ApiException implements Exception {
   final int? statusCode;
   final String? path;
   final String? debugMessage;
+  final String? errorCode;
 
   const ApiException({
     required this.message,
     this.statusCode,
     this.path,
     this.debugMessage,
+    this.errorCode,
   });
 
   factory ApiException.fromDioException(DioException exception) {
@@ -20,6 +22,7 @@ class ApiException implements Exception {
       statusCode: statusCode,
       path: exception.requestOptions.path,
       debugMessage: _extractDebugMessage(exception),
+      errorCode: _extractErrorCode(exception),
     );
   }
 
@@ -60,10 +63,30 @@ class ApiException implements Exception {
       if (detail is String && detail.trim().isNotEmpty) {
         return detail.trim();
       }
+      if (detail is Map<String, dynamic>) {
+        final message = detail['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message.trim();
+        }
+      }
     }
     if (exception.message case final String message
         when message.trim().isNotEmpty) {
       return message.trim();
+    }
+    return null;
+  }
+
+  static String? _extractErrorCode(DioException exception) {
+    final responseData = exception.response?.data;
+    if (responseData is Map<String, dynamic>) {
+      final detail = responseData['detail'];
+      if (detail is Map<String, dynamic>) {
+        final code = detail['code'];
+        if (code is String && code.trim().isNotEmpty) {
+          return code.trim();
+        }
+      }
     }
     return null;
   }

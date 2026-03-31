@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:trendpulse/app_providers.dart';
 import 'package:trendpulse/core/network/api_endpoints.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
 import 'package:trendpulse/features/settings/presentation/providers/settings_provider.dart';

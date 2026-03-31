@@ -6,9 +6,9 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from src.adapters.base import SourceFailure
+from src.common.time_utils import utc_now_iso
 from src.models.database import get_db
 from src.models.schemas import (
     AnalysisReportResponse,
@@ -69,10 +69,11 @@ LEFT JOIN (
 class NoAvailableSourcesError(RuntimeError):
     """Raised when a task request contains no runnable sources."""
 
+    code = "no_available_sources"
 
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
+    def as_detail(self) -> dict[str, str]:
+        """Return a structured API-safe error payload."""
+        return {"code": self.code, "message": str(self)}
 
 def build_task_query(*, where_clause: str = "", order_clause: str = "") -> str:
     """Build a task query that includes derived list/detail metrics."""
@@ -147,7 +148,9 @@ class TaskService:
             if item.status == "degraded" and item.reason and item.reason_code
         }
         logger.info(
-            "Task source resolution keyword=%r requested=%s effective=%s unavailable=%s degraded=%s max_items_per_source=%d",
+            "Task source resolution "
+            "keyword=%r requested=%s effective=%s unavailable=%s degraded=%s "
+            "max_items_per_source=%d",
             request.keyword,
             request.sources,
             effective_sources,
@@ -176,7 +179,7 @@ class TaskService:
             }
         )
         task_id = str(uuid.uuid4())
-        now = _now_iso()
+        now = utc_now_iso()
 
         db = await get_db()
         try:
@@ -198,12 +201,12 @@ class TaskService:
                 """,
                 (
                     task_id,
-                    request.keyword,
-                    request.content_language,
-                    report_language,
-                    request.max_items,
+                    effective_request.keyword,
+                    effective_request.content_language,
+                    effective_request.report_language,
+                    effective_request.max_items,
                     "pending",
-                    json.dumps(request.sources),
+                    json.dumps(effective_request.sources),
                     now,
                     now,
                     subscription_id,
@@ -223,12 +226,12 @@ class TaskService:
 
         return TaskResponse(
             id=task_id,
-            keyword=request.keyword,
-            content_language=request.content_language,
-            report_language=report_language,
-            max_items=request.max_items,
+            keyword=effective_request.keyword,
+            content_language=effective_request.content_language,
+            report_language=effective_request.report_language,
+            max_items=effective_request.max_items,
             status="pending",
-            sources=request.sources,
+            sources=effective_request.sources,
             created_at=now,
             updated_at=now,
             subscription_id=subscription_id,
@@ -505,14 +508,14 @@ class TaskService:
                 "UPDATE tasks "
                 "SET status = ?, updated_at = ?, error_message = ? "
                 "WHERE id = ?",
-                (status, _now_iso(), error_message, task_id),
+                (status, utc_now_iso(), error_message, task_id),
             )
             await db.commit()
         finally:
             await db.close()
 
     async def _save_raw_posts(self, task_id: str, posts: list[RawPost]) -> None:
-        now = _now_iso()
+        now = utc_now_iso()
         db = await get_db()
         try:
             for post in posts:
@@ -548,7 +551,7 @@ class TaskService:
 
     async def _save_analysis_report(self, task_id: str, result: AnalysisResult) -> None:
         report_id = str(uuid.uuid4())
-        now = _now_iso()
+        now = utc_now_iso()
         insights_json = json.dumps([ins.model_dump() for ins in result.key_insights])
         raw_json = json.dumps(result.raw_analysis) if result.raw_analysis else None
 
@@ -625,7 +628,7 @@ class TaskService:
                 (
                     str(uuid.uuid4()),
                     sentiment_score,
-                    _now_iso(),
+                    utc_now_iso(),
                     task_id,
                     _COMPLETED_STATUS,
                     _PARTIAL_STATUS,
@@ -682,3 +685,14 @@ class TaskService:
             collected_at=row["collected_at"],  # type: ignore[index]
             metadata_json=json.loads(metadata_raw) if metadata_raw else None,
         )
+
+
+_task_service_instance: TaskService | None = None
+
+
+def get_task_service() -> TaskService:
+    """Return the app-wide TaskService singleton."""
+    global _task_service_instance
+    if _task_service_instance is None:
+        _task_service_instance = TaskService()
+    return _task_service_instance

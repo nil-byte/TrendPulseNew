@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trendpulse/core/animations/shimmer_loading.dart';
+import 'package:trendpulse/core/network/api_exception.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/settings/data/settings_repository.dart';
@@ -986,4 +987,36 @@ void main() {
     expect(find.text('暂时无法启动这次执行。'), findsOneWidget);
     expect(find.text('Exception: network timeout'), findsNothing);
   });
+
+  testWidgets(
+    'subscription tasks page shows no-available-sources guidance for run now 422 errors',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _FakeSubscriptionRepository(
+            tasks: const [],
+            runNowError: const ApiException(
+              message: '请求参数无效，请检查输入或稍后重试。',
+              statusCode: 422,
+              errorCode: 'no_available_sources',
+              debugMessage: 'No requested sources are currently available.',
+            ),
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('RUN NOW'));
+      await tester.pump();
+
+      expect(
+        find.text(
+          'No data sources are currently available. Check source configuration or try again later.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Unable to start this run right now.'), findsNothing);
+    },
+  );
 }

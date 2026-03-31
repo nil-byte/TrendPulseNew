@@ -50,8 +50,7 @@ Future<List<Override>> buildAppOverrides({
   final initialLanguage = await loadInitialLanguage(repository);
   final initialThemeMode = await loadInitialThemeMode(repository);
 
-  return [
-    settingsRepositoryProvider.overrideWithValue(repository),
+  final overrides = <Override>[
     initialBaseUrlProvider.overrideWithValue(initialBaseUrl),
     initialInAppNotifyProvider.overrideWithValue(initialInAppNotify),
     initialLanguageProvider.overrideWithValue(initialLanguage),
@@ -63,6 +62,15 @@ Future<List<Override>> buildAppOverrides({
     ),
     baseUrlIsWebProvider.overrideWithValue(isWeb),
   ];
+
+  if (settingsRepository != null) {
+    overrides.insert(
+      0,
+      settingsRepositoryProvider.overrideWithValue(repository),
+    );
+  }
+
+  return overrides;
 }
 
 Future<void> main() async {
@@ -95,8 +103,10 @@ Future<void> main() async {
       ),
     );
   }, (error, stackTrace) {
-    debugPrint('[ZoneError] $error');
-    debugPrint('$stackTrace');
+    if (kDebugMode) {
+      debugPrint('[ZoneError] $error');
+      debugPrint('$stackTrace');
+    }
   });
 }
 

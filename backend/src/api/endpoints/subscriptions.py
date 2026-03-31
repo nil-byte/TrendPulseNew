@@ -81,7 +81,7 @@ async def run_subscription_now(sub_id: str) -> TaskResponse:
     try:
         task = await subscription_service.run_subscription_now(sub_id)
     except NoAvailableSourcesError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=exc.as_detail()) from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Subscription not found")
     return task

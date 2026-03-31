@@ -48,8 +48,18 @@ async def test_delete_subscription_nulls_task_fk_preserves_task() -> None:
         await db.execute(
             """
             INSERT INTO tasks
-                (id, keyword, content_language, report_language, max_items, status, sources,
-                 created_at, updated_at, subscription_id)
+                (
+                    id,
+                    keyword,
+                    content_language,
+                    report_language,
+                    max_items,
+                    status,
+                    sources,
+                    created_at,
+                    updated_at,
+                    subscription_id
+                )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (task_id, "k", "en", "en", 10, "completed", sources, now, now, sub_id),

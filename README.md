@@ -57,6 +57,7 @@ cd backend
 pip install -e ".[dev]"
 cp .env.example .env
 # 编辑 .env 填入 API Keys
+# 默认 DEBUG=false；仅在本机排障时再显式改为 true
 # 官方 xAI: 保持 GROK_PROVIDER_MODE=official_xai
 # 第三方兼容端点: 设置 GROK_PROVIDER_MODE=openai_compatible，并改写 GROK_BASE_URL / GROK_MODEL
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
@@ -64,6 +65,7 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 - **API 文档**: http://localhost:8000/docs
 - **`--host 0.0.0.0`**: 便于同局域网设备访问；若仅用 USB + `adb reverse`，也可只开 `--reload`，但统一加上更省事。
+- **CORS 默认值**: 后端默认仅允许 `localhost` / `127.0.0.1` 的浏览器本地开发源（任意端口）。若要额外放行前端域名，可在 `backend/.env` 中设置 `CORS_ALLOWED_ORIGINS`（逗号分隔）或覆盖 `CORS_ALLOWED_ORIGIN_REGEX`。
 
 若启动时报 **`[Errno 48] Address already in use`**，表示 **8000 端口已被占用**（例如未关掉的旧 `uvicorn`）。处理：
 
@@ -81,6 +83,8 @@ cd app
 flutter pub get
 flutter run
 # 指定设备：flutter devices 后使用 flutter run -d <deviceId>
+# 如需显式打开 HTTP 请求/响应正文日志：
+# flutter run --dart-define=TRENDPULSE_ENABLE_API_HTTP_LOGS=true
 ```
 
 ### Android 真机通过 USB 连接本机后端（推荐）
@@ -116,7 +120,8 @@ scripts/dev-android.sh --usb --device-serial <adb devices 第一列序列号>
 ### Android：调试构建与 HTTP（简要）
 
 - **Release 包**：Android 上明文 HTTP 仅允许少量本机相关 host（如 `localhost`、`127.0.0.1`、模拟器访问宿主机用的 `10.0.2.2`），公网服务应使用 **HTTPS**。
-- **Debug / Profile 包**：工程内对 **RFC1918 私网 IP**（如 `192.168.x.x`）的 `http://` 在 Dart 校验与网络安全配置上放宽，便于 **Wi‑Fi 直连开发机**；上架与正式环境仍应使用 HTTPS。
+- **Debug / Profile 包**：工程内对明文 HTTP 做了更宽松的开发放行，便于模拟器、真机、局域网和临时调试服务联调；这些规则仅用于开发构建，不代表生产网络策略。
+- **Release 签名**：仓库默认不复用 debug keystore。若你需要真正分发 release 包，请自行提供本地签名配置；开源仓库内不会内置正式签名资产。
 
 ### 应用启动图标维护
 
@@ -161,6 +166,16 @@ dart run flutter_launcher_icons
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `GET /api/v1/trending` | GET | 返回预设的热门关键词列表（后端占位接口，供前端后续接入） |
+
+### 设置
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `GET /api/v1/settings/notifications` | GET | 读取默认通知设置 |
+| `PUT /api/v1/settings/notifications` | PUT | 更新默认通知设置 |
+| `GET /api/v1/settings/report-language` | GET | 读取默认报告语言 |
+| `PUT /api/v1/settings/report-language` | PUT | 更新默认报告语言 |
+| `GET /api/v1/settings/sources` | GET | 查询各采集源当前可用性 |
 
 ## 项目结构
 
@@ -211,8 +226,14 @@ TrendPulseNew/
 # 后端测试
 cd backend && python -m pytest tests/ -v
 
+# 后端静态检查
+cd backend && python -m ruff check .
+
 # 前端测试
 cd app && flutter test
+
+# 前端静态检查
+cd app && flutter analyze
 
 # 关键链路验收
 scripts/verify-critical-paths.sh

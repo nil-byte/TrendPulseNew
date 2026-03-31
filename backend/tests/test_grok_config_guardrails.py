@@ -37,6 +37,7 @@ VISIBLE_GROK_ARTIFACTS = (
 
 PUBLIC_TEXT_ARTIFACT_PATTERNS = (
     "**/README.md",
+    "docs/*.md",
     "docs/**/*.md",
     "scripts/**/*.sh",
     "backend/.env.example",
@@ -46,7 +47,6 @@ EXPECTED_PUBLIC_TEXT_ARTIFACTS = (
     README_PATH,
     APP_README_PATH,
     DOCS_GROK_REPORT_PATH,
-    DOCS_OBJECTIVE_PATH,
     ENV_EXAMPLE_PATH,
     DEMO_RUNBOOK_PATH,
     DEV_ANDROID_SCRIPT_PATH,
@@ -204,6 +204,7 @@ def test_env_example_uses_official_grok_placeholder_and_defaults() -> None:
     assert f"GROK_API_KEY={OFFICIAL_GROK_API_KEY_PLACEHOLDER}" in env_example
     assert f"GROK_BASE_URL={OFFICIAL_GROK_BASE_URL}" in env_example
     assert f"GROK_MODEL={OFFICIAL_GROK_MODEL}" in env_example
+    assert "DEBUG=false" in env_example
 
 
 def test_settings_defaults_use_official_grok_defaults(
@@ -227,6 +228,18 @@ def test_settings_default_mode_is_official_xai(
     settings = Settings(_env_file=None)
 
     assert settings.grok_provider_mode == "official_xai"
+
+
+def test_settings_debug_defaults_to_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Debug mode should be opt-in for local development instead of default-on."""
+    _clear_grok_env(monkeypatch)
+    monkeypatch.delenv("DEBUG", raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.debug is False
 
 
 def test_settings_rejects_custom_base_url_without_compatible_mode(

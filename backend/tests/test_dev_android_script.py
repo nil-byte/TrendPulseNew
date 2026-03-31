@@ -35,7 +35,13 @@ def _prepare_fake_repo(tmp_path: Path) -> tuple[Path, Path]:
 
     shutil.copy2(SCRIPT_SOURCE_PATH, script_dir / "dev-android.sh")
     (app_android_dir / "build.gradle.kts").write_text(
-        'android {\n    defaultConfig {\n        applicationId = "com.example.trendpulse"\n    }\n}\n',
+        (
+            "android {\n"
+            "    defaultConfig {\n"
+            '        applicationId = "com.example.trendpulse"\n'
+            "    }\n"
+            "}\n"
+        ),
         encoding="utf-8",
     )
     _write_executable(

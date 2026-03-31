@@ -10,10 +10,10 @@ from src.models.schemas import (
     TaskListResponse,
     TaskResponse,
 )
-from src.services.task_service import NoAvailableSourcesError, TaskService
+from src.services.task_service import NoAvailableSourcesError, get_task_service
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
-task_service = TaskService()
+task_service = get_task_service()
 
 
 @router.post("", response_model=TaskResponse, status_code=201)
@@ -22,7 +22,7 @@ async def create_task(request: CreateTaskRequest) -> TaskResponse:
     try:
         return await task_service.create_task(request)
     except NoAvailableSourcesError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=exc.as_detail()) from exc
 
 
 @router.get("", response_model=TaskListResponse)

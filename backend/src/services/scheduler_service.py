@@ -10,7 +10,11 @@ from datetime import datetime, timedelta, timezone
 
 from src.models.database import get_db
 from src.models.schemas import CreateTaskRequest
-from src.services.task_service import NoAvailableSourcesError, TaskService
+from src.services.task_service import (
+    NoAvailableSourcesError,
+    TaskService,
+    get_task_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +31,9 @@ _POLL_INTERVAL_SECONDS = 60
 class SchedulerService:
     """Periodically polls for due subscriptions and spawns analysis tasks."""
 
-    def __init__(self) -> None:
+    def __init__(self, task_service: TaskService | None = None) -> None:
         self._task: asyncio.Task[None] | None = None
-        self._task_service = TaskService()
+        self._task_service = task_service or get_task_service()
 
     @property
     def is_running(self) -> bool:

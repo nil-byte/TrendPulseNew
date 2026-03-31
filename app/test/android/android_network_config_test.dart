@@ -72,4 +72,16 @@ void main() {
       );
     },
   );
+
+  test('Android release build config does not reuse debug signing', () {
+    final gradleFile = File('android/app/build.gradle.kts');
+
+    expect(gradleFile.existsSync(), isTrue);
+
+    final gradleConfig = gradleFile.readAsStringSync();
+    expect(
+      gradleConfig,
+      isNot(contains('signingConfigs.getByName("debug")')),
+    );
+  });
 }

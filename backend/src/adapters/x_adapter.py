@@ -16,7 +16,12 @@ from urllib.parse import urlparse
 
 from openai import AsyncOpenAI
 
-from src.adapters.base import BaseAdapter, PartialSourceCollectionError, SourceCollectionError
+from src.adapters.base import (
+    BaseAdapter,
+    PartialSourceCollectionError,
+    SourceCollectionError,
+)
+from src.common.language_utils import target_language_name
 from src.config.settings import settings
 from src.models.schemas import RawPost
 
@@ -101,14 +106,6 @@ def _compute_shard_limit(limit: int) -> int:
     """Round up shard size so total shard budget can satisfy the requested limit."""
     shard_count = len(_SHARDS)
     return max(1, (limit + shard_count - 1) // shard_count)
-
-
-def _target_language_name(language: str) -> str:
-    """Return a human-readable language hint for Grok prompts."""
-    if language == "zh":
-        return "Simplified Chinese"
-    return "English"
-
 
 def _message_content_to_str(content: object) -> str:
     """Normalize OpenAI ``message.content`` (str or multi-part list) to plain text."""
@@ -333,7 +330,8 @@ class XAdapter(BaseAdapter):
                 if isinstance(shard, BaseException):
                     source_error = self._normalize_error(shard)
                     logger.warning(
-                        "Grok shard failed keyword=%r shard=%r reason_code=%s reason=%s",
+                        "Grok shard failed "
+                        "keyword=%r shard=%r reason_code=%s reason=%s",
                         keyword,
                         dimension_name,
                         source_error.reason_code,
@@ -351,17 +349,23 @@ class XAdapter(BaseAdapter):
             if shard_errors and posts:
                 raise PartialSourceCollectionError(
                     self._aggregate_shard_reason_code(shard_errors),
-                    f"X collection partially failed: {self._format_shard_errors(shard_errors)}",
+                    "X collection partially failed: "
+                    f"{self._format_shard_errors(shard_errors)}",
                     partial_posts=posts,
                 )
 
             if not posts and shard_errors:
                 raise SourceCollectionError(
                     self._aggregate_shard_reason_code(shard_errors),
-                    f"X collection failed: {self._format_shard_errors(shard_errors)}",
+                    "X collection failed: "
+                    f"{self._format_shard_errors(shard_errors)}",
                 )
 
-            logger.info("X collected %d unique posts for keyword=%r", len(posts), keyword)
+            logger.info(
+                "X collected %d unique posts for keyword=%r",
+                len(posts),
+                keyword,
+            )
             return posts
         finally:
             await client.close()
@@ -394,7 +398,7 @@ class XAdapter(BaseAdapter):
         """Execute a single Grok shard request and parse the response."""
         user_prompt = _USER_PROMPT_TEMPLATE.format(
             keyword=keyword,
-            target_language=_target_language_name(language),
+            target_language=target_language_name(language),
             shard_limit=shard_limit,
             dimension_name=dimension_name,
             dimension_focus=dimension_focus,

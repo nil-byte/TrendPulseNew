@@ -240,7 +240,7 @@ class TestTaskServiceProcessTask:
     async def test_create_task_defaults_report_language_from_app_settings(
         self,
     ) -> None:
-        """Omitted report_language should resolve from app settings inside create_task."""
+        """Omitted report_language should resolve from app settings."""
         await AppSettingsService().update_report_language("zh")
         request = CreateTaskRequest(
             keyword="openai",
@@ -258,13 +258,16 @@ class TestTaskServiceProcessTask:
         await_args = service._process_task.await_args
         assert await_args.args[1].report_language == "zh"
 
-    async def test_create_task_preserves_requested_sources_but_processes_only_runnable(
+    async def test_create_task_persists_only_runnable_sources(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Task rows should keep the requested sources while background work uses runnable ones."""
+        """Task rows and responses should reflect the runnable source set only."""
         source_availability_service.reset_runtime_state()
-        monkeypatch.setattr("src.config.settings.settings.youtube_api_key", "youtube-key")
+        monkeypatch.setattr(
+            "src.config.settings.settings.youtube_api_key",
+            "youtube-key",
+        )
         monkeypatch.setattr("src.config.settings.settings.grok_api_key", "")
 
         request = CreateTaskRequest(
@@ -280,10 +283,10 @@ class TestTaskServiceProcessTask:
         response = await service.create_task(request)
         await asyncio.sleep(0)
 
-        assert response.sources == ["youtube", "x"]
+        assert response.sources == ["youtube"]
         assert response.content_language == "zh"
         assert response.report_language == "en"
-        assert await _get_task_sources(response.id) == ["youtube", "x"]
+        assert await _get_task_sources(response.id) == ["youtube"]
         service._process_task.assert_awaited_once()
         await_args = service._process_task.await_args
         assert await_args.args[1].sources == ["youtube"]
@@ -292,10 +295,10 @@ class TestTaskServiceProcessTask:
         initial_source_errors = await_args.kwargs["initial_source_errors"]
         assert initial_source_errors["x"].reason_code == "grok_api_key_missing"
 
-    async def test_process_task_marks_partial_when_sources_were_unavailable_before_collection(
+    async def test_process_task_marks_partial_for_preflight_source_failures(
         self,
     ) -> None:
-        """Known-unavailable sources from task creation must survive to final status."""
+        """Preflight source failures must survive to final task status."""
         stored_request = CreateTaskRequest(
             keyword="openai",
             content_language="zh",
@@ -375,7 +378,7 @@ class TestTaskServiceProcessTask:
         assert await _count_reports(task_id) == 0
         service._analyzer.analyze.assert_not_awaited()
 
-    async def test_process_task_fails_when_collection_returns_no_posts_without_source_errors(
+    async def test_process_task_fails_when_no_posts_and_no_source_errors(
         self,
     ) -> None:
         """Zero posts from all sources should fail even when no source failed."""

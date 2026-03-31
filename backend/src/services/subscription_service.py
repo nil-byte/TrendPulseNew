@@ -7,6 +7,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from src.common.time_utils import utc_now_iso
 from src.models.database import get_db
 from src.models.schemas import (
     CreateSubscriptionRequest,
@@ -21,6 +22,7 @@ from src.services.app_settings_service import AppSettingsService
 from src.services.task_service import (
     TaskService,
     build_task_query,
+    get_task_service,
     row_to_task_response,
 )
 
@@ -72,11 +74,6 @@ SELECT
 FROM subscriptions
 """
 
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 def _calc_next_run(interval: str, from_dt: datetime | None = None) -> str:
     """Calculate the next run timestamp based on the interval.
 
@@ -105,9 +102,9 @@ def build_subscription_query(*, where_clause: str = "", order_clause: str = "") 
 class SubscriptionService:
     """Manages subscription CRUD operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, task_service: TaskService | None = None) -> None:
         self._app_settings_service = AppSettingsService()
-        self._task_service = TaskService()
+        self._task_service = task_service or get_task_service()
 
     async def create_subscription(
         self, request: CreateSubscriptionRequest
@@ -121,7 +118,7 @@ class SubscriptionService:
             The newly created subscription.
         """
         sub_id = str(uuid.uuid4())
-        now = _now_iso()
+        now = utc_now_iso()
         next_run = _calc_next_run(request.interval)
         db = await get_db()
         try:
@@ -253,7 +250,7 @@ class SubscriptionService:
                 updates["notify"] = int(request.notify)
 
             if updates:
-                updates["updated_at"] = _now_iso()
+                updates["updated_at"] = utc_now_iso()
                 set_clause = ", ".join(f"{k} = ?" for k in updates)
                 values = list(updates.values()) + [sub_id]
                 await db.execute(

@@ -44,15 +44,18 @@ void main() {
       expect(mapped.toString(), '请求的资源不存在或已被删除。');
     });
 
-    test('keeps 422 detail in debugMessage for UI-specific handling', () {
+    test('extracts structured 422 error code and message for UI-specific handling', () {
       final exception = DioException(
         requestOptions: RequestOptions(path: '/api/v1/tasks'),
         response: Response<Map<String, dynamic>>(
           requestOptions: RequestOptions(path: '/api/v1/tasks'),
           statusCode: 422,
           data: const {
-            'detail':
-                'No requested sources are currently available. Unavailable sources: reddit (missing credentials).',
+            'detail': {
+              'code': 'no_available_sources',
+              'message':
+                  'No requested sources are currently available. Unavailable sources: reddit (missing credentials).',
+            },
           },
         ),
         type: DioExceptionType.badResponse,
@@ -61,6 +64,7 @@ void main() {
       final mapped = ApiException.fromDioException(exception);
 
       expect(mapped.statusCode, 422);
+      expect(mapped.errorCode, 'no_available_sources');
       expect(
         mapped.debugMessage,
         'No requested sources are currently available. Unavailable sources: reddit (missing credentials).',
