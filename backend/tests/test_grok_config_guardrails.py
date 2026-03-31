@@ -19,6 +19,7 @@ DEMO_RUNBOOK_PATH = REPO_ROOT / "docs/demo-acceptance-runbook.md"
 DOCS_GROK_REPORT_PATH = REPO_ROOT / "docs/GROK_API_INTEGRATION_REPORT.md"
 DOCS_OBJECTIVE_PATH = REPO_ROOT / "docs/Objective.md"
 VERIFY_SCRIPT_PATH = REPO_ROOT / "scripts/verify-critical-paths.sh"
+ADB_REVERSE_SCRIPT_PATH = REPO_ROOT / "scripts/adb-reverse-backend.sh"
 DEV_ANDROID_SCRIPT_PATH = REPO_ROOT / "scripts/dev-android.sh"
 ENV_EXAMPLE_PATH = BACKEND_DIR / ".env.example"
 SETTINGS_PATH = BACKEND_DIR / "src/config/settings.py"
@@ -53,6 +54,7 @@ EXPECTED_PUBLIC_TEXT_ARTIFACTS = (
     ENV_EXAMPLE_PATH,
     DEMO_RUNBOOK_PATH,
     DEV_ANDROID_SCRIPT_PATH,
+    ADB_REVERSE_SCRIPT_PATH,
     VERIFY_SCRIPT_PATH,
 )
 
