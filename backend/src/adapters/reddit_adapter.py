@@ -79,7 +79,7 @@ class RedditAdapter(BaseAdapter):
             logger.info(
                 "Reddit collection starting keyword=%r limit=%d "
                 "candidate_limit=%d recency_hours=%d "
-                "trust_env=true custom_ca=%s proxy_configured=%s",
+                "trust_env=false custom_ca=%s proxy_configured=%s",
                 keyword,
                 limit,
                 candidate_limit,

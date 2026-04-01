@@ -325,6 +325,52 @@ class TestTaskServiceProcessTask:
         initial_source_errors = await_args.kwargs["initial_source_errors"]
         assert initial_source_errors["x"].reason_code == "grok_api_key_missing"
 
+    async def test_create_task_filters_x_when_source_is_in_cooldown(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Cooldown should make X unavailable for new tasks until the window expires."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(
+            "src.config.settings.settings.youtube_api_key",
+            "youtube-key",
+        )
+        monkeypatch.setattr("src.config.settings.settings.grok_api_key", "grok-key")
+        monkeypatch.setattr("src.config.settings.settings.x_failure_threshold", 2)
+        monkeypatch.setattr("src.config.settings.settings.x_cooldown_seconds", 300)
+        source_availability_service.record_failure(
+            "x",
+            "grok_rate_limited",
+            "No available tokens. Please try again later.",
+        )
+        source_availability_service.record_failure(
+            "x",
+            "grok_connection_error",
+            "Connection error.",
+        )
+
+        request = CreateTaskRequest(
+            keyword="openai",
+            content_language="zh",
+            report_language="en",
+            max_items=20,
+            sources=["youtube", "x"],
+        )
+        service = TaskService()
+        service._process_task = AsyncMock()  # type: ignore[method-assign]
+
+        response = await service.create_task(request)
+        await asyncio.sleep(0)
+
+        assert response.sources == ["youtube"]
+        assert response.quality == "degraded"
+        assert await _get_task_sources(response.id) == ["youtube"]
+        service._process_task.assert_awaited_once()
+        await_args = service._process_task.await_args
+        assert await_args.args[1].sources == ["youtube"]
+        initial_source_errors = await_args.kwargs["initial_source_errors"]
+        assert initial_source_errors["x"].reason_code == "grok_cooldown"
+
     async def test_create_task_keeps_quality_summary_empty_while_pending(
         self,
         monkeypatch: pytest.MonkeyPatch,

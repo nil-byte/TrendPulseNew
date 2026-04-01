@@ -165,3 +165,35 @@ class TestSourceAvailabilityEndpoints:
             availability_by_source["reddit"]["reason"]
             == "Reddit proxy URL is invalid"
         )
+
+    async def test_get_source_availability_marks_x_cooldown_as_unavailable(
+        self,
+        client: AsyncClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Repeated X gateway failures should surface as a temporary cooldown."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "grok_api_key", "grok-key")
+        monkeypatch.setattr(settings, "x_failure_threshold", 2)
+        monkeypatch.setattr(settings, "x_cooldown_seconds", 300)
+        source_availability_service.record_failure(
+            "x",
+            "grok_rate_limited",
+            "No available tokens. Please try again later.",
+        )
+        source_availability_service.record_failure(
+            "x",
+            "grok_connection_error",
+            "Connection error.",
+        )
+
+        response = await client.get("/api/v1/settings/sources")
+
+        assert response.status_code == 200
+        availability_by_source = {
+            item["source"]: item for item in response.json()["sources"]
+        }
+        assert availability_by_source["x"]["status"] == "cooldown"
+        assert availability_by_source["x"]["is_available"] is False
+        assert availability_by_source["x"]["reason_code"] == "grok_cooldown"
+        assert availability_by_source["x"]["reason"]

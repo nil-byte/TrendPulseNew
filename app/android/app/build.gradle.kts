@@ -32,8 +32,16 @@ android {
 
     buildTypes {
         release {
-            // Open-source default: keep release unsigned unless a local
-            // signing config is provided by the developer.
+            // CI / devkit: sign with debug keystore so `flutter build apk --release`
+            // works without repo secrets. Replace with a release keystore + GitHub
+            // secrets before Play Store submission.
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

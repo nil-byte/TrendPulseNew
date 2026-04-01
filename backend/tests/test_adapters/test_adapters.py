@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -695,7 +695,7 @@ class TestXAdapter:
         mock_settings: MagicMock,
         mock_utc_now: MagicMock,
     ) -> None:
-        """Grok prompts should include explicit 24h boundaries and the current UTC time."""
+        """Grok prompts should include 24h window boundaries and current UTC time."""
         fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
         mock_utc_now.return_value = fixed_now
         mock_settings.grok_provider_mode = "openai_compatible"
@@ -727,7 +727,8 @@ class TestXAdapter:
             "Allowed post window: 2026-03-31T12:00:00Z to 2026-04-01T12:00:00Z"
             in joined_messages
         )
-        assert "Only return tweets whose created_at falls within this window." in joined_messages
+        snippet = "Only return tweets whose created_at falls within this window."
+        assert snippet in joined_messages
 
     @patch("src.adapters.x_adapter.utc_now")
     @patch("src.adapters.x_adapter.settings")
@@ -785,12 +786,12 @@ class TestXAdapter:
 
     @patch("src.adapters.x_adapter.utc_now")
     @patch("src.adapters.x_adapter.settings")
-    async def test_x_query_shard_filters_out_posts_outside_recent_window_or_missing_time(
+    async def test_x_shard_drops_stale_or_missing_created_at(
         self,
         mock_settings: MagicMock,
         mock_utc_now: MagicMock,
     ) -> None:
-        """X should hard-filter posts when created_at is stale, missing, or invalid."""
+        """X should hard-filter when created_at is stale, missing, or invalid."""
         fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
         mock_utc_now.return_value = fixed_now
         mock_settings.grok_provider_mode = "openai_compatible"
@@ -1055,15 +1056,16 @@ class TestXAdapter:
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
-    async def test_x_collect_rounds_up_shard_limit_to_cover_requested_total(
+    async def test_x_collect_uses_single_batch_when_limit_is_at_most_twenty(
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
-        """Shard limit should round up so total shard budget can satisfy limit."""
+        """Small X requests should stay in a single Grok batch."""
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
         mock_settings.grok_http_timeout_seconds = 45.0
+        mock_settings.x_batch_size = 20
 
         mock_client = AsyncMock()
         mock_openai_cls.return_value = mock_client
@@ -1074,19 +1076,20 @@ class TestXAdapter:
             await adapter.collect("test", "en", 10)
 
         shard_limits = [call.args[-1] for call in query_shard.await_args_list]
-        assert shard_limits == [4, 4, 4]
+        assert shard_limits == [10]
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
-    async def test_x_collect_does_not_cap_large_requests_at_forty_five_items(
+    async def test_x_collect_splits_large_requests_into_twenty_item_batches(
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
-        """Large requests should not be truncated by a hidden 15-per-shard ceiling."""
+        """Large X requests should be chunked into twenty-item Grok batches."""
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
         mock_settings.grok_http_timeout_seconds = 45.0
+        mock_settings.x_batch_size = 20
 
         mock_client = AsyncMock()
         mock_openai_cls.return_value = mock_client
@@ -1097,7 +1100,36 @@ class TestXAdapter:
             await adapter.collect("test", "en", 100)
 
         shard_limits = [call.args[-1] for call in query_shard.await_args_list]
-        assert shard_limits == [34, 34, 34]
+        assert shard_limits == [20, 20, 20, 20, 20]
+
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_with_retry_retries_rate_limited_failures(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """Retryable gateway failures should be retried before surfacing."""
+        mock_settings.x_retry_max_attempts = 2
+        mock_settings.x_retry_base_delay_seconds = 0.0
+
+        adapter = XAdapter()
+        query_shard = AsyncMock(
+            side_effect=[
+                SourceCollectionError("grok_rate_limited", "No available tokens."),
+                [],
+            ]
+        )
+
+        with patch.object(adapter, "_query_shard", query_shard):
+            posts = await adapter._query_shard_with_retry(
+                AsyncMock(),
+                keyword="test",
+                language="en",
+                dimension_name="Balanced Mix",
+                dimension_focus="Return a balanced mix of X posts.",
+                shard_limit=10,
+            )
+
+        assert posts == []
+        assert query_shard.await_count == 2
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
@@ -1122,15 +1154,16 @@ class TestXAdapter:
 
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
-    async def test_x_collect_raises_partial_error_when_a_shard_fails(
+    async def test_x_collect_raises_partial_error_when_a_batch_fails(
         self, mock_openai_cls: MagicMock, mock_settings: MagicMock
     ) -> None:
-        """Partial shard failures should be surfaced, not silently ignored."""
+        """Partial batch failures should be surfaced, not silently ignored."""
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
         mock_settings.grok_http_timeout_seconds = 45.0
+        mock_settings.x_batch_size = 20
 
         mock_client = AsyncMock()
         mock_openai_cls.return_value = mock_client
@@ -1156,34 +1189,16 @@ class TestXAdapter:
                                     }
                                 ]
                             ),
-                            "The Pulse",
+                            "Balanced Mix",
                         )[0]
                     ],
-                    RuntimeError("shard down"),
-                    [
-                        adapter._parse_response(
-                            json.dumps(
-                                [
-                                    {
-                                        "id": "t2",
-                                        "username": "user2",
-                                        "content": "Need more evidence",
-                                        "perspective": "Skeptical",
-                                        "created_at": "2024-01-01T01:00:00Z",
-                                        "engagement": 50,
-                                        "url": "https://x.com/user2/status/t2",
-                                    }
-                                ]
-                            ),
-                            "The Noise",
-                        )[0]
-                    ],
+                    RuntimeError("batch down"),
                 ]
             ),
         ), pytest.raises(PartialSourceCollectionError) as exc_info:
-            await adapter.collect("test", "en", 10)
+            await adapter.collect("test", "en", 35)
 
-        assert len(exc_info.value.partial_posts) == 2
+        assert len(exc_info.value.partial_posts) == 1
         assert exc_info.value.reason_code == "grok_collection_failed"
 
     @patch("src.adapters.x_adapter.settings")

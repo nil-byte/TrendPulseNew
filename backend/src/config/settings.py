@@ -56,6 +56,48 @@ class Settings(BaseSettings):
         description="Per-request timeout for Grok/OpenAI-compatible collection calls.",
         validation_alias="GROK_HTTP_TIMEOUT",
     )
+    x_batch_size: int = Field(
+        default=20,
+        ge=1,
+        le=20,
+        description="Maximum number of X posts requested from a single Grok call.",
+        validation_alias="X_BATCH_SIZE",
+    )
+    x_parallel_batches: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description="Maximum number of X Grok batches allowed to run concurrently.",
+        validation_alias="X_PARALLEL_BATCHES",
+    )
+    x_retry_max_attempts: int = Field(
+        default=2,
+        ge=0,
+        le=10,
+        description="Retry budget for recoverable X Grok batch failures.",
+        validation_alias="X_RETRY_MAX_ATTEMPTS",
+    )
+    x_retry_base_delay_seconds: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=30.0,
+        description="Base backoff delay for recoverable X Grok batch failures.",
+        validation_alias="X_RETRY_BASE_DELAY_SECONDS",
+    )
+    x_failure_threshold: int = Field(
+        default=2,
+        ge=1,
+        le=10,
+        description="Consecutive recoverable X failures required before cooldown.",
+        validation_alias="X_FAILURE_THRESHOLD",
+    )
+    x_cooldown_seconds: int = Field(
+        default=180,
+        ge=1,
+        le=3600,
+        description="Cooldown duration after repeated recoverable X failures.",
+        validation_alias="X_COOLDOWN_SECONDS",
+    )
 
     # LLM Analysis API (OpenAI SDK compatible)
     llm_api_key: str = ""

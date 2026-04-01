@@ -382,6 +382,60 @@ class TestCollectorService:
         assert availability["x"].reason_code == "grok_collection_failed"
         source_availability_service.reset_runtime_state()
 
+    async def test_collect_repeated_x_gateway_failures_trigger_cooldown(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Repeated recoverable X failures should eventually disable new X runs."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr("src.config.settings.settings.x_failure_threshold", 2)
+        monkeypatch.setattr("src.config.settings.settings.x_cooldown_seconds", 300)
+
+        mock_x = AsyncMock()
+        mock_x.collect = AsyncMock(
+            side_effect=SourceCollectionError(
+                "grok_rate_limited",
+                "No available tokens. Please try again later.",
+            )
+        )
+        mock_x.source_name = "x"
+
+        mock_search_query_service = AsyncMock()
+        mock_search_query_service.build_search_query = AsyncMock(
+            return_value=SimpleNamespace(
+                query="AI",
+                status="localized",
+                reason=None,
+            )
+        )
+
+        service = CollectorService(
+            adapters={"x": mock_x},
+            search_query_service=mock_search_query_service,
+        )
+
+        first_result = await service.collect("AI", "en", 10, ["x"])
+        first_availability = {
+            item.source: item
+            for item in source_availability_service.list_availability(["x"])
+        }
+        assert first_result.posts == []
+        assert first_result.source_errors["x"].reason_code == "grok_rate_limited"
+        assert first_availability["x"].status == "degraded"
+        assert first_availability["x"].is_available is True
+
+        second_result = await service.collect("AI", "en", 10, ["x"])
+        second_availability = {
+            item.source: item
+            for item in source_availability_service.list_availability(["x"])
+        }
+        assert second_result.posts == []
+        assert second_result.source_errors["x"].reason_code == "grok_rate_limited"
+        assert second_availability["x"].status == "cooldown"
+        assert second_availability["x"].is_available is False
+        assert second_availability["x"].reason_code == "grok_cooldown"
+        source_availability_service.reset_runtime_state()
+
     @patch("src.adapters.reddit_adapter.settings")
     async def test_collect_records_real_adapter_configuration_failure(
         self, mock_settings: type

@@ -387,21 +387,3 @@ class SubscriptionListResponse(BaseModel):
     total: int
 
 
-# ---------------------------------------------------------------------------
-# Trending models
-# ---------------------------------------------------------------------------
-
-
-class TrendingKeyword(BaseModel):
-    """A single trending keyword entry."""
-
-    keyword: str
-    icon: str
-    category: str
-
-
-class TrendingListResponse(BaseModel):
-    """List of trending keywords."""
-
-    keywords: list[TrendingKeyword]
-    total: int

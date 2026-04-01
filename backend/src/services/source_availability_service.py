@@ -13,6 +13,7 @@ from src.adapters.youtube_adapter import YouTubeAdapter
 from src.common.time_utils import utc_now_iso
 from src.config.settings import settings
 from src.models.schemas import SourceAvailability
+from src.services.source_runtime_control import source_runtime_control
 
 _SUPPORTED_SOURCES = ("reddit", "youtube", "x")
 logger = logging.getLogger(__name__)
@@ -58,6 +59,18 @@ class SourceAvailabilityService:
                 continue
 
             runtime_state = self._get_runtime_state(source)
+            if source_runtime_control.is_in_cooldown(source):
+                availability.append(
+                    SourceAvailability(
+                        source=source,
+                        status="cooldown",
+                        is_available=False,
+                        reason_code="grok_cooldown",
+                        reason=self._cooldown_reason(source),
+                        checked_at=runtime_state.checked_at if runtime_state else None,
+                    )
+                )
+                continue
             if runtime_state is not None:
                 availability.append(
                     SourceAvailability(
@@ -98,6 +111,7 @@ class SourceAvailabilityService:
 
     def record_success(self, source: str) -> None:
         """Mark a source as healthy after a successful collection attempt."""
+        source_runtime_control.record_success(source)
         checked_at = utc_now_iso()
         self._set_runtime_state(
             source,
@@ -117,6 +131,10 @@ class SourceAvailabilityService:
 
     def record_failure(self, source: str, reason_code: str, reason: str) -> None:
         """Mark a source as degraded after a failed collection attempt."""
+        cooldown_active = source_runtime_control.record_failure(
+            source,
+            reason_code=reason_code,
+        )
         checked_at = utc_now_iso()
         public_reason = self._public_runtime_reason(source, reason_code)
         self._set_runtime_state(
@@ -131,8 +149,9 @@ class SourceAvailabilityService:
         )
         logger.warning(
             "Source availability updated "
-            "source=%s status=degraded reason_code=%s checked_at=%s reason=%s",
+            "source=%s status=%s reason_code=%s checked_at=%s reason=%s",
             source,
+            "cooldown" if cooldown_active else "degraded",
             reason_code,
             checked_at,
             reason,
@@ -142,6 +161,7 @@ class SourceAvailabilityService:
         """Clear runtime health memory for deterministic tests/debugging."""
         with self._lock:
             self._runtime_state.clear()
+        source_runtime_control.reset()
 
     def _get_runtime_state(self, source: str) -> _RuntimeAvailabilityState | None:
         with self._lock:
@@ -220,6 +240,18 @@ class SourceAvailabilityService:
             "youtube_transcript_error": (
                 "YouTube transcript retrieval failed during the last attempt."
             ),
+            "grok_rate_limited": (
+                "X is temporarily rate limited by the configured provider."
+            ),
+            "grok_connection_error": (
+                "The configured X provider connection failed during the last attempt."
+            ),
+            "grok_timeout": (
+                "The configured X provider timed out during the last attempt."
+            ),
+            "grok_upstream_unavailable": (
+                "The configured X provider was unavailable during the last attempt."
+            ),
             "grok_provider_error": "X data collection failed during the last attempt.",
             "grok_provider_incompatible": (
                 "The configured X provider returned an incompatible response."
@@ -230,6 +262,7 @@ class SourceAvailabilityService:
             "grok_invalid_payload": (
                 "X returned an invalid payload during the last attempt."
             ),
+            "grok_batches_failed": "X data collection failed during the last attempt.",
             "grok_shards_failed": "X data collection failed during the last attempt.",
             "grok_collection_failed": (
                 "X data collection failed during the last attempt."
@@ -257,6 +290,14 @@ class SourceAvailabilityService:
         if source == "reddit":
             return "Reddit"
         return source.capitalize()
+
+    @staticmethod
+    def _cooldown_reason(source: str) -> str:
+        """Return a user-facing cooldown message for temporarily disabled sources."""
+        return (
+            f"{SourceAvailabilityService._source_label(source)} is temporarily "
+            "cooling down after repeated upstream failures."
+        )
 
 
 source_availability_service = SourceAvailabilityService()

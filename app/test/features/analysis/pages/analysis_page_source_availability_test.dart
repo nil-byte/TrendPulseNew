@@ -97,6 +97,52 @@ void main() {
     expect(redditChip.status, 'degraded');
   });
 
+  testWidgets('analysis page disables x when source is cooling down', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrapAnalysisPage(
+        const AnalysisPage(),
+        analysisRepository: FakeAnalysisRepository(
+          sourceAvailability: const [
+            AnalysisSourceAvailability(
+              source: 'reddit',
+              status: 'available',
+              isAvailable: true,
+            ),
+            AnalysisSourceAvailability(
+              source: 'youtube',
+              status: 'available',
+              isAvailable: true,
+            ),
+            AnalysisSourceAvailability(
+              source: 'x',
+              status: 'cooldown',
+              isAvailable: false,
+              reason: 'X is temporarily cooling down after repeated upstream failures.',
+              reasonCode: 'grok_cooldown',
+              checkedAt: '2026-03-30T00:00:00Z',
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.tune_rounded).first);
+    await tester.pumpAndSettle();
+
+    final chips = tester
+        .widgetList<AnalysisSourceChip>(find.byType(AnalysisSourceChip))
+        .toList();
+    final xChip = chips[2];
+
+    expect(xChip.selected, isFalse);
+    expect(xChip.enabled, isFalse);
+    expect(xChip.status, 'cooldown');
+    expect(xChip.reason, contains('cooling down'));
+  });
+
   testWidgets(
     'initial source hydration does not overwrite a user selection made while loading',
     (tester) async {

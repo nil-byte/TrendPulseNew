@@ -166,6 +166,51 @@ class TestTaskCreationEndpoints:
         assert await_args.args[1].sources == ["reddit", "youtube"]
         assert await_args.kwargs["initial_source_errors"] == {}
 
+    @patch("src.api.endpoints.tasks.task_service._process_task", new_callable=AsyncMock)
+    async def test_create_task_filters_x_when_source_is_in_cooldown(
+        self,
+        mock_process: AsyncMock,
+        client: AsyncClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Cooldown removes X from runnable sources during task creation."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(settings, "youtube_api_key", "youtube-key")
+        monkeypatch.setattr(settings, "grok_api_key", "grok-key")
+        monkeypatch.setattr(settings, "x_failure_threshold", 2)
+        monkeypatch.setattr(settings, "x_cooldown_seconds", 300)
+        source_availability_service.record_failure(
+            "x",
+            "grok_rate_limited",
+            "No available tokens. Please try again later.",
+        )
+        source_availability_service.record_failure(
+            "x",
+            "grok_connection_error",
+            "Connection error.",
+        )
+
+        response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "ai",
+                "content_language": "zh",
+                "report_language": "en",
+                "max_items": 20,
+                "sources": ["youtube", "x"],
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["sources"] == ["youtube"]
+        await asyncio.sleep(0)
+        mock_process.assert_awaited_once()
+        await_args = mock_process.await_args
+        assert await_args.args[1].sources == ["youtube"]
+        assert await_args.kwargs["initial_source_errors"]["x"].reason_code == (
+            "grok_cooldown"
+        )
+
     async def test_create_task_rejects_when_all_requested_sources_are_unavailable(
         self,
         client: AsyncClient,

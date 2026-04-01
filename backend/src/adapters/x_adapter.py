@@ -1,8 +1,10 @@
 """X (Twitter) data collection adapter via Grok API.
 
-Implements the Triple-Helix Sampling strategy: three parallel shards
-(Pulse / Core / Noise) each request a subset of tweets through Grok's
-native X search capability, then results are deduplicated by source_id.
+Splits the requested ``limit`` into one or more chat completion calls capped by
+``X_BATCH_SIZE`` (default 20). A single batch uses a balanced profile; multiple
+batches rotate **Balanced Mix / Authority / Dissent / Latest** dimensions.
+Results merge and deduplicate by ``source_id``. Concurrency and backoff align
+with ``source_runtime_control`` and settings (``X_PARALLEL_BATCHES``, retries).
 """
 
 from __future__ import annotations
@@ -10,12 +12,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
 import re
 from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse
 
-from openai import AsyncOpenAI
+from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
 from src.adapters.base import (
     BaseAdapter,
@@ -32,6 +35,10 @@ from src.common.time_utils import (
 )
 from src.config.settings import settings
 from src.models.schemas import RawPost
+from src.services.source_runtime_control import (
+    RECOVERABLE_X_GATEWAY_REASON_CODES,
+    source_runtime_control,
+)
 
 logger = logging.getLogger(__name__)
 _CJK_RE = re.compile(r"[\u3400-\u4DBF\u4E00-\u9FFF]")
@@ -102,27 +109,69 @@ Do not use older tweets to fill the quota.
 Generate the JSON array of {shard_limit} objects now.
 </instruction>"""
 
-# Shard definitions: (name, focus description)
-_SHARDS: list[tuple[str, str]] = [
+_SINGLE_BATCH_PROFILE = (
+    "Balanced Mix",
+    "Return a balanced mix of latest posts, authoritative voices, and skeptical "
+    "or contrarian views.",
+)
+
+_BATCH_PROFILES: list[tuple[str, str]] = [
     (
-        "The Pulse",
-        "Latest original posts (time-sensitive, exclude retweets)",
+        "Balanced Mix",
+        "Return a balanced mix of latest posts, authoritative voices, and "
+        "skeptical or contrarian views.",
     ),
     (
-        "The Core",
-        "High engagement/Authority content (verified accounts, high likes)",
+        "Authority",
+        "Prioritize high-engagement, expert, official, and authoritative voices.",
     ),
     (
-        "The Noise",
-        "Dissenting/Skeptical views (contrarian opinions, criticism)",
+        "Dissent",
+        "Prioritize skeptical, contrarian, critical, or risk-focused discussion.",
+    ),
+    (
+        "Latest",
+        "Prioritize the freshest original posts inside the allowed time window.",
     ),
 ]
 
+def _resolve_positive_int(value: object, default: int) -> int:
+    """Return a positive integer config value or fall back to ``default``."""
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = int(value)
+        except ValueError:
+            return default
+        if parsed > 0:
+            return parsed
+    return default
 
-def _compute_shard_limit(limit: int) -> int:
-    """Round up shard size so total shard budget can satisfy the requested limit."""
-    shard_count = len(_SHARDS)
-    return max(1, (limit + shard_count - 1) // shard_count)
+
+def _resolve_non_negative_float(value: object, default: float) -> float:
+    """Return a non-negative float config value or fall back to ``default``."""
+    if isinstance(value, (int, float)) and float(value) >= 0:
+        return float(value)
+    if isinstance(value, str):
+        try:
+            parsed = float(value)
+        except ValueError:
+            return default
+        if parsed >= 0:
+            return parsed
+    return default
+
+
+def _compute_batch_sizes(limit: int, batch_size: int) -> list[int]:
+    """Split the requested total into sequential batches capped at ``batch_size``."""
+    remaining = limit
+    batch_sizes: list[int] = []
+    while remaining > 0:
+        current = min(batch_size, remaining)
+        batch_sizes.append(current)
+        remaining -= current
+    return batch_sizes
 
 def _message_content_to_str(content: object) -> str:
     """Normalize OpenAI ``message.content`` (str or multi-part list) to plain text."""
@@ -221,6 +270,35 @@ def _text_from_message_dict(msg: dict[str, Any]) -> str:
     return ""
 
 
+def _source_error_from_provider_payload(error_payload: object) -> SourceCollectionError:
+    """Classify 200-level provider error payloads into stable X reason codes."""
+    if isinstance(error_payload, str):
+        message = error_payload
+        signal = error_payload.lower()
+    elif isinstance(error_payload, dict):
+        message = str(
+            error_payload.get("message")
+            or error_payload.get("msg")
+            or error_payload.get("code")
+            or error_payload
+        )
+        signal = " ".join(
+            str(error_payload.get(key, "")).lower()
+            for key in ("code", "type", "message")
+        )
+    else:
+        message = str(error_payload)
+        signal = message.lower()
+
+    if (
+        "rate_limit" in signal
+        or "rate limit" in signal
+        or "no available tokens" in signal
+    ):
+        return SourceCollectionError("grok_rate_limited", message)
+    return SourceCollectionError("grok_provider_error", message)
+
+
 def _extract_completion_text_from_chat_response(response: object) -> str:
     """Extract assistant text from an OpenAI-compatible completion."""
     data = _coerce_completion_dict(response)
@@ -228,15 +306,7 @@ def _extract_completion_text_from_chat_response(response: object) -> str:
         data = _unwrap_relay_envelope(data)
         err = data.get("error")
         if err is not None:
-            if isinstance(err, str):
-                msg = err
-            elif isinstance(err, dict):
-                msg = str(
-                    err.get("message") or err.get("msg") or err.get("code") or err
-                )
-            else:
-                msg = str(err)
-            raise SourceCollectionError("grok_provider_error", msg)
+            raise _source_error_from_provider_payload(err)
 
         choices = data.get("choices")
         if not choices:
@@ -298,7 +368,7 @@ class XAdapter(BaseAdapter):
         return "x"
 
     async def collect(self, keyword: str, language: str, limit: int) -> list[RawPost]:
-        """Run three parallel Grok shards and deduplicate results.
+        """Run one or more Grok batches and deduplicate results.
 
         Args:
             keyword: Search keyword.
@@ -317,17 +387,21 @@ class XAdapter(BaseAdapter):
 
         client = self._build_grok_client()
         try:
-            shard_limit = _compute_shard_limit(limit)
+            batch_plan = self._build_batch_plan(limit)
+            batch_sizes = [batch_size for _, _, batch_size in batch_plan]
             recency_hours = resolve_recency_hours(settings.collection_recency_hours)
             window_now = utc_now()
             parsed = urlparse(settings.grok_base_url)
             endpoint_host = parsed.netloc or settings.grok_base_url
             logger.info(
-                "X collection starting keyword=%r limit=%d shard_limit=%d "
-                "recency_hours=%d provider_mode=%s endpoint=%s model=%s timeout=%ss",
+                "X collection starting keyword=%r limit=%d batch_count=%d "
+                "batch_sizes=%s parallel_cap=%d recency_hours=%d provider_mode=%s "
+                "endpoint=%s model=%s timeout=%ss",
                 keyword,
                 limit,
-                shard_limit,
+                len(batch_plan),
+                batch_sizes,
+                _resolve_positive_int(settings.x_parallel_batches, 1),
                 recency_hours,
                 settings.grok_provider_mode,
                 endpoint_host,
@@ -336,58 +410,60 @@ class XAdapter(BaseAdapter):
             )
 
             tasks = [
-                self._query_shard(
+                self._query_shard_with_retry(
                     client,
                     keyword,
                     language,
                     name,
                     focus,
-                    shard_limit,
+                    batch_limit,
                     window_now=window_now,
                     recency_hours=recency_hours,
                 )
-                for name, focus in _SHARDS
+                for name, focus, batch_limit in batch_plan
             ]
-            shard_results: list[list[RawPost] | BaseException] = await asyncio.gather(
+            batch_results: list[list[RawPost] | BaseException] = await asyncio.gather(
                 *tasks,
                 return_exceptions=True,
             )
 
-            shard_errors: dict[str, SourceCollectionError] = {}
+            batch_errors: dict[str, SourceCollectionError] = {}
             seen: dict[str | None, RawPost] = {}
-            for (dimension_name, _), shard in zip(_SHARDS, shard_results, strict=True):
-                if isinstance(shard, BaseException):
-                    source_error = self._normalize_error(shard)
+            for (dimension_name, _, _), batch in zip(
+                batch_plan, batch_results, strict=True
+            ):
+                if isinstance(batch, BaseException):
+                    source_error = self._normalize_request_error(batch)
                     logger.warning(
-                        "Grok shard failed "
-                        "keyword=%r shard=%r reason_code=%s reason=%s",
+                        "Grok batch failed "
+                        "keyword=%r batch=%r reason_code=%s reason=%s",
                         keyword,
                         dimension_name,
                         source_error.reason_code,
                         source_error.message,
                     )
-                    shard_errors[dimension_name] = source_error
+                    batch_errors[dimension_name] = source_error
                     continue
 
-                for post in shard:
+                for post in batch:
                     if post.source_id and post.source_id in seen:
                         continue
                     seen[post.source_id] = post
 
             posts = list(seen.values())[:limit]
-            if shard_errors and posts:
+            if batch_errors and posts:
                 raise PartialSourceCollectionError(
-                    self._aggregate_shard_reason_code(shard_errors),
+                    self._aggregate_batch_reason_code(batch_errors),
                     "X collection partially failed: "
-                    f"{self._format_shard_errors(shard_errors)}",
+                    f"{self._format_batch_errors(batch_errors)}",
                     partial_posts=posts,
                 )
 
-            if not posts and shard_errors:
+            if not posts and batch_errors:
                 raise SourceCollectionError(
-                    self._aggregate_shard_reason_code(shard_errors),
+                    self._aggregate_batch_reason_code(batch_errors),
                     "X collection failed: "
-                    f"{self._format_shard_errors(shard_errors)}",
+                    f"{self._format_batch_errors(batch_errors)}",
                 )
 
             logger.info(
@@ -415,6 +491,80 @@ class XAdapter(BaseAdapter):
         """Return the configured model name for Grok shard requests."""
         return settings.grok_model
 
+    def _build_batch_plan(self, limit: int) -> list[tuple[str, str, int]]:
+        """Return the X collection batch plan for the requested limit."""
+        batch_size = _resolve_positive_int(settings.x_batch_size, 20)
+        batch_sizes = _compute_batch_sizes(limit, batch_size)
+        if len(batch_sizes) == 1:
+            name, focus = _SINGLE_BATCH_PROFILE
+            return [(name, focus, batch_sizes[0])]
+
+        batch_plan: list[tuple[str, str, int]] = []
+        for index, requested_items in enumerate(batch_sizes):
+            profile_name, profile_focus = _BATCH_PROFILES[index % len(_BATCH_PROFILES)]
+            batch_plan.append(
+                (
+                    f"{profile_name} Batch {index + 1}",
+                    profile_focus,
+                    requested_items,
+                )
+            )
+        return batch_plan
+
+    async def _query_shard_with_retry(
+        self,
+        client: AsyncOpenAI,
+        keyword: str,
+        language: str,
+        dimension_name: str,
+        dimension_focus: str,
+        shard_limit: int,
+        *,
+        window_now: datetime | None = None,
+        recency_hours: int | None = None,
+    ) -> list[RawPost]:
+        """Retry recoverable X gateway failures before surfacing them upward."""
+        retry_budget = _resolve_positive_int(settings.x_retry_max_attempts, 2)
+        base_delay = _resolve_non_negative_float(
+            settings.x_retry_base_delay_seconds,
+            1.0,
+        )
+        attempt = 0
+        while True:
+            try:
+                return await self._query_shard(
+                    client,
+                    keyword,
+                    language,
+                    dimension_name,
+                    dimension_focus,
+                    shard_limit,
+                    window_now=window_now,
+                    recency_hours=recency_hours,
+                )
+            except Exception as exc:
+                source_error = self._normalize_request_error(exc)
+                if (
+                    source_error.reason_code
+                    not in RECOVERABLE_X_GATEWAY_REASON_CODES
+                    or attempt >= retry_budget
+                ):
+                    raise source_error from exc
+
+                attempt += 1
+                delay_seconds = self._compute_retry_delay(base_delay, attempt)
+                logger.warning(
+                    "Retrying X batch "
+                    "keyword=%r batch=%r attempt=%d/%d reason_code=%s delay=%.2fs",
+                    keyword,
+                    dimension_name,
+                    attempt,
+                    retry_budget,
+                    source_error.reason_code,
+                    delay_seconds,
+                )
+                await asyncio.sleep(delay_seconds)
+
     async def _query_shard(
         self,
         client: AsyncOpenAI,
@@ -427,7 +577,7 @@ class XAdapter(BaseAdapter):
         window_now: datetime | None = None,
         recency_hours: int | None = None,
     ) -> list[RawPost]:
-        """Execute a single Grok shard request and parse the response."""
+        """Execute a single Grok batch request and parse the response."""
         effective_now = window_now or utc_now()
         effective_recency_hours = (
             recency_hours
@@ -451,15 +601,16 @@ class XAdapter(BaseAdapter):
 
         # New API (and some relays) default to SSE streaming when `stream` is omitted;
         # the SDK then yields a malformed non-stream parse. Force JSON completions.
-        response = await client.chat.completions.create(
-            model=self._resolve_grok_model(),
-            temperature=0.2,
-            stream=False,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+        async with source_runtime_control.acquire_slot(self.source_name):
+            response = await client.chat.completions.create(
+                model=self._resolve_grok_model(),
+                temperature=0.2,
+                stream=False,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
 
         raw_text = _extract_completion_text_from_chat_response(response)
         if not raw_text.strip():
@@ -575,27 +726,52 @@ class XAdapter(BaseAdapter):
         return filtered_posts
 
     @staticmethod
-    def _normalize_error(error: BaseException) -> SourceCollectionError:
-        """Convert arbitrary shard exceptions into typed source failures."""
+    def _normalize_request_error(error: BaseException) -> SourceCollectionError:
+        """Convert SDK and transport errors into stable X source failures."""
         if isinstance(error, SourceCollectionError):
             return error
+        if isinstance(error, APITimeoutError):
+            return SourceCollectionError(
+                "grok_timeout",
+                "Timed out waiting for the X provider response.",
+            )
+        if isinstance(error, APIConnectionError):
+            message = str(error).strip() or "Connection error."
+            return SourceCollectionError("grok_connection_error", message)
+        if isinstance(error, APIStatusError):
+            message = str(error).strip() or error.__class__.__name__
+            if error.status_code == 429:
+                return SourceCollectionError("grok_rate_limited", message)
+            if isinstance(error.status_code, int) and error.status_code >= 500:
+                return SourceCollectionError("grok_upstream_unavailable", message)
+            return SourceCollectionError("grok_provider_error", message)
         message = str(error).strip() or error.__class__.__name__
         return SourceCollectionError("grok_collection_failed", message)
 
     @staticmethod
-    def _format_shard_errors(shard_errors: dict[str, SourceCollectionError]) -> str:
-        """Render shard failures into a readable summary string."""
-        return "; ".join(
-            f"{shard_name}: {error.reason_code} ({error.message})"
-            for shard_name, error in shard_errors.items()
+    def _compute_retry_delay(base_delay: float, attempt: int) -> float:
+        """Return exponential backoff with bounded positive jitter."""
+        if base_delay <= 0:
+            return 0.0
+        return (base_delay * (2 ** (attempt - 1))) + random.uniform(
+            0.0,
+            base_delay,
         )
 
     @staticmethod
-    def _aggregate_shard_reason_code(
-        shard_errors: dict[str, SourceCollectionError],
+    def _format_batch_errors(batch_errors: dict[str, SourceCollectionError]) -> str:
+        """Render batch failures into a readable summary string."""
+        return "; ".join(
+            f"{batch_name}: {error.reason_code} ({error.message})"
+            for batch_name, error in batch_errors.items()
+        )
+
+    @staticmethod
+    def _aggregate_batch_reason_code(
+        batch_errors: dict[str, SourceCollectionError],
     ) -> str:
-        """Return a source-level code for all shard failures."""
-        reason_codes = {error.reason_code for error in shard_errors.values()}
+        """Return a source-level reason code for failed X batches."""
+        reason_codes = {error.reason_code for error in batch_errors.values()}
         if len(reason_codes) == 1:
             return reason_codes.pop()
-        return "grok_shards_failed"
+        return "grok_batches_failed"
