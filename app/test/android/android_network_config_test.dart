@@ -63,7 +63,7 @@ void main() {
       );
 
       final cleartextDomains = RegExp(
-        r'<domain>([^<]+)</domain>',
+        r'<domain[^>]*>([^<]+)</domain>',
       ).allMatches(config).map((match) => match.group(1)).whereType<String>();
 
       expect(
