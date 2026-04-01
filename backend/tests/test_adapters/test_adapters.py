@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -19,17 +20,24 @@ from src.adapters.youtube_adapter import YouTubeAdapter
 class TestRedditAdapter:
     """Tests for RedditAdapter.collect()."""
 
+    @patch("src.adapters.reddit_adapter.utc_now")
     @patch("src.adapters.reddit_adapter.settings")
     @patch("src.adapters.reddit_adapter.asyncpraw")
     async def test_reddit_adapter_returns_raw_posts(
-        self, mock_asyncpraw: MagicMock, mock_settings: MagicMock
+        self,
+        mock_asyncpraw: MagicMock,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
     ) -> None:
         """Mock asyncpraw to return fake submissions and verify RawPost list."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
         mock_settings.reddit_client_id = "test_id"
         mock_settings.reddit_client_secret = "test_secret"
         mock_settings.reddit_user_agent = "test_agent"
         mock_settings.reddit_https_proxy = ""
         mock_settings.reddit_ssl_ca_file = ""
+        mock_settings.collection_recency_hours = 24
 
         fake_submission = SimpleNamespace(
             id="abc123",
@@ -37,7 +45,7 @@ class TestRedditAdapter:
             selftext="Test body content here",
             author="test_user",
             score=42,
-            created_utc=1700000000.0,
+            created_utc=(fixed_now - timedelta(hours=2)).timestamp(),
             permalink="/r/test/comments/abc123/test/",
         )
 
@@ -60,17 +68,24 @@ class TestRedditAdapter:
         assert "Test Title" in posts[0].content
         assert posts[0].engagement == 42
 
+    @patch("src.adapters.reddit_adapter.utc_now")
     @patch("src.adapters.reddit_adapter.settings")
     @patch("src.adapters.reddit_adapter.asyncpraw")
     async def test_reddit_adapter_filters_obvious_language_mismatches(
-        self, mock_asyncpraw: MagicMock, mock_settings: MagicMock
+        self,
+        mock_asyncpraw: MagicMock,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
     ) -> None:
         """Reddit should drop obviously non-English posts when content_language=en."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
         mock_settings.reddit_client_id = "test_id"
         mock_settings.reddit_client_secret = "test_secret"
         mock_settings.reddit_user_agent = "test_agent"
         mock_settings.reddit_https_proxy = ""
         mock_settings.reddit_ssl_ca_file = ""
+        mock_settings.collection_recency_hours = 24
 
         english_submission = SimpleNamespace(
             id="en123",
@@ -78,7 +93,7 @@ class TestRedditAdapter:
             selftext="Users are debating the new roadmap in detail.",
             author="english_user",
             score=42,
-            created_utc=1700000000.0,
+            created_utc=(fixed_now - timedelta(hours=3)).timestamp(),
             permalink="/r/test/comments/en123/test/",
         )
         chinese_submission = SimpleNamespace(
@@ -87,7 +102,7 @@ class TestRedditAdapter:
             selftext="这个话题在中文社区非常热门。",
             author="chinese_user",
             score=30,
-            created_utc=1700000001.0,
+            created_utc=(fixed_now - timedelta(hours=1)).timestamp(),
             permalink="/r/test/comments/zh123/test/",
         )
 
@@ -107,6 +122,77 @@ class TestRedditAdapter:
         posts = await adapter.collect("artificial intelligence", "en", 10)
 
         assert [post.source_id for post in posts] == ["en123"]
+
+    @patch("src.adapters.reddit_adapter.utc_now")
+    @patch("src.adapters.reddit_adapter.settings")
+    @patch("src.adapters.reddit_adapter.asyncpraw")
+    async def test_reddit_adapter_uses_day_new_and_filters_to_recent_window(
+        self,
+        mock_asyncpraw: MagicMock,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
+    ) -> None:
+        """Reddit should narrow to `day/new`, then hard-filter to the last 24 hours."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
+        mock_settings.reddit_client_id = "test_id"
+        mock_settings.reddit_client_secret = "test_secret"
+        mock_settings.reddit_user_agent = "test_agent"
+        mock_settings.reddit_https_proxy = ""
+        mock_settings.reddit_ssl_ca_file = ""
+        mock_settings.collection_recency_hours = 24
+
+        recent_submission = SimpleNamespace(
+            id="recent123",
+            title="Recent launch notes",
+            selftext="Fresh product chatter from today.",
+            author="recent_user",
+            score=52,
+            created_utc=(fixed_now - timedelta(hours=2)).timestamp(),
+            permalink="/r/test/comments/recent123/test/",
+        )
+        stale_submission = SimpleNamespace(
+            id="stale123",
+            title="Last week's recap",
+            selftext="This should be discarded as too old.",
+            author="stale_user",
+            score=31,
+            created_utc=(fixed_now - timedelta(hours=30)).timestamp(),
+            permalink="/r/test/comments/stale123/test/",
+        )
+        another_recent_submission = SimpleNamespace(
+            id="recent456",
+            title="Another current discussion",
+            selftext="Still inside the last day window.",
+            author="recent_user_2",
+            score=44,
+            created_utc=(fixed_now - timedelta(hours=6)).timestamp(),
+            permalink="/r/test/comments/recent456/test/",
+        )
+
+        mock_subreddit = AsyncMock()
+        mock_subreddit.search = MagicMock(
+            return_value=_async_iter(
+                [recent_submission, stale_submission, another_recent_submission]
+            )
+        )
+
+        mock_reddit_instance = AsyncMock()
+        mock_reddit_instance.subreddit = AsyncMock(return_value=mock_subreddit)
+        mock_reddit_instance.__aenter__ = AsyncMock(return_value=mock_reddit_instance)
+        mock_reddit_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_asyncpraw.Reddit.return_value = mock_reddit_instance
+
+        adapter = RedditAdapter()
+        posts = await adapter.collect("test", "en", 1)
+
+        assert [post.source_id for post in posts] == ["recent123"]
+        mock_subreddit.search.assert_called_once_with(
+            "test",
+            sort="new",
+            time_filter="day",
+            limit=3,
+        )
 
     @patch("src.adapters.reddit_adapter.settings")
     @patch("src.adapters.reddit_adapter.aiohttp.ClientSession")
@@ -263,6 +349,7 @@ class TestYouTubeAdapter:
             ["zh-Hans", "zh-CN", "zh-SG", "zh", "zh-Hant", "zh-TW", "zh-HK"]
         )
 
+    @patch("src.adapters.youtube_adapter.utc_now")
     @patch("src.adapters.youtube_adapter.YouTubeTranscriptApi")
     @patch("src.adapters.youtube_adapter.build")
     @patch("src.adapters.youtube_adapter.asyncio.to_thread")
@@ -273,9 +360,13 @@ class TestYouTubeAdapter:
         mock_to_thread: AsyncMock,
         mock_build: MagicMock,
         mock_transcript_api: MagicMock,
+        mock_utc_now: MagicMock,
     ) -> None:
         """Mock Google API client and transcript API, verify posts with transcript."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
         mock_settings.youtube_api_key = "test_key"
+        mock_settings.collection_recency_hours = 24
         mock_to_thread.side_effect = lambda func, *args: func(*args)
 
         search_response = {
@@ -285,7 +376,7 @@ class TestYouTubeAdapter:
                     "snippet": {
                         "title": "Test Video",
                         "channelTitle": "TestChannel",
-                        "publishedAt": "2024-01-01T00:00:00Z",
+                        "publishedAt": "2026-04-01T08:00:00Z",
                     },
                 }
             ]
@@ -361,6 +452,92 @@ class TestYouTubeAdapter:
             mock_youtube.search().list.call_args.kwargs.get("relevanceLanguage")
             == "zh-Hans"
         )
+
+    @patch("src.adapters.youtube_adapter.utc_now")
+    @patch("src.adapters.youtube_adapter.build")
+    @patch("src.adapters.youtube_adapter.asyncio.to_thread")
+    @patch("src.adapters.youtube_adapter.settings")
+    async def test_youtube_search_uses_recent_window_parameters(
+        self,
+        mock_settings: MagicMock,
+        mock_to_thread: AsyncMock,
+        mock_build: MagicMock,
+        mock_utc_now: MagicMock,
+    ) -> None:
+        """YouTube search.list should request only the last 24 hours ordered by date."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
+        mock_settings.youtube_api_key = "test_key"
+        mock_settings.collection_recency_hours = 24
+        mock_to_thread.side_effect = lambda func, *args: func(*args)
+
+        mock_youtube = MagicMock()
+        mock_youtube.search().list().execute.return_value = {"items": []}
+        mock_build.return_value = mock_youtube
+
+        adapter = YouTubeAdapter()
+        posts = await adapter.collect("test", "en", 5)
+
+        assert posts == []
+        assert mock_youtube.search().list.call_args.kwargs == {
+            "q": "test",
+            "part": "snippet",
+            "type": "video",
+            "maxResults": 5,
+            "relevanceLanguage": "en",
+            "order": "date",
+            "publishedAfter": "2026-03-31T12:00:00Z",
+            "publishedBefore": "2026-04-01T12:00:00Z",
+        }
+
+    @patch("src.adapters.youtube_adapter.utc_now")
+    @patch("src.adapters.youtube_adapter.build")
+    @patch("src.adapters.youtube_adapter.settings")
+    def test_youtube_search_filters_results_outside_recent_window(
+        self,
+        mock_settings: MagicMock,
+        mock_build: MagicMock,
+        mock_utc_now: MagicMock,
+    ) -> None:
+        """YouTube should still hard-filter out videos outside the recent window."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
+        mock_settings.youtube_api_key = "test_key"
+        mock_settings.collection_recency_hours = 24
+
+        mock_youtube = MagicMock()
+        mock_youtube.search().list().execute.return_value = {
+            "items": [
+                {
+                    "id": {"videoId": "recent001"},
+                    "snippet": {
+                        "title": "Recent video",
+                        "channelTitle": "CurrentChannel",
+                        "publishedAt": "2026-04-01T08:00:00Z",
+                    },
+                },
+                {
+                    "id": {"videoId": "stale001"},
+                    "snippet": {
+                        "title": "Old video",
+                        "channelTitle": "ArchiveChannel",
+                        "publishedAt": "2026-03-30T11:59:59Z",
+                    },
+                },
+            ]
+        }
+        mock_youtube.videos().list().execute.return_value = {
+            "items": [
+                {"id": "recent001", "statistics": {"viewCount": "100"}},
+                {"id": "stale001", "statistics": {"viewCount": "200"}},
+            ]
+        }
+        mock_build.return_value = mock_youtube
+
+        adapter = YouTubeAdapter()
+        videos = adapter._search_videos("test", "en", 5)
+
+        assert [video["video_id"] for video in videos] == ["recent001"]
 
     @patch("src.adapters.youtube_adapter.settings")
     async def test_youtube_raises_when_api_key_missing(
@@ -483,6 +660,7 @@ class TestXAdapter:
         """Grok prompts should explicitly require the requested content language."""
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_model = "configured-model"
+        mock_settings.collection_recency_hours = 24
 
         mock_response = MagicMock()
         mock_response.choices = [MagicMock(message=MagicMock(content="[]"))]
@@ -510,13 +688,59 @@ class TestXAdapter:
             in joined_messages
         )
 
+    @patch("src.adapters.x_adapter.utc_now")
     @patch("src.adapters.x_adapter.settings")
-    async def test_x_query_shard_filters_obvious_language_mismatches_from_results(
-        self, mock_settings: MagicMock
+    async def test_x_query_shard_includes_recent_window_boundaries_in_messages(
+        self,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
     ) -> None:
-        """Result parsing should drop obviously wrong-language tweets."""
+        """Grok prompts should include explicit 24h boundaries and the current UTC time."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_model = "configured-model"
+        mock_settings.collection_recency_hours = 24
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="[]"))]
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        adapter = XAdapter()
+        await adapter._query_shard(
+            mock_client,
+            keyword="AI",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=1,
+        )
+
+        kwargs = mock_client.chat.completions.create.await_args.kwargs
+        joined_messages = "\n".join(
+            str(message["content"]) for message in kwargs["messages"]
+        )
+        assert "Current UTC time: 2026-04-01T12:00:00Z" in joined_messages
+        assert (
+            "Allowed post window: 2026-03-31T12:00:00Z to 2026-04-01T12:00:00Z"
+            in joined_messages
+        )
+        assert "Only return tweets whose created_at falls within this window." in joined_messages
+
+    @patch("src.adapters.x_adapter.utc_now")
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_filters_obvious_language_mismatches_from_results(
+        self,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
+    ) -> None:
+        """Result parsing should drop obviously wrong-language tweets."""
+        mock_utc_now.return_value = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+        mock_settings.collection_recency_hours = 24
 
         tweets = [
             {
@@ -524,7 +748,7 @@ class TestXAdapter:
                 "username": "user1",
                 "content": "Detailed product feedback from English users",
                 "perspective": "Bullish",
-                "created_at": "2024-01-01T00:00:00Z",
+                "created_at": "2026-04-01T10:00:00Z",
                 "engagement": 100,
                 "url": "https://x.com/user1/status/t1",
             },
@@ -533,7 +757,7 @@ class TestXAdapter:
                 "username": "user2",
                 "content": "这个产品在中文社区讨论很多",
                 "perspective": "Neutral",
-                "created_at": "2024-01-01T01:00:00Z",
+                "created_at": "2026-04-01T09:00:00Z",
                 "engagement": 20,
                 "url": "https://x.com/user2/status/t2",
             },
@@ -558,6 +782,88 @@ class TestXAdapter:
         )
 
         assert [post.source_id for post in posts] == ["t1"]
+
+    @patch("src.adapters.x_adapter.utc_now")
+    @patch("src.adapters.x_adapter.settings")
+    async def test_x_query_shard_filters_out_posts_outside_recent_window_or_missing_time(
+        self,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
+    ) -> None:
+        """X should hard-filter posts when created_at is stale, missing, or invalid."""
+        fixed_now = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
+        mock_utc_now.return_value = fixed_now
+        mock_settings.grok_provider_mode = "openai_compatible"
+        mock_settings.grok_model = "configured-model"
+        mock_settings.collection_recency_hours = 24
+
+        tweets = [
+            {
+                "id": "recent",
+                "username": "user1",
+                "content": "Fresh commentary from today",
+                "perspective": "Neutral",
+                "created_at": "2026-04-01T09:30:00Z",
+                "engagement": 100,
+                "url": "https://x.com/user1/status/recent",
+            },
+            {
+                "id": "stale",
+                "username": "user2",
+                "content": "This one is too old",
+                "perspective": "Neutral",
+                "created_at": "2026-03-30T09:29:59Z",
+                "engagement": 50,
+                "url": "https://x.com/user2/status/stale",
+            },
+            {
+                "id": "missing",
+                "username": "user3",
+                "content": "Missing time metadata",
+                "perspective": "Neutral",
+                "created_at": "",
+                "engagement": 10,
+                "url": "https://x.com/user3/status/missing",
+            },
+            {
+                "id": "invalid",
+                "username": "user4",
+                "content": "Invalid time metadata",
+                "perspective": "Neutral",
+                "created_at": "not-a-timestamp",
+                "engagement": 5,
+                "url": "https://x.com/user4/status/invalid",
+            },
+            {
+                "id": "ambiguous",
+                "username": "user5",
+                "content": "Ambiguous timestamp metadata",
+                "perspective": "Neutral",
+                "created_at": "2026-04-01T08:45:00",
+                "engagement": 15,
+                "url": "https://x.com/user5/status/ambiguous",
+            },
+        ]
+
+        mock_response = MagicMock()
+        mock_response.choices = [
+            MagicMock(message=MagicMock(content=json.dumps(tweets))),
+        ]
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        adapter = XAdapter()
+        posts = await adapter._query_shard(
+            mock_client,
+            keyword="test",
+            language="en",
+            dimension_name="The Pulse",
+            dimension_focus="Latest original posts",
+            shard_limit=4,
+        )
+
+        assert [post.source_id for post in posts] == ["recent"]
 
     @patch("src.adapters.x_adapter.settings")
     async def test_x_query_shard_rejects_empty_choices_json_string(
@@ -690,17 +996,23 @@ class TestXAdapter:
         assert exc_info.value.reason_code == "grok_provider_error"
         assert "stream_options" in exc_info.value.message
 
+    @patch("src.adapters.x_adapter.utc_now")
     @patch("src.adapters.x_adapter.settings")
     @patch("src.adapters.x_adapter.AsyncOpenAI")
     async def test_x_adapter_returns_raw_posts(
-        self, mock_openai_cls: MagicMock, mock_settings: MagicMock
+        self,
+        mock_openai_cls: MagicMock,
+        mock_settings: MagicMock,
+        mock_utc_now: MagicMock,
     ) -> None:
         """Mock AsyncOpenAI to return fake JSON, verify deduplicated posts."""
+        mock_utc_now.return_value = datetime(2026, 4, 1, 12, 0, tzinfo=timezone.utc)
         mock_settings.grok_provider_mode = "openai_compatible"
         mock_settings.grok_api_key = "test_key"
         mock_settings.grok_base_url = "https://test.api/v1"
         mock_settings.grok_model = "test-model"
         mock_settings.grok_http_timeout_seconds = 45.0
+        mock_settings.collection_recency_hours = 24
 
         tweets = [
             {
@@ -708,7 +1020,7 @@ class TestXAdapter:
                 "username": "user1",
                 "content": "Great product launch",
                 "perspective": "Bullish",
-                "created_at": "2024-01-01T00:00:00Z",
+                "created_at": "2026-04-01T10:30:00Z",
                 "engagement": 100,
                 "url": "https://x.com/user1/status/t1",
             },
@@ -717,7 +1029,7 @@ class TestXAdapter:
                 "username": "user2",
                 "content": "Not impressed at all",
                 "perspective": "Skeptical",
-                "created_at": "2024-01-01T01:00:00Z",
+                "created_at": "2026-04-01T09:45:00Z",
                 "engagement": 50,
                 "url": "https://x.com/user2/status/t2",
             },

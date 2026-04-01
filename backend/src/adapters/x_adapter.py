@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import re
+from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse
 
@@ -22,6 +23,13 @@ from src.adapters.base import (
     SourceCollectionError,
 )
 from src.common.language_utils import target_language_name
+from src.common.time_utils import (
+    format_rfc3339,
+    is_timestamp_in_recency_window,
+    recency_window_start,
+    resolve_recency_hours,
+    utc_now,
+)
 from src.config.settings import settings
 from src.models.schemas import RawPost
 
@@ -67,6 +75,8 @@ Target language: {target_language}
 Target: {shard_limit} items
 Dimension: {dimension_name}
 Search Focus: {dimension_focus}
+Current UTC time: {current_utc}
+Allowed post window: {window_start} to {current_utc}
 </context>
 
 <task>
@@ -80,6 +90,13 @@ Prioritize variety in authors and specific, detailed content over generic reacti
 Tweets must be primarily written in {target_language}.
 Discard tweets whose main content is clearly in another language.
 </language_requirement>
+
+<time_requirement>
+Only return tweets whose created_at falls within this window.
+If created_at is missing, invalid, ambiguous, or older than the last {recency_hours} \
+hours, exclude that tweet.
+Do not use older tweets to fill the quota.
+</time_requirement>
 
 <instruction>
 Generate the JSON array of {shard_limit} objects now.
@@ -301,14 +318,17 @@ class XAdapter(BaseAdapter):
         client = self._build_grok_client()
         try:
             shard_limit = _compute_shard_limit(limit)
+            recency_hours = resolve_recency_hours(settings.collection_recency_hours)
+            window_now = utc_now()
             parsed = urlparse(settings.grok_base_url)
             endpoint_host = parsed.netloc or settings.grok_base_url
             logger.info(
                 "X collection starting keyword=%r limit=%d shard_limit=%d "
-                "provider_mode=%s endpoint=%s model=%s timeout=%ss",
+                "recency_hours=%d provider_mode=%s endpoint=%s model=%s timeout=%ss",
                 keyword,
                 limit,
                 shard_limit,
+                recency_hours,
                 settings.grok_provider_mode,
                 endpoint_host,
                 settings.grok_model,
@@ -316,7 +336,16 @@ class XAdapter(BaseAdapter):
             )
 
             tasks = [
-                self._query_shard(client, keyword, language, name, focus, shard_limit)
+                self._query_shard(
+                    client,
+                    keyword,
+                    language,
+                    name,
+                    focus,
+                    shard_limit,
+                    window_now=window_now,
+                    recency_hours=recency_hours,
+                )
                 for name, focus in _SHARDS
             ]
             shard_results: list[list[RawPost] | BaseException] = await asyncio.gather(
@@ -394,14 +423,30 @@ class XAdapter(BaseAdapter):
         dimension_name: str,
         dimension_focus: str,
         shard_limit: int,
+        *,
+        window_now: datetime | None = None,
+        recency_hours: int | None = None,
     ) -> list[RawPost]:
         """Execute a single Grok shard request and parse the response."""
+        effective_now = window_now or utc_now()
+        effective_recency_hours = (
+            recency_hours
+            if recency_hours is not None
+            else resolve_recency_hours(settings.collection_recency_hours)
+        )
+        window_start = recency_window_start(
+            effective_recency_hours,
+            now=effective_now,
+        )
         user_prompt = _USER_PROMPT_TEMPLATE.format(
             keyword=keyword,
             target_language=target_language_name(language),
             shard_limit=shard_limit,
             dimension_name=dimension_name,
             dimension_focus=dimension_focus,
+            current_utc=format_rfc3339(effective_now),
+            window_start=format_rfc3339(window_start),
+            recency_hours=effective_recency_hours,
         )
 
         # New API (and some relays) default to SSE streaming when `stream` is omitted;
@@ -429,7 +474,12 @@ class XAdapter(BaseAdapter):
                 "grok_invalid_payload",
                 str(exc),
             ) from exc
-        return self._filter_posts_by_language(posts, language)
+        recent_posts = self._filter_posts_by_recency(
+            posts,
+            hours=effective_recency_hours,
+            window_now=effective_now,
+        )
+        return self._filter_posts_by_language(recent_posts, language)
 
     def _parse_response(self, raw_text: str, dimension_name: str) -> list[RawPost]:
         """Strip <think> tags and parse JSON array into RawPost objects."""
@@ -493,6 +543,32 @@ class XAdapter(BaseAdapter):
                     "Skipping X post id=%s for obvious language mismatch target=%s",
                     post.source_id,
                     language,
+                )
+                continue
+            filtered_posts.append(post)
+        return filtered_posts
+
+    def _filter_posts_by_recency(
+        self,
+        posts: list[RawPost],
+        *,
+        hours: int,
+        window_now: datetime,
+    ) -> list[RawPost]:
+        """Drop posts whose timestamps are missing, invalid, or outside the window."""
+        filtered_posts: list[RawPost] = []
+        for post in posts:
+            if not is_timestamp_in_recency_window(
+                post.published_at,
+                hours=hours,
+                now=window_now,
+            ):
+                logger.debug(
+                    "Skipping X post id=%s outside recent window "
+                    "hours=%d published_at=%s",
+                    post.source_id,
+                    hours,
+                    post.published_at,
                 )
                 continue
             filtered_posts.append(post)

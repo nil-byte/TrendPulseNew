@@ -72,6 +72,15 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite+aiosqlite:///./trendpulse.db"
 
+    # Collection recency window
+    collection_recency_hours: int = Field(
+        default=24,
+        ge=1,
+        le=168,
+        description="Recent-window size applied by source collectors, in hours.",
+        validation_alias="COLLECTION_RECENCY_HOURS",
+    )
+
     # Background jobs (tests set ``SCHEDULER_ENABLED=false`` to avoid real scheduler)
     scheduler_enabled: bool = True
 

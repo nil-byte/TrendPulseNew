@@ -14,6 +14,11 @@ import asyncpraw  # type: ignore[import-untyped]
 from asyncprawcore.exceptions import RequestException as PrawRequestException
 
 from src.adapters.base import BaseAdapter, SourceCollectionError
+from src.common.time_utils import (
+    is_timestamp_in_recency_window,
+    resolve_recency_hours,
+    utc_now,
+)
 from src.config.settings import settings
 from src.models.schemas import RawPost
 
@@ -21,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 _CJK_RE = re.compile(r"[\u3400-\u4DBF\u4E00-\u9FFF]")
 _ASCII_ALPHA_RE = re.compile(r"[A-Za-z]")
+_SEARCH_OVERSAMPLE_FACTOR = 3
+_MAX_SEARCH_CANDIDATES = 250
 
 
 class RedditAdapter(BaseAdapter):
@@ -55,6 +62,12 @@ class RedditAdapter(BaseAdapter):
 
         posts: list[RawPost] = []
         session: aiohttp.ClientSession | None = None
+        recency_hours = resolve_recency_hours(settings.collection_recency_hours)
+        window_now = utc_now()
+        candidate_limit = min(
+            max(limit * _SEARCH_OVERSAMPLE_FACTOR, limit),
+            _MAX_SEARCH_CANDIDATES,
+        )
         try:
             session = self._build_client_session()
             reddit = asyncpraw.Reddit(
@@ -65,9 +78,12 @@ class RedditAdapter(BaseAdapter):
             )
             logger.info(
                 "Reddit collection starting keyword=%r limit=%d "
+                "candidate_limit=%d recency_hours=%d "
                 "trust_env=true custom_ca=%s proxy_configured=%s",
                 keyword,
                 limit,
+                candidate_limit,
+                recency_hours,
                 bool(settings.reddit_ssl_ca_file),
                 bool(settings.reddit_https_proxy),
             )
@@ -76,10 +92,27 @@ class RedditAdapter(BaseAdapter):
                 subreddit = await reddit.subreddit("all")
                 async for submission in subreddit.search(
                     keyword,
-                    sort="relevance",
-                    time_filter="week",
-                    limit=limit,
+                    sort="new",
+                    time_filter="day",
+                    limit=candidate_limit,
                 ):
+                    published_at = datetime.fromtimestamp(
+                        submission.created_utc, tz=timezone.utc
+                    ).isoformat()
+                    if not is_timestamp_in_recency_window(
+                        published_at,
+                        hours=recency_hours,
+                        now=window_now,
+                    ):
+                        logger.debug(
+                            "Skipping Reddit post id=%s outside recent window "
+                            "hours=%d published_at=%s",
+                            submission.id,
+                            recency_hours,
+                            published_at,
+                        )
+                        continue
+
                     content_parts = [submission.title or ""]
                     if submission.selftext:
                         content_parts.append(submission.selftext)
@@ -98,9 +131,6 @@ class RedditAdapter(BaseAdapter):
                     author_name = (
                         str(submission.author) if submission.author else None
                     )
-                    published_at = datetime.fromtimestamp(
-                        submission.created_utc, tz=timezone.utc
-                    ).isoformat()
 
                     posts.append(
                         RawPost(
@@ -113,6 +143,8 @@ class RedditAdapter(BaseAdapter):
                             published_at=published_at,
                         )
                     )
+                    if len(posts) >= limit:
+                        break
 
         except SourceCollectionError:
             raise

@@ -23,6 +23,13 @@ from youtube_transcript_api import (  # type: ignore[import-untyped]
 )
 
 from src.adapters.base import BaseAdapter, SourceCollectionError
+from src.common.time_utils import (
+    format_rfc3339,
+    is_timestamp_in_recency_window,
+    recency_window_start,
+    resolve_recency_hours,
+    utc_now,
+)
 from src.config.settings import settings
 from src.models.schemas import RawPost
 
@@ -124,16 +131,31 @@ class YouTubeAdapter(BaseAdapter):
         self, keyword: str, language: str, limit: int
     ) -> list[dict[str, Any]]:
         """Call YouTube Data API v3 search + videos.list for statistics."""
+        recency_hours = resolve_recency_hours(settings.collection_recency_hours)
+        window_now = utc_now()
+        window_start = recency_window_start(recency_hours, now=window_now)
         youtube = build("youtube", "v3", developerKey=settings.youtube_api_key)
         search_kwargs: dict[str, Any] = {
             "q": keyword,
             "part": "snippet",
             "type": "video",
             "maxResults": limit,
+            "order": "date",
+            "publishedAfter": format_rfc3339(window_start),
+            "publishedBefore": format_rfc3339(window_now),
         }
         relevance_language = self._map_relevance_language(language)
         if relevance_language is not None:
             search_kwargs["relevanceLanguage"] = relevance_language
+        logger.info(
+            "YouTube search starting keyword=%r limit=%d recency_hours=%d "
+            "published_after=%s published_before=%s",
+            keyword,
+            limit,
+            recency_hours,
+            search_kwargs["publishedAfter"],
+            search_kwargs["publishedBefore"],
+        )
 
         search_resp = (
             youtube.search()
@@ -144,7 +166,28 @@ class YouTubeAdapter(BaseAdapter):
         if not items:
             return []
 
-        video_ids = [it["id"]["videoId"] for it in items]
+        recent_items: list[dict[str, Any]] = []
+        for item in items:
+            published_at = item.get("snippet", {}).get("publishedAt")
+            if not is_timestamp_in_recency_window(
+                published_at,
+                hours=recency_hours,
+                now=window_now,
+            ):
+                logger.debug(
+                    "Skipping YouTube video outside recent window "
+                    "video_id=%s published_at=%s hours=%d",
+                    item.get("id", {}).get("videoId"),
+                    published_at,
+                    recency_hours,
+                )
+                continue
+            recent_items.append(item)
+
+        if not recent_items:
+            return []
+
+        video_ids = [it["id"]["videoId"] for it in recent_items]
         stats_resp = (
             youtube.videos()
             .list(id=",".join(video_ids), part="statistics")
@@ -155,7 +198,7 @@ class YouTubeAdapter(BaseAdapter):
         }
 
         results: list[dict[str, Any]] = []
-        for item in items:
+        for item in recent_items:
             vid = item["id"]["videoId"]
             snippet = item["snippet"]
             stats = stats_map.get(vid, {})
