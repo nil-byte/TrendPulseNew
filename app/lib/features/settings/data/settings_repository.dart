@@ -6,6 +6,7 @@ import 'package:trendpulse/core/network/api_endpoints.dart';
 class SettingsRepository {
   static const _keyBaseUrl = 'settings_base_url';
   static const _keyLanguage = 'settings_language';
+  static const _keyReportLanguage = 'settings_report_language';
   static const _keyMaxItems = 'settings_max_items';
   static const _keyThemeMode = 'settings_theme_mode';
   static const _keyInAppNotify = 'in_app_notify';
@@ -45,6 +46,18 @@ class SettingsRepository {
   Future<void> setLanguage(String language) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLanguage, language);
+  }
+
+  Future<String> getCachedReportLanguage({
+    String fallbackLanguage = 'zh',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyReportLanguage) ?? fallbackLanguage;
+  }
+
+  Future<void> setCachedReportLanguage(String language) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyReportLanguage, language);
   }
 
   Future<String> getReportLanguage({String? baseUrl}) async {
@@ -95,14 +108,23 @@ class SettingsRepository {
   }
 
   ApiClient _clientForBaseUrl(String? baseUrl) {
-    final sharedClient = _readApiClient?.call(baseUrl);
+    final trimmedBaseUrl = baseUrl?.trim();
+    if (trimmedBaseUrl != null && trimmedBaseUrl.isNotEmpty) {
+      final scopedClient = _readApiClient?.call(trimmedBaseUrl);
+      if (scopedClient != null) {
+        return scopedClient;
+      }
+      return ApiClient(baseUrl: trimmedBaseUrl, enableLogging: false);
+    }
+
+    final sharedClient = _readApiClient?.call(null);
     if (sharedClient != null) {
       return sharedClient;
     }
     if (_apiClient != null) {
       return _apiClient;
     }
-    return ApiClient(baseUrl: baseUrl, enableLogging: false);
+    return ApiClient(enableLogging: false);
   }
 
   String _requireReportLanguage(Map<String, dynamic> data) {

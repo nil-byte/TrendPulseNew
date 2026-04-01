@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/presentation/pages/analysis_page.dart';
+import 'package:trendpulse/features/analysis/presentation/widgets/analysis_source_chip.dart';
 
 import 'analysis_page_test_helpers.dart';
 
@@ -38,17 +39,19 @@ void main() {
     await tester.tap(find.byIcon(Icons.tune_rounded).first);
     await tester.pumpAndSettle();
 
-    final chips = tester.widgetList<FilterChip>(find.byType(FilterChip)).toList();
+    final chips = tester
+        .widgetList<AnalysisSourceChip>(find.byType(AnalysisSourceChip))
+        .toList();
     final redditChip = chips[0];
     final youtubeChip = chips[1];
     final xChip = chips[2];
 
     expect(redditChip.selected, isFalse);
-    expect(redditChip.onSelected, isNull);
+    expect(redditChip.enabled, isFalse);
     expect(youtubeChip.selected, isTrue);
-    expect(youtubeChip.onSelected, isNotNull);
+    expect(youtubeChip.enabled, isTrue);
     expect(xChip.selected, isFalse);
-    expect(xChip.onSelected, isNull);
+    expect(xChip.enabled, isFalse);
   });
 
   testWidgets('analysis page keeps degraded sources selectable', (tester) async {
@@ -84,11 +87,14 @@ void main() {
     await tester.tap(find.byIcon(Icons.tune_rounded).first);
     await tester.pumpAndSettle();
 
-    final chips = tester.widgetList<FilterChip>(find.byType(FilterChip)).toList();
+    final chips = tester
+        .widgetList<AnalysisSourceChip>(find.byType(AnalysisSourceChip))
+        .toList();
     final redditChip = chips[0];
 
     expect(redditChip.selected, isTrue);
-    expect(redditChip.onSelected, isNotNull);
+    expect(redditChip.enabled, isTrue);
+    expect(redditChip.status, 'degraded');
   });
 
   testWidgets(
@@ -103,8 +109,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.tune_rounded).first);
       await tester.pumpAndSettle();
 
-      final youtubeChip = find.byType(FilterChip).at(1);
-      final xChip = find.byType(FilterChip).at(2);
+      final youtubeChip = find.byKey(const ValueKey('analysis-source-youtube'));
+      final xChip = find.byKey(const ValueKey('analysis-source-x'));
 
       await tester.ensureVisible(youtubeChip);
       await tester.tap(youtubeChip);
@@ -132,7 +138,9 @@ void main() {
       ]);
       await tester.pumpAndSettle();
 
-      final chips = tester.widgetList<FilterChip>(find.byType(FilterChip)).toList();
+      final chips = tester
+          .widgetList<AnalysisSourceChip>(find.byType(AnalysisSourceChip))
+          .toList();
       expect(chips[0].selected, isTrue);
       expect(chips[1].selected, isFalse);
       expect(chips[2].selected, isFalse);

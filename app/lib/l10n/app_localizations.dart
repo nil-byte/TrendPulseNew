@@ -149,7 +149,7 @@ abstract class AppLocalizations {
   /// No description provided for @trendingTopics.
   ///
   /// In en, this message translates to:
-  /// **'Trending Topics'**
+  /// **'Suggested Topics'**
   String get trendingTopics;
 
   /// No description provided for @language.
@@ -563,7 +563,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLanguageSyncFailed.
   ///
   /// In en, this message translates to:
-  /// **'Language was not changed because report language sync failed.'**
+  /// **'Language changed, but report language sync failed.'**
   String get settingsLanguageSyncFailed;
 
   /// No description provided for @settingsServerUrlInvalid.
@@ -613,6 +613,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong'**
   String get errorGeneric;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Data not found'**
+  String get errorNotFound;
+
+  /// No description provided for @errorInvalidRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid request parameters'**
+  String get errorInvalidRequest;
+
+  /// No description provided for @errorServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Service temporarily unavailable, please retry later'**
+  String get errorServiceUnavailable;
+
+  /// No description provided for @errorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection failed, please check your connection'**
+  String get errorNetwork;
+
+  /// No description provided for @errorSourceAvailabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Source Check Failed'**
+  String get errorSourceAvailabilityTitle;
+
+  /// No description provided for @errorSourceAvailabilityMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to verify data source status. Tap to retry.'**
+  String get errorSourceAvailabilityMessage;
 
   /// No description provided for @systemErrorTitle.
   ///
@@ -731,13 +767,13 @@ abstract class AppLocalizations {
   /// No description provided for @analysisStarterTopicsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Starter Topics'**
+  /// **'Suggested Topics'**
   String get analysisStarterTopicsTitle;
 
   /// No description provided for @analysisStarterTopicsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Try one of these sample topics to begin faster.'**
+  /// **'Try one of these example keywords to get started.'**
   String get analysisStarterTopicsDescription;
 
   /// No description provided for @analysisStarterTopicAi.

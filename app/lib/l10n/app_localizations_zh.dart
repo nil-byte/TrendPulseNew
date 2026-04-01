@@ -33,7 +33,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get configureSearch => '配置';
 
   @override
-  String get trendingTopics => '热门话题';
+  String get trendingTopics => '推荐话题';
 
   @override
   String get language => '语言';
@@ -240,7 +240,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsServerUrlSyncFailed => '报告语言同步失败，服务器地址未生效。';
 
   @override
-  String get settingsLanguageSyncFailed => '报告语言同步失败，语言切换未生效。';
+  String get settingsLanguageSyncFailed => '语言已切换，但报告语言同步失败。';
 
   @override
   String get settingsServerUrlInvalid => '请输入完整的 http:// 或 https:// 服务器地址。';
@@ -269,6 +269,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorGeneric => '出了点问题';
+
+  @override
+  String get errorNotFound => '数据不存在';
+
+  @override
+  String get errorInvalidRequest => '请求参数错误';
+
+  @override
+  String get errorServiceUnavailable => '服务暂时不可用，请稍后重试';
+
+  @override
+  String get errorNetwork => '网络连接失败，请检查网络';
+
+  @override
+  String get errorSourceAvailabilityTitle => '数据源检查失败';
+
+  @override
+  String get errorSourceAvailabilityMessage => '无法获取数据源状态，点击重试。';
 
   @override
   String get systemErrorTitle => '系统错误';
@@ -332,10 +350,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analysisParametersTitle => '参数';
 
   @override
-  String get analysisStarterTopicsTitle => '灵感选题';
+  String get analysisStarterTopicsTitle => '推荐话题';
 
   @override
-  String get analysisStarterTopicsDescription => '先从一个示例话题开始，也可以直接输入自己的主题。';
+  String get analysisStarterTopicsDescription => '以下是一些推荐话题，点击即可开始分析。';
 
   @override
   String get analysisStarterTopicAi => '人工智能';

@@ -10,6 +10,7 @@ class AnalysisSourceChip extends StatelessWidget {
   final String status;
   final bool enabled;
   final String? reason;
+  final Key? tapTargetKey;
   final ValueChanged<bool>? onSelected;
 
   const AnalysisSourceChip({
@@ -20,6 +21,7 @@ class AnalysisSourceChip extends StatelessWidget {
     required this.status,
     required this.enabled,
     this.reason,
+    this.tapTargetKey,
     required this.onSelected,
   });
 
@@ -32,56 +34,56 @@ class AnalysisSourceChip extends StatelessWidget {
     final textColor = selected
         ? AppColors.onBrandFill(color)
         : colors.onSurface.withValues(alpha: effectiveAlpha);
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+    final borderRadius = BorderRadius.circular(AppSpacing.radiusPill);
+    final shapeBorder = RoundedRectangleBorder(
+      borderRadius: borderRadius,
+      side: BorderSide(
+        color: selected
+            ? color.withValues(alpha: effectiveAlpha)
+            : colors.outline.withValues(alpha: effectiveAlpha),
+        width: selected ? 1.5 : 1.0,
+      ),
     );
-    final chipLabel = Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isDegraded) ...[
-          Icon(
-            Icons.warning_amber_rounded,
-            size: 14,
-            color: textColor,
-          ),
-          const SizedBox(width: AppSpacing.xxs),
-        ],
-        Flexible(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
+    final labelStyle = (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+      color: textColor,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.4,
     );
 
-    Widget button = SizedBox(
-      width: double.infinity,
+    Widget button = Semantics(
+      button: true,
+      enabled: enabled,
+      selected: selected,
+      label: label,
       child: ConstrainedBox(
+        key: tapTargetKey,
         constraints: const BoxConstraints(minHeight: 48),
-        child: FilterChip(
-          label: chipLabel,
-          selected: selected,
-          onSelected: enabled ? onSelected : null,
-          showCheckmark: false,
-          selectedColor: color.withValues(alpha: effectiveAlpha),
-          disabledColor: Colors.transparent,
-          backgroundColor: Colors.transparent,
-          materialTapTargetSize: MaterialTapTargetSize.padded,
-          visualDensity: VisualDensity.standard,
-          labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
-          ),
-          shape: shape,
-          side: BorderSide(
-            color: selected
-                ? color.withValues(alpha: effectiveAlpha)
-                : colors.outline.withValues(alpha: effectiveAlpha),
-            width: selected ? 1.5 : 1.0,
+        child: Material(
+          color: selected
+              ? color.withValues(alpha: effectiveAlpha)
+              : Colors.transparent,
+          shape: shapeBorder,
+          child: InkWell(
+            onTap: enabled ? () => onSelected?.call(!selected) : null,
+            customBorder: shapeBorder,
+            child: ExcludeSemantics(
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isDegraded) ...[
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 14,
+                        color: textColor,
+                      ),
+                      const SizedBox(width: AppSpacing.xxs),
+                    ],
+                    Text(label, style: labelStyle),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

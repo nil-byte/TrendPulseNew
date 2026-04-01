@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/analysis/presentation/pages/analysis_page.dart';
+import 'package:trendpulse/features/analysis/presentation/widgets/analysis_source_chip.dart';
 
 import 'analysis_page_test_helpers.dart';
 
@@ -29,10 +30,18 @@ void main() {
       await tester.tap(find.byIcon(Icons.tune_rounded).first);
       await tester.pumpAndSettle();
 
-      final xChip = tester.widgetList<FilterChip>(find.byType(FilterChip)).last;
+      final xChip = tester
+          .widgetList<AnalysisSourceChip>(find.byType(AnalysisSourceChip))
+          .last;
+      final xLabel = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('analysis-source-x')),
+          matching: find.text('X'),
+        ),
+      );
 
       expect(xChip.selected, isTrue);
-      expect(xChip.labelStyle?.color, AppColors.lightInk);
+      expect(xLabel.style?.color, AppColors.lightInk);
     },
   );
 
@@ -47,7 +56,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.tune_rounded).first);
       await tester.pumpAndSettle();
 
-      final redditChip = find.widgetWithText(FilterChip, 'Reddit');
+      final redditChip = find.byKey(const ValueKey('analysis-source-reddit'));
       expect(redditChip, findsOneWidget);
       expect(tester.getSize(redditChip).height, greaterThanOrEqualTo(48));
 

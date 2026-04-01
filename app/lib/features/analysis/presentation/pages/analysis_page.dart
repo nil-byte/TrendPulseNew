@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/network/api_exception.dart';
+import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/app_providers.dart';
@@ -31,7 +32,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   bool _configExpanded = false;
   bool _isSearching = false;
   bool _sourcesHydrated = false;
+  bool _maxItemsHydrated = false;
   bool _hasCustomSourceSelection = false;
+  bool _hasCustomMaxItemsSelection = false;
 
   String _contentLanguage = 'en';
   Set<String> _sources = {'reddit', 'youtube', 'x'};
@@ -93,7 +96,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       }
 
       final repo = ref.read(analysisRepositoryProvider);
-      final reportLanguage = ref.read(defaultLanguageProvider);
+      final reportLanguage = ref.read(defaultReportLanguageProvider);
       final task = await repo.createTask(
         keyword: keyword,
         contentLanguage: _contentLanguage,
@@ -188,7 +191,25 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final sourceAvailabilityAsync = ref.watch(sourceAvailabilityProvider);
-    ref.watch(defaultLanguageProvider);
+    final defaultMaxItems = ref.watch(defaultMaxItemsProvider);
+    ref.watch(defaultReportLanguageProvider);
+    if (!_maxItemsHydrated) {
+      _maxItems = defaultMaxItems.toDouble();
+      _maxItemsHydrated = true;
+    }
+    ref.listen<int>(defaultMaxItemsProvider, (_, next) {
+      if (_hasCustomMaxItemsSelection || !mounted) {
+        return;
+      }
+      final nextMaxItems = next.toDouble();
+      if (nextMaxItems == _maxItems) {
+        return;
+      }
+      setState(() {
+        _maxItems = nextMaxItems;
+        _maxItemsHydrated = true;
+      });
+    });
     ref.listen<AsyncValue<List<AnalysisSourceAvailability>>>(
       sourceAvailabilityProvider,
       (_, next) {
@@ -237,6 +258,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                                 );
                               },
                             ),
+                            if (sourceAvailabilityAsync.hasError)
+                              _SourceAvailabilityError(
+                                onRetry: () =>
+                                    ref.invalidate(sourceAvailabilityProvider),
+                              ),
                             AnalysisConfigPanel(
                               expanded: _configExpanded,
                               contentLanguage: _contentLanguage,
@@ -250,8 +276,10 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                                 _sources = v;
                                 _hasCustomSourceSelection = true;
                               }),
-                              onMaxItemsChanged: (v) =>
-                                  setState(() => _maxItems = v),
+                              onMaxItemsChanged: (v) => setState(() {
+                                _maxItems = v;
+                                _hasCustomMaxItemsSelection = true;
+                              }),
                             ),
                           ],
                         ),
@@ -278,6 +306,56 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _SourceAvailabilityError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _SourceAvailabilityError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tpColors = theme.trendPulseColors;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        border: Border.all(color: tpColors.negative, width: 1.0),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 20, color: tpColors.negative),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              l10n.errorSourceAvailabilityMessage,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          InkWell(
+            onTap: onRetry,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              child: Icon(
+                Icons.refresh_rounded,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +33,22 @@ class _FakeApiClient extends ApiClient {
       requestOptions: RequestOptions(path: path),
       data: getResponseData as T,
     );
+  }
+}
+
+class _ExplodingApiClient extends ApiClient {
+  _ExplodingApiClient()
+    : super(baseUrl: ApiEndpoints.defaultBaseUrl, enableLogging: false);
+
+  int getCalls = 0;
+
+  @override
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    getCalls += 1;
+    throw StateError('shared apiClientProvider should not be used');
   }
 }
 
@@ -68,14 +87,29 @@ void main() {
     },
   );
 
-  test('settingsRepositoryProvider uses shared apiClientProvider for remote sync APIs', () async {
+  test(
+    'settingsRepositoryProvider avoids shared apiClientProvider for report language sync APIs',
+    () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    final fakeApiClient = _FakeApiClient();
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final requests = <String>[];
+    final serverSubscription = server.listen((request) async {
+      requests.add('${request.method} ${request.uri.path}');
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(jsonEncode({'report_language': 'zh'}));
+      await request.response.close();
+    });
+    addTearDown(() async {
+      await serverSubscription.cancel();
+      await server.close(force: true);
+    });
+    final explodingApiClient = _ExplodingApiClient();
+    final targetBaseUrl = 'http://127.0.0.1:${server.port}';
 
     final container = ProviderContainer(
       overrides: [
-        apiClientProvider.overrideWithValue(fakeApiClient),
+        apiClientProvider.overrideWithValue(explodingApiClient),
         initialBaseUrlProvider.overrideWithValue('http://first:8000'),
         baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
         baseUrlIsWebProvider.overrideWithValue(false),
@@ -84,11 +118,15 @@ void main() {
     addTearDown(container.dispose);
 
     final repository = container.read(settingsRepositoryProvider);
-    final reportLanguage = await repository.getReportLanguage();
+    final reportLanguage = await repository.getReportLanguage(
+      baseUrl: targetBaseUrl,
+    );
 
     expect(reportLanguage, 'zh');
-    expect(fakeApiClient.lastGetPath, ApiEndpoints.reportLanguage);
-  });
+    expect(explodingApiClient.getCalls, 0);
+    expect(requests, ['GET ${ApiEndpoints.reportLanguage}']);
+    },
+  );
 
   test('notificationSettingsRepositoryProvider uses shared apiClientProvider', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;

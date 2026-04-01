@@ -151,11 +151,12 @@ class _ScaffoldWithNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: navigationShell,
-      bottomNavigationBar: Builder(
+      bottomNavigationBar: keyboardVisible ? null : Builder(
         builder: (context) {
           final isDark = theme.brightness == Brightness.dark;
           return Container(

@@ -437,7 +437,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     try {
       await ref
-          .read(defaultLanguageProvider.notifier)
+          .read(defaultReportLanguageProvider.notifier)
           .syncCurrentReportLanguage(
             baseUrl: nextBaseUrl,
             rethrowOnFailure: true,
@@ -486,9 +486,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _changeLanguage(String language) async {
-    try {
-      await ref.read(defaultLanguageProvider.notifier).setLanguage(language);
-    } catch (_) {
+    final reportLanguageSynced = await ref
+        .read(languagePreferenceControllerProvider)
+        .setLanguage(language);
+    if (!reportLanguageSynced) {
       if (!mounted) {
         return;
       }

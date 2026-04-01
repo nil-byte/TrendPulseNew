@@ -12,10 +12,11 @@ import 'package:trendpulse/features/settings/data/settings_repository.dart';
 
 final Provider<SettingsRepository> settingsRepositoryProvider =
     Provider<SettingsRepository>((ref) {
-  return SettingsRepository(
-    readApiClient: (_) => ref.read(apiClientProvider),
-  );
-});
+      // Keep settings sync independent from the shared ApiClient provider graph.
+      // Report-language sync needs to work while baseUrlProvider is being read
+      // or updated, so reusing apiClientProvider here creates a dependency cycle.
+      return SettingsRepository();
+    });
 
 final initialBaseUrlProvider = Provider<String>((ref) {
   return ApiEndpoints.defaultBaseUrl;
@@ -39,6 +40,14 @@ final initialLanguageProvider = Provider<String>((ref) {
 
 final initialLanguagePreloadedProvider = Provider<bool>((ref) {
   return false;
+});
+
+final initialReportLanguageProvider = Provider<String>((ref) {
+  return ref.watch(initialLanguageProvider);
+});
+
+final initialReportLanguagePreloadedProvider = Provider<bool>((ref) {
+  return ref.watch(initialLanguagePreloadedProvider);
 });
 
 final initialThemeModeProvider = Provider<ThemeMode>((ref) {
@@ -93,11 +102,30 @@ final defaultLanguageProvider =
         repo,
         initialLanguage: initialLanguage,
         isPreloaded: languagePreloaded,
+      );
+    });
+
+final defaultReportLanguageProvider =
+    StateNotifierProvider<DefaultReportLanguageNotifier, String>((ref) {
+      final repo = ref.watch(settingsRepositoryProvider);
+      final initialReportLanguage = ref.watch(initialReportLanguageProvider);
+      final reportLanguagePreloaded = ref.watch(
+        initialReportLanguagePreloadedProvider,
+      );
+      return DefaultReportLanguageNotifier(
+        repo,
+        initialReportLanguage: initialReportLanguage,
+        isPreloaded: reportLanguagePreloaded,
         readBaseUrl: () => ref.read(baseUrlProvider),
         setSyncState: (status) {
           ref.read(reportLanguageSyncStateProvider.notifier).state = status;
         },
       );
+    });
+
+final languagePreferenceControllerProvider =
+    Provider<LanguagePreferenceController>((ref) {
+      return LanguagePreferenceController(ref);
     });
 
 final defaultMaxItemsProvider =
@@ -156,6 +184,25 @@ class NotificationSettingsController {
       applyToExisting: true,
     );
     _ref.invalidate(notificationSettingsProvider);
+  }
+}
+
+class LanguagePreferenceController {
+  final Ref _ref;
+
+  LanguagePreferenceController(this._ref);
+
+  Future<bool> setLanguage(String language) async {
+    await _ref.read(defaultLanguageProvider.notifier).setLanguage(language);
+    try {
+      await _ref.read(defaultReportLanguageProvider.notifier).setLanguage(
+        language,
+        rethrowOnFailure: true,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }
 
@@ -254,23 +301,13 @@ class BaseUrlNotifier extends StateNotifier<String> {
 
 class DefaultLanguageNotifier extends StateNotifier<String> {
   final SettingsRepository _repo;
-  final String Function() _readBaseUrl;
-  final void Function(AsyncValue<void> status) _setSyncState;
-  Future<void> _reportLanguageSyncChain = Future<void>.value();
 
   DefaultLanguageNotifier(
     this._repo, {
     required String initialLanguage,
     required bool isPreloaded,
-    required String Function() readBaseUrl,
-    required void Function(AsyncValue<void> status) setSyncState,
-  }) : _readBaseUrl = readBaseUrl,
-       _setSyncState = setSyncState,
-       super(initialLanguage) {
+  }) : super(initialLanguage) {
     if (isPreloaded) {
-      _enqueueReportLanguageSync(
-        () => _syncReportLanguage(initialLanguage, checkRemoteFirst: true),
-      );
       return;
     }
     _load();
@@ -279,27 +316,63 @@ class DefaultLanguageNotifier extends StateNotifier<String> {
   Future<void> _load() async {
     final language = await _repo.getLanguage();
     state = language;
+  }
+
+  Future<void> setLanguage(String language) async {
+    if (language == state) {
+      return;
+    }
+    state = language;
+    await _repo.setLanguage(language);
+  }
+}
+
+class DefaultReportLanguageNotifier extends StateNotifier<String> {
+  final SettingsRepository _repo;
+  final String Function() _readBaseUrl;
+  final void Function(AsyncValue<void> status) _setSyncState;
+  Future<void> _reportLanguageSyncChain = Future<void>.value();
+
+  DefaultReportLanguageNotifier(
+    this._repo, {
+    required String initialReportLanguage,
+    required bool isPreloaded,
+    required String Function() readBaseUrl,
+    required void Function(AsyncValue<void> status) setSyncState,
+  }) : _readBaseUrl = readBaseUrl,
+       _setSyncState = setSyncState,
+       super(initialReportLanguage) {
+    if (isPreloaded) {
+      _enqueueReportLanguageSync(
+        () => _syncReportLanguage(initialReportLanguage, checkRemoteFirst: true),
+      );
+      return;
+    }
+    _load();
+  }
+
+  Future<void> _load() async {
+    final language = await _repo.getCachedReportLanguage(
+      fallbackLanguage: state,
+    );
+    state = language;
     await _enqueueReportLanguageSync(
       () => _syncReportLanguage(language, checkRemoteFirst: true),
     );
   }
 
-  Future<void> setLanguage(String language) async {
-    final previousLanguage = state;
-    if (language == previousLanguage) {
+  Future<void> setLanguage(
+    String language, {
+    bool rethrowOnFailure = false,
+  }) async {
+    if (language == state) {
       return;
     }
     state = language;
-    await _repo.setLanguage(language);
-    try {
-      await _enqueueReportLanguageSync(
-        () => _syncReportLanguage(language, rethrowOnFailure: true),
-      );
-    } catch (error) {
-      state = previousLanguage;
-      await _repo.setLanguage(previousLanguage);
-      rethrow;
-    }
+    await _repo.setCachedReportLanguage(language);
+    await _enqueueReportLanguageSync(
+      () => _syncReportLanguage(language, rethrowOnFailure: rethrowOnFailure),
+    );
   }
 
   Future<void> syncCurrentReportLanguage({
@@ -357,7 +430,14 @@ class DefaultLanguageNotifier extends StateNotifier<String> {
     }
 
     try {
-      await _repo.setReportLanguage(language, baseUrl: targetBaseUrl);
+      final resolvedLanguage = await _repo.setReportLanguage(
+        language,
+        baseUrl: targetBaseUrl,
+      );
+      if (resolvedLanguage != state) {
+        state = resolvedLanguage;
+        await _repo.setCachedReportLanguage(resolvedLanguage);
+      }
       _publishSyncState(const AsyncData<void>(null));
     } catch (error, stackTrace) {
       _publishSyncState(AsyncError<void>(error, stackTrace));

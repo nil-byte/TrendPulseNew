@@ -16,6 +16,14 @@ void main() {
     mockRepo = _MockSettingsRepository();
     when(() => mockRepo.getInAppNotify()).thenAnswer((_) async => true);
     when(() => mockRepo.getLanguage()).thenAnswer((_) async => 'en');
+    when(
+      () => mockRepo.getCachedReportLanguage(
+        fallbackLanguage: any(named: 'fallbackLanguage'),
+      ),
+    ).thenAnswer(
+      (invocation) async =>
+          invocation.namedArguments[#fallbackLanguage] as String,
+    );
     when(() => mockRepo.getThemeMode()).thenAnswer((_) async => 'light');
     when(
       () => mockRepo.getReportLanguage(baseUrl: any(named: 'baseUrl')),
@@ -79,6 +87,11 @@ void main() {
       when(() => mockRepo.getBaseUrl()).thenAnswer((_) async => '');
       when(() => mockRepo.getLanguage()).thenAnswer((_) async => 'zh');
       when(
+        () => mockRepo.getCachedReportLanguage(
+          fallbackLanguage: any(named: 'fallbackLanguage'),
+        ),
+      ).thenAnswer((_) async => 'zh');
+      when(
         () => mockRepo.getReportLanguage(baseUrl: any(named: 'baseUrl')),
       ).thenAnswer((_) async => 'zh');
 
@@ -96,6 +109,39 @@ void main() {
 
       expect(container.read(defaultLanguageProvider), 'zh');
       verify(() => mockRepo.getLanguage()).called(1);
+    },
+  );
+
+  test(
+    'buildAppOverrides preloads cached report language for synchronous startup',
+    () async {
+      when(() => mockRepo.getBaseUrl()).thenAnswer((_) async => '');
+      when(() => mockRepo.getLanguage()).thenAnswer((_) async => 'en');
+      when(
+        () => mockRepo.getCachedReportLanguage(
+          fallbackLanguage: any(named: 'fallbackLanguage'),
+        ),
+      ).thenAnswer((_) async => 'zh');
+      when(
+        () => mockRepo.getReportLanguage(baseUrl: any(named: 'baseUrl')),
+      ).thenAnswer((_) async => 'zh');
+
+      final overrides = await app.buildAppOverrides(
+        settingsRepository: mockRepo,
+        targetPlatform: TargetPlatform.iOS,
+      );
+      final container = ProviderContainer(overrides: overrides);
+      addTearDown(container.dispose);
+
+      expect(container.read(defaultReportLanguageProvider), 'zh');
+
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(defaultReportLanguageProvider), 'zh');
+      verify(
+        () => mockRepo.getCachedReportLanguage(fallbackLanguage: 'en'),
+      ).called(1);
     },
   );
 

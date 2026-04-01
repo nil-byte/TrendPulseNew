@@ -340,9 +340,16 @@ void main() {
 
     final pageContext = tester.element(find.byType(SubscriptionFormPage));
     final theme = Theme.of(pageContext);
-    final chip = tester.widget<FilterChip>(find.byType(FilterChip).first);
+    final chipMaterial = tester
+        .widgetList<Material>(
+          find.ancestor(
+            of: find.text('Reddit'),
+            matching: find.byType(Material),
+          ),
+        )
+        .firstWhere((material) => material.shape is RoundedRectangleBorder);
 
-    expect(chip.selectedColor, isNot(theme.colorScheme.onSurface));
+    expect(chipMaterial.color, isNot(theme.colorScheme.onSurface));
   });
 
   testWidgets(
@@ -351,9 +358,9 @@ void main() {
       await tester.pumpWidget(_wrap(const SubscriptionFormPage()));
       await tester.pumpAndSettle();
 
-      final chip = tester.widget<FilterChip>(find.byType(FilterChip).first);
+      final chipLabel = tester.widget<Text>(find.text('Reddit'));
 
-      expect(chip.labelStyle?.fontFamily, AppTypography.editorialSansFamily);
+      expect(chipLabel.style?.fontFamily, AppTypography.editorialSansFamily);
     },
   );
 
@@ -368,10 +375,18 @@ void main() {
       await tester.tap(find.text('X'));
       await tester.pumpAndSettle();
 
-      final xChip = tester.widgetList<FilterChip>(find.byType(FilterChip)).last;
+      final xLabel = tester.widget<Text>(find.text('X'));
+      final xMaterial = tester
+          .widgetList<Material>(
+            find.ancestor(
+              of: find.text('X'),
+              matching: find.byType(Material),
+            ),
+          )
+          .firstWhere((material) => material.shape is RoundedRectangleBorder);
 
-      expect(xChip.selected, isTrue);
-      expect(xChip.labelStyle?.color, AppColors.lightInk);
+      expect(xMaterial.color, isNot(Colors.transparent));
+      expect(xLabel.style?.color, AppColors.lightInk);
     },
   );
 

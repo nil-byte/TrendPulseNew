@@ -8,8 +8,10 @@ import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/network/error_message_resolver.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/empty_widget.dart';
+import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/detail/presentation/providers/detail_provider.dart';
 import 'package:trendpulse/features/detail/presentation/widgets/post_card.dart';
 import 'package:trendpulse/l10n/app_localizations.dart';
@@ -132,30 +134,24 @@ class RawDataTab extends ConsumerWidget {
               itemHeight: 100,
               cardSkeleton: true,
             ),
-            error: (e, _) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: tpColors.negative,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    l10n.errorGeneric,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+            error: (e, _) => RefreshIndicator(
+              color: theme.colorScheme.onSurface,
+              backgroundColor: theme.colorScheme.surface,
+              onRefresh: () async {
+                ref.invalidate(taskPostsProvider(taskId));
+                ref.invalidate(taskAllPostsProvider(taskId));
+                await ref.read(taskPostsProvider(taskId).future);
+              },
+              child: CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    child: AppErrorWidget(
+                      message: resolveUserErrorMessage(e, l10n),
+                      onRetry: () {
+                        ref.invalidate(taskPostsProvider(taskId));
+                        ref.invalidate(taskAllPostsProvider(taskId));
+                      },
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      ref.invalidate(taskPostsProvider(taskId));
-                      ref.invalidate(taskAllPostsProvider(taskId));
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: Text(l10n.retry.toUpperCase()),
                   ),
                 ],
               ),
@@ -180,16 +176,25 @@ class RawDataTab extends ConsumerWidget {
                       : l10n.noRecordsFoundMessage,
                 );
               }
-              return ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.lg,
-                ),
-                itemCount: posts.length,
-                separatorBuilder: (_, __) => const EditorialDivider(topSpace: AppSpacing.md, bottomSpace: AppSpacing.md),
-                itemBuilder: (_, index) => StaggeredListItem(
-                  index: index,
-                  child: PostCard(post: posts[index]),
+              return RefreshIndicator(
+                color: theme.colorScheme.onSurface,
+                backgroundColor: theme.colorScheme.surface,
+                onRefresh: () async {
+                  ref.invalidate(taskPostsProvider(taskId));
+                  ref.invalidate(taskAllPostsProvider(taskId));
+                  await ref.read(taskPostsProvider(taskId).future);
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.lg,
+                  ),
+                  itemCount: posts.length,
+                  separatorBuilder: (_, __) => const EditorialDivider(topSpace: AppSpacing.md, bottomSpace: AppSpacing.md),
+                  itemBuilder: (_, index) => StaggeredListItem(
+                    index: index,
+                    child: PostCard(post: posts[index]),
+                  ),
                 ),
               );
             },

@@ -33,7 +33,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configureSearch => 'Configure';
 
   @override
-  String get trendingTopics => 'Trending Topics';
+  String get trendingTopics => 'Suggested Topics';
 
   @override
   String get language => 'Language';
@@ -245,7 +245,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageSyncFailed =>
-      'Language was not changed because report language sync failed.';
+      'Language changed, but report language sync failed.';
 
   @override
   String get settingsServerUrlInvalid =>
@@ -275,6 +275,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorGeneric => 'Something went wrong';
+
+  @override
+  String get errorNotFound => 'Data not found';
+
+  @override
+  String get errorInvalidRequest => 'Invalid request parameters';
+
+  @override
+  String get errorServiceUnavailable =>
+      'Service temporarily unavailable, please retry later';
+
+  @override
+  String get errorNetwork =>
+      'Network connection failed, please check your connection';
+
+  @override
+  String get errorSourceAvailabilityTitle => 'Source Check Failed';
+
+  @override
+  String get errorSourceAvailabilityMessage =>
+      'Unable to verify data source status. Tap to retry.';
 
   @override
   String get systemErrorTitle => 'System Error';
@@ -340,11 +361,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analysisParametersTitle => 'Parameters';
 
   @override
-  String get analysisStarterTopicsTitle => 'Starter Topics';
+  String get analysisStarterTopicsTitle => 'Suggested Topics';
 
   @override
   String get analysisStarterTopicsDescription =>
-      'Try one of these sample topics to begin faster.';
+      'Try one of these example keywords to get started.';
 
   @override
   String get analysisStarterTopicAi => 'Artificial Intelligence';

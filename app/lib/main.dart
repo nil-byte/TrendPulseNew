@@ -30,6 +30,15 @@ Future<String> loadInitialLanguage(SettingsRepository repository) async {
   return repository.getLanguage();
 }
 
+Future<String> loadInitialReportLanguage(
+  SettingsRepository repository, {
+  required String fallbackLanguage,
+}) async {
+  return repository.getCachedReportLanguage(
+    fallbackLanguage: fallbackLanguage,
+  );
+}
+
 Future<ThemeMode> loadInitialThemeMode(SettingsRepository repository) async {
   final storedThemeMode = await repository.getThemeMode();
   return ThemeModeNotifier.fromStorage(storedThemeMode);
@@ -48,6 +57,10 @@ Future<List<Override>> buildAppOverrides({
   );
   final initialInAppNotify = await repository.getInAppNotify();
   final initialLanguage = await loadInitialLanguage(repository);
+  final initialReportLanguage = await loadInitialReportLanguage(
+    repository,
+    fallbackLanguage: initialLanguage,
+  );
   final initialThemeMode = await loadInitialThemeMode(repository);
 
   final overrides = <Override>[
@@ -55,6 +68,8 @@ Future<List<Override>> buildAppOverrides({
     initialInAppNotifyProvider.overrideWithValue(initialInAppNotify),
     initialLanguageProvider.overrideWithValue(initialLanguage),
     initialLanguagePreloadedProvider.overrideWithValue(true),
+    initialReportLanguageProvider.overrideWithValue(initialReportLanguage),
+    initialReportLanguagePreloadedProvider.overrideWithValue(true),
     initialThemeModeProvider.overrideWithValue(initialThemeMode),
     initialThemeModePreloadedProvider.overrideWithValue(true),
     baseUrlTargetPlatformProvider.overrideWithValue(

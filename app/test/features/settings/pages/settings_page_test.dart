@@ -16,6 +16,7 @@ import 'package:trendpulse/l10n/app_localizations.dart';
 class _FakeSettingsRepository extends SettingsRepository {
   String? _baseUrl = ApiEndpoints.defaultBaseUrl;
   String _language = 'en';
+  String _cachedReportLanguage = 'en';
   String _reportLanguage = 'en';
   int _maxItems = 50;
   String _themeMode = 'system';
@@ -59,6 +60,16 @@ class _FakeSettingsRepository extends SettingsRepository {
     _language = language;
     lastSetLanguage = language;
     languageWriteHistory.add(language);
+  }
+
+  @override
+  Future<String> getCachedReportLanguage({
+    String fallbackLanguage = 'zh',
+  }) async => _cachedReportLanguage;
+
+  @override
+  Future<void> setCachedReportLanguage(String language) async {
+    _cachedReportLanguage = language;
   }
 
   @override
@@ -196,54 +207,54 @@ Widget _wrap(
 
 void main() {
   test(
-    'defaultLanguageProvider syncs loaded local language to remote report language',
+    'defaultReportLanguageProvider syncs cached local report language to remote',
     () async {
       final repository = _FakeSettingsRepository();
-      await repository.setLanguage('zh');
+      await repository.setCachedReportLanguage('zh');
       final container = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWithValue(repository),
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
-          initialLanguageProvider.overrideWithValue('en'),
+          initialReportLanguageProvider.overrideWithValue('en'),
         ],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(defaultLanguageProvider), 'en');
+      expect(container.read(defaultReportLanguageProvider), 'en');
 
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
-      expect(container.read(defaultLanguageProvider), 'zh');
+      expect(container.read(defaultReportLanguageProvider), 'zh');
       expect(repository.lastSetReportLanguage, 'zh');
       expect(repository.setReportLanguageCalls, 1);
     },
   );
 
   test(
-    'defaultLanguageProvider still puts report language when precheck get fails',
+    'defaultReportLanguageProvider still puts report language when precheck get fails',
     () async {
       final repository = _GetReportLanguageFailsSettingsRepository();
-      await repository.setLanguage('zh');
+      await repository.setCachedReportLanguage('zh');
       final container = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWithValue(repository),
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
-          initialLanguageProvider.overrideWithValue('en'),
+          initialReportLanguageProvider.overrideWithValue('en'),
         ],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(defaultLanguageProvider), 'en');
+      expect(container.read(defaultReportLanguageProvider), 'en');
 
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
-      expect(container.read(defaultLanguageProvider), 'zh');
+      expect(container.read(defaultReportLanguageProvider), 'zh');
       expect(repository.getReportLanguageCalls, 1);
       expect(repository.lastSetReportLanguage, 'zh');
       expect(repository.setReportLanguageCalls, 1);
@@ -251,10 +262,10 @@ void main() {
   );
 
   test(
-    'defaultLanguageProvider exposes startup report language sync failures',
+    'defaultReportLanguageProvider exposes startup report language sync failures',
     () async {
       final repository = _FakeSettingsRepository();
-      await repository.setLanguage('zh');
+      await repository.setCachedReportLanguage('zh');
       repository.setReportLanguageError = Exception('report language sync failed');
       final container = ProviderContainer(
         overrides: [
@@ -262,24 +273,24 @@ void main() {
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
-          initialLanguageProvider.overrideWithValue('en'),
+          initialReportLanguageProvider.overrideWithValue('en'),
         ],
       );
       addTearDown(container.dispose);
 
       expect(container.read(reportLanguageSyncStateProvider), isA<AsyncData<void>>());
-      expect(container.read(defaultLanguageProvider), 'en');
+      expect(container.read(defaultReportLanguageProvider), 'en');
 
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
-      expect(container.read(defaultLanguageProvider), 'zh');
+      expect(container.read(defaultReportLanguageProvider), 'zh');
       expect(container.read(reportLanguageSyncStateProvider).hasError, isTrue);
     },
   );
 
   test(
-    'defaultLanguageProvider rolls back local language when user-triggered sync fails',
+    'languagePreferenceController keeps app and report language locally when sync fails',
     () async {
       final repository = _FakeSettingsRepository();
       final container = ProviderContainer(
@@ -289,30 +300,39 @@ void main() {
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
           initialLanguageProvider.overrideWithValue('en'),
+          initialLanguagePreloadedProvider.overrideWithValue(true),
+          initialReportLanguageProvider.overrideWithValue('en'),
+          initialReportLanguagePreloadedProvider.overrideWithValue(true),
         ],
       );
       addTearDown(container.dispose);
 
       expect(container.read(defaultLanguageProvider), 'en');
+      expect(container.read(defaultReportLanguageProvider), 'en');
 
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
       repository.setReportLanguageError = Exception('report language sync failed');
 
-      await expectLater(
-        container.read(defaultLanguageProvider.notifier).setLanguage('zh'),
-        throwsException,
+      expect(
+        await container.read(languagePreferenceControllerProvider).setLanguage(
+          'zh',
+        ),
+        isFalse,
       );
 
-      expect(container.read(defaultLanguageProvider), 'en');
-      expect(await repository.getLanguage(), 'en');
-      expect(repository.languageWriteHistory, ['zh', 'en']);
+      expect(container.read(defaultLanguageProvider), 'zh');
+      expect(container.read(defaultReportLanguageProvider), 'zh');
+      expect(await repository.getLanguage(), 'zh');
+      expect(await repository.getCachedReportLanguage(), 'zh');
+      expect(repository.languageWriteHistory, ['zh']);
+      expect(container.read(reportLanguageSyncStateProvider).hasError, isTrue);
     },
   );
 
   test(
-    'defaultLanguageProvider serializes startup sync before user language change and leaves latest language remotely',
+    'defaultReportLanguageProvider serializes startup sync before user change',
     () async {
       final repository = _FakeSettingsRepository();
       await repository.setReportLanguage('fr');
@@ -336,23 +356,23 @@ void main() {
           initialBaseUrlProvider.overrideWithValue(ApiEndpoints.defaultBaseUrl),
           baseUrlTargetPlatformProvider.overrideWithValue(TargetPlatform.iOS),
           baseUrlIsWebProvider.overrideWithValue(false),
-          initialLanguageProvider.overrideWithValue('en'),
-          initialLanguagePreloadedProvider.overrideWithValue(true),
+          initialReportLanguageProvider.overrideWithValue('en'),
+          initialReportLanguagePreloadedProvider.overrideWithValue(true),
         ],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(defaultLanguageProvider), 'en');
+      expect(container.read(defaultReportLanguageProvider), 'en');
 
       final setLanguageFuture = container
-          .read(defaultLanguageProvider.notifier)
+          .read(defaultReportLanguageProvider.notifier)
           .setLanguage('zh');
 
       await Future<void>.delayed(Duration.zero);
 
       expect(repository.reportLanguageStartHistory, ['en']);
       expect(repository.reportLanguageCompleteHistory, isEmpty);
-      expect(container.read(defaultLanguageProvider), 'zh');
+      expect(container.read(defaultReportLanguageProvider), 'zh');
 
       firstSyncCompleter.complete('en');
       await setLanguageFuture;
@@ -360,7 +380,7 @@ void main() {
       expect(repository.reportLanguageStartHistory, ['en', 'zh']);
       expect(repository.reportLanguageCompleteHistory, ['en', 'zh']);
       expect(repository.reportLanguage, 'zh');
-      expect(await repository.getLanguage(), 'zh');
+      expect(await repository.getCachedReportLanguage(), 'zh');
     },
   );
 
@@ -728,7 +748,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('中文'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       expect(await repository.getLanguage(), 'zh');
       expect(repository.lastSetLanguage, 'zh');
@@ -738,7 +759,7 @@ void main() {
   );
 
   testWidgets(
-    'settings page rolls back language change and shows explicit feedback when remote sync fails',
+    'settings page keeps language change and shows explicit feedback when remote sync fails',
     (tester) async {
       final repository = _FakeSettingsRepository();
       repository.setReportLanguageError = Exception('report language sync failed');
@@ -755,11 +776,13 @@ void main() {
             .first,
       );
 
-      expect(await repository.getLanguage(), 'en');
-      expect(repository.languageWriteHistory, ['zh', 'en']);
-      expect(segmented.selected, {'en'});
+      expect(await repository.getLanguage(), 'zh');
+      expect(repository.languageWriteHistory, ['zh']);
+      expect(repository.reportLanguageStartHistory, contains('zh'));
+      expect(segmented.selected, {'zh'});
+      expect(find.byType(SnackBar), findsOneWidget);
       expect(
-        find.textContaining('WAS NOT CHANGED BECAUSE REPORT LANGUAGE SYNC FAILED'),
+        find.textContaining('REPORT LANGUAGE SYNC FAILED'),
         findsOneWidget,
       );
     },

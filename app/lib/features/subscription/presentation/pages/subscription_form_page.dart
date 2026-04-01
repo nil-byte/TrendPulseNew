@@ -36,6 +36,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
   bool? _notify;
   bool _saving = false;
   bool _loaded = false;
+  bool _maxItemsDirty = false;
 
   bool get _isEdit => widget.subId != null;
 
@@ -51,6 +52,16 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final tpColors = theme.trendPulseColors;
+    ref.listen<int>(defaultMaxItemsProvider, (_, next) {
+      if (_isEdit || !_loaded || _maxItemsDirty || !mounted) {
+        return;
+      }
+      final nextMaxItems = next.toDouble();
+      if (nextMaxItems == _maxItems) {
+        return;
+      }
+      setState(() => _maxItems = nextMaxItems);
+    });
 
     if (!_loaded && _isEdit) {
       final detailAsync = ref.watch(subscriptionDetailProvider(widget.subId!));
@@ -89,6 +100,7 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
                   _sources = sub.sources.toSet();
                   _interval = sub.interval;
                   _maxItems = sub.maxItems.toDouble();
+                  _maxItemsDirty = true;
                   _notify = sub.notify;
                   _loaded = true;
                 });
@@ -129,6 +141,8 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               if (!_loaded && mounted) {
                 setState(() {
                   _contentLanguage = ref.read(defaultLanguageProvider);
+                  _maxItems = ref.read(defaultMaxItemsProvider).toDouble();
+                  _maxItemsDirty = false;
                   _notify = notifyDefault;
                   _loaded = true;
                 });
@@ -316,7 +330,10 @@ class _SubscriptionFormPageState extends ConsumerState<SubscriptionFormPage> {
               min: 10,
               max: 100,
               divisions: 9,
-              onChanged: (v) => setState(() => _maxItems = v),
+              onChanged: (v) => setState(() {
+                _maxItems = v;
+                _maxItemsDirty = true;
+              }),
             ),
 
             const SizedBox(height: AppSpacing.xl),
@@ -451,38 +468,40 @@ class _SourceToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final textColor =
-        selected ? AppColors.onBrandFill(color) : theme.colorScheme.onSurface;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        selected ? AppColors.onBrandFill(color) : colors.onSurface;
+    final borderRadius = BorderRadius.circular(AppSpacing.radiusPill);
+    final shapeBorder = RoundedRectangleBorder(
+      borderRadius: borderRadius,
+      side: BorderSide(
+        color: selected ? color : colors.outline,
+        width: selected ? 1.5 : 1.0,
+      ),
     );
 
-    return SizedBox(
-      width: double.infinity,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
-        child: FilterChip(
-          label: Text(
-            label,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-          selected: selected,
-          onSelected: (_) => onTap(),
-          showCheckmark: false,
-          selectedColor: color,
-          backgroundColor: Colors.transparent,
-          materialTapTargetSize: MaterialTapTargetSize.padded,
-          visualDensity: VisualDensity.standard,
-          labelStyle: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
-          ),
-          shape: shape,
-          side: BorderSide(
-            color: selected ? color : theme.colorScheme.outline,
-            width: selected ? 1.5 : 1.0,
+        child: Material(
+          color: selected ? color : Colors.transparent,
+          shape: shapeBorder,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: shapeBorder,
+            child: Center(
+              child: Text(
+                label,
+                style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -545,7 +564,9 @@ class _IntervalSelector extends StatelessWidget {
                           EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                         ),
                         foregroundColor: WidgetStatePropertyAll(
-                          isSelected ? colors.onPrimary : colors.onSurface,
+                          isSelected
+                              ? AppColors.onBrandFill(colors.primary)
+                              : colors.onSurface,
                         ),
                         backgroundColor: const WidgetStatePropertyAll(
                           Colors.transparent,
@@ -579,6 +600,9 @@ class _IntervalSelector extends StatelessWidget {
                             style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight:
                                   isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.onBrandFill(colors.primary)
+                                  : colors.onSurface,
                             ),
                           ),
                         ),

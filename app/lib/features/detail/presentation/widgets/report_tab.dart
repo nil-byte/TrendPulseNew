@@ -9,7 +9,9 @@ import 'package:trendpulse/core/theme/app_colors.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
 import 'package:trendpulse/core/theme/app_typography.dart';
+import 'package:trendpulse/core/network/error_message_resolver.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
+import 'package:trendpulse/core/widgets/error_widget.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/detail/presentation/providers/detail_provider.dart';
 import 'package:trendpulse/features/detail/presentation/widgets/mermaid_mindmap_card.dart';
@@ -32,9 +34,13 @@ class ReportTab extends ConsumerWidget {
         itemHeight: 100,
         cardSkeleton: true,
       ),
-      error: (e, _) => _ErrorContent(
-        message: l10n.errorGeneric,
+      error: (e, _) => _RefreshableErrorContent(
+        message: resolveUserErrorMessage(e, l10n),
         onRetry: () => ref.invalidate(taskDetailProvider(taskId)),
+        onRefresh: () async {
+          ref.invalidate(taskDetailProvider(taskId));
+          await ref.read(taskDetailProvider(taskId).future);
+        },
       ),
       data: (task) {
         if (task.isFailed) {
@@ -89,6 +95,7 @@ class _CompletedContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(taskReportProvider(taskId));
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return reportAsync.when(
       loading: () => const ShimmerLoading(
@@ -96,9 +103,13 @@ class _CompletedContent extends ConsumerWidget {
         itemHeight: 100,
         cardSkeleton: true,
       ),
-      error: (e, _) => _ErrorContent(
-        message: l10n.errorGeneric,
+      error: (e, _) => _RefreshableErrorContent(
+        message: resolveUserErrorMessage(e, l10n),
         onRetry: () => ref.invalidate(taskReportProvider(taskId)),
+        onRefresh: () async {
+          ref.invalidate(taskReportProvider(taskId));
+          await ref.read(taskReportProvider(taskId).future);
+        },
       ),
       data: (report) {
         if (report == null) {
@@ -109,7 +120,14 @@ class _CompletedContent extends ConsumerWidget {
           );
         }
         final mermaidMindmap = report.mermaidMindmap?.trim();
-        return ListView(
+        return RefreshIndicator(
+          color: theme.colorScheme.onSurface,
+          backgroundColor: theme.colorScheme.surface,
+          onRefresh: () async {
+            ref.invalidate(taskReportProvider(taskId));
+            await ref.read(taskReportProvider(taskId).future);
+          },
+          child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             if (task.isPartial) ...[
@@ -191,6 +209,7 @@ class _CompletedContent extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xxl),
           ],
+        ),
         );
       },
     );
@@ -625,6 +644,37 @@ class _ErrorContent extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RefreshableErrorContent extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  final Future<void> Function() onRefresh;
+
+  const _RefreshableErrorContent({
+    required this.message,
+    required this.onRetry,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      color: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      onRefresh: onRefresh,
+      child: CustomScrollView(
+        slivers: [
+          SliverFillRemaining(
+            child: AppErrorWidget(
+              message: message,
+              onRetry: onRetry,
+            ),
+          ),
+        ],
       ),
     );
   }

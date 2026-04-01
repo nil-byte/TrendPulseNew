@@ -7,6 +7,7 @@ import 'package:trendpulse/core/animations/shimmer_loading.dart';
 import 'package:trendpulse/core/animations/staggered_list.dart';
 import 'package:trendpulse/core/theme/app_motion.dart';
 import 'package:trendpulse/core/theme/app_spacing.dart';
+import 'package:trendpulse/core/network/error_message_resolver.dart';
 import 'package:trendpulse/core/widgets/editorial_divider.dart';
 import 'package:trendpulse/core/widgets/empty_widget.dart';
 import 'package:trendpulse/core/widgets/error_widget.dart';
@@ -87,10 +88,23 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
               vertical: AppSpacing.sm,
             ),
           ),
-          error: (error, _) => AppErrorWidget(
-            message: l10n.errorGeneric,
-            retryLabel: l10n.retry,
-            onRetry: () => ref.invalidate(subscriptionListProvider),
+          error: (error, _) => RefreshIndicator(
+            color: theme.colorScheme.onSurface,
+            backgroundColor: theme.colorScheme.surface,
+            onRefresh: () async {
+              ref.invalidate(subscriptionListProvider);
+              await ref.read(subscriptionListProvider.future);
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  child: AppErrorWidget(
+                    message: resolveUserErrorMessage(error, l10n),
+                    onRetry: () => ref.invalidate(subscriptionListProvider),
+                  ),
+                ),
+              ],
+            ),
           ),
           data: (items) {
             if (items.isEmpty) {
