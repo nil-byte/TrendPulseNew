@@ -8,7 +8,7 @@
 
 - **范围内**：任务与订阅生命周期、多源采集编排、降级与源可用性展示、本地 SQLite 持久化、REST API 与 OpenAPI 契约、Android 客户端（本仓库含 `app/android/`，不含 `app/ios/`）。
 - **范围外（当前仓库不承诺）**：Docker/Compose 一键部署、根目录 SPDX `LICENSE` 文件、独立的「演示 runbook」文档；详细密钥与线上运维以各环境为准。
-- **持续集成**：推送至 `main`/`master` 时由 `.github/workflows/ci.yml` 运行后端测试与 Flutter **按 ABI 分包**的 debug / release APK 构建；CI 下 release 暂用 **debug keystore** 签名以便产出可安装包，上架前需改为正式签名。
+- **持续集成**：推送至 `main`/`master` 时由 `ci.yml` 跑后端测试与 Flutter **分包** debug/release，产物在 **Actions Artifacts**；打 `v*` 标签或手动运行 `release-apk.yml` 时在 **GitHub Releases** 仅挂 **release** APK。CI 下签名见 README。
 
 ## 相关文档
 

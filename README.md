@@ -390,9 +390,20 @@ TrendPulseNew/
 
 ## GitHub Actions（CI）
 
-工作流文件：`.github/workflows/ci.yml`。
+**与本仓库匹配的用法（推荐）**：
 
-**触发条件**：向 `main` / `master` 的 **push** 与 **pull_request**。
+| 场景 | 用法 | 产物在哪 |
+|------|------|----------|
+| 日常开发 / PR 门禁 | 推 `main` 或开 PR → 自动跑 **`CI`** | **Actions → 该次运行 → Artifacts**（含 **debug + release** 分包 APK，约保留 90 天） |
+| 要给用户/测试一个「版本页」长期下载 | **打标签并推送** `v*`，或 Actions 里手动跑 **Release APKs** | **Releases**（仅 **release** 分包 APK，与 CI 不重样） |
+
+这样既保证每次提交都有完整校验与内测包，又让 **Releases** 只承担「对外版本」角色，避免同一套 debug/release 混在版本页里。
+
+---
+
+工作流文件：**`.github/workflows/ci.yml`**（主 CI）、**`.github/workflows/release-apk.yml`**（发版）。
+
+**`CI` 触发条件**：向 `main` / `master` 的 **push** 与 **pull_request**。
 
 **任务概览**：
 
@@ -415,20 +426,20 @@ Artifacts 默认保留 **90 天**（过期后需重新跑 CI）。
 - **`trendpulse-android-debug-split-apks`**：`*debug.apk`
 - **`trendpulse-android-release-split-apks`**：`*release.apk`
 
-### Releases 页（带 APK 附件）
+### Releases 页（对外版本 + release APK）
 
-工作流：`.github/workflows/release-apk.yml`。成功后在仓库右栏 **Releases** 里可下载 **debug + release** 两套按 ABI 分包的 APK（同一次发版 6 个文件：3×debug + 3×release）。
+工作流：**`.github/workflows/release-apk.yml`**。成功后 **Releases** 仅附带 **3 个 release 分包 APK**（arm64-v8a / armeabi-v7a / x86_64）。需要 **debug 包**请从每次 **CI** 的 **Artifacts** 下载。
 
-**方式 A — 推送标签（推荐）**：
+**方式 A — 推送标签（主路径）**：
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-**方式 B — 在 GitHub 上手动跑**：**Actions** → 左侧选 **「Release APKs」** → **Run workflow** → 输入 **tag**（如 `v1.0.0`）→ **Run workflow**。会在**当前默认分支最新提交**上创建该标签对应的 Release（若标签已存在则更新该 Release 的资产，视 `action-gh-release` / 权限而定）。
+**方式 B — 仅网页触发**：**Actions** → **Release APKs** → **Run workflow** → 填写 **tag** → **Run workflow**。
 
-> 与仅跑 **CI** 时只能在单次运行里下 **Artifacts** 不同；**Releases** 里的附件长期留在版本页，适合对外分发。
+> **Releases** 与 **CI Artifacts** 分工：CI 负责「每次提交的验证 + 内测 debug/release 包」；Releases 负责「带版本号的对外分发」，避免版本页堆满重复调试包。
 
 **说明**：**`release` 仅在 `CI=true`（GitHub Actions 默认注入）或设置 `TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true` 时** 使用 debug keystore 签名，避免仓库内无条件滥用 debug 签名；上架前请改为自有 release keystore + GitHub Secrets。勿将 `key.properties`、`*.jks` 提交入库（见根目录 `.gitignore`）。Release 已启用 **R8 压缩与资源收缩**，配合分包控制体积。本地打 release 但未配置正式密钥时，可临时：`TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true flutter build apk --release ...`。
 
@@ -469,7 +480,7 @@ scripts/verify-critical-paths.sh --flutter-only
 scripts/verify-readme-docs.sh
 ```
 
-推送至 GitHub 后，上述 **CI** 会在 Actions 页自动运行；PR 上可查看检查结果与 **Artifacts** 中的 debug APK。
+推送至 GitHub 后，**CI** 会在 Actions 页自动运行；PR 上可查看检查结果与 **Artifacts**（含 debug 与 release 分包 APK）。对外发版请使用 **Releases**（仅 release APK，`release-apk.yml`）。
 
 ## 许可证
 

@@ -1,8 +1,9 @@
-# 在 GitHub **Releases** 页创建版本并上传 APK（与 CI 里的 Artifacts 不同）。
+# GitHub Releases：只上传 **release** 分包 APK（对外分发用）。
+# **debug** 包仍在每次 CI（ci.yml）的 Artifacts 里，避免 Releases 重复堆叠、体积与认知成本。
 #
-# 触发方式：
-# 1) 推送标签： git tag v1.0.0 && git push origin v1.0.0
-# 2) 手动运行： Actions → «Release APKs» → Run workflow → 填写 tag（如 v1.0.0）
+# 推荐触发：打并推送语义化标签
+#   git tag v1.0.0 && git push origin v1.0.0
+# 补救：Actions → Release APKs → Run workflow（无本地 git 时）
 name: Release APKs
 
 on:
@@ -12,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "版本标签（如 v1.0.0）；将基于运行时的默认分支提交创建/更新 Release"
+        description: "版本标签（如 v1.0.0）；基于运行 workflow 时的默认分支提交"
         required: true
         default: "v1.0.0"
 
@@ -51,9 +52,6 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-      - name: Build debug APKs (split-per-abi)
-        run: flutter build apk --debug --split-per-abi
-
       - name: Build release APKs (split-per-abi)
         run: |
           flutter build apk --release --split-per-abi \
@@ -63,7 +61,7 @@ jobs:
       - name: List APK outputs
         run: ls -la build/app/outputs/flutter-apk/
 
-      - name: Publish GitHub Release with APKs
+      - name: Publish GitHub Release with release APKs
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
@@ -71,10 +69,11 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           body: |
-            > 附带 **debug** / **release** 分包 APK；真机优先选 **arm64-v8a** 的 `*release*.apk`。
+            **安装包**：本页仅附带 **release** 按 CPU 分包 APK（真机选 **arm64-v8a**）。
+
+            **调试包**：每次合并/推送后的 **CI** workflow → **Artifacts** → `trendpulse-android-debug-split-apks`。
 
           files: |
-            app/build/app/outputs/flutter-apk/app-*-debug.apk
             app/build/app/outputs/flutter-apk/app-*-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
