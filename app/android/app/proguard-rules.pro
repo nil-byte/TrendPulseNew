@@ -6,3 +6,8 @@
 -keep class io.flutter.view.** { *; }
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
+
+# Play Core is referenced by Flutter embedding for optional deferred components /
+# split installs; it is not bundled unless you add the dependency. R8 otherwise
+# fails minifyRelease (see missing_rules.txt).
+-dontwarn com.google.android.play.core.**
