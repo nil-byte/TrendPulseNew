@@ -1,12 +1,20 @@
-# Creates a GitHub **Release** (Releases 页) when you push a version tag, and attaches
-# per-ABI release APKs. Ordinary CI only uploads **Artifacts** on each run — they are
-# not the same as Releases.
+# 在 GitHub **Releases** 页创建版本并上传 APK（与 CI 里的 Artifacts 不同）。
+#
+# 触发方式：
+# 1) 推送标签： git tag v1.0.0 && git push origin v1.0.0
+# 2) 手动运行： Actions → «Release APKs» → Run workflow → 填写 tag（如 v1.0.0）
 name: Release APKs
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "版本标签（如 v1.0.0）；将基于运行时的默认分支提交创建/更新 Release"
+        required: true
+        default: "v1.0.0"
 
 permissions:
   contents: write
@@ -19,6 +27,15 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: subosito/flutter-action@v2
         with:
@@ -34,21 +51,30 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+      - name: Build debug APKs (split-per-abi)
+        run: flutter build apk --debug --split-per-abi
+
       - name: Build release APKs (split-per-abi)
         run: |
           flutter build apk --release --split-per-abi \
             --obfuscate \
             --split-debug-info=build/debug-info
 
+      - name: List APK outputs
+        run: ls -la build/app/outputs/flutter-apk/
+
       - name: Publish GitHub Release with APKs
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: TrendPulse ${{ github.ref_name }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: TrendPulse ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
           body: |
-            自动构建的 **release** 分包 APK（`--split-per-abi`）。真机安装一般选 **arm64-v8a**；
-            模拟器 x86_64 选 **x86_64**。符号表未随 APK 分发（见构建 obfuscate / split-debug-info）。
+            > 附带 **debug** / **release** 分包 APK；真机优先选 **arm64-v8a** 的 `*release*.apk`。
+
           files: |
+            app/build/app/outputs/flutter-apk/app-*-debug.apk
             app/build/app/outputs/flutter-apk/app-*-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
