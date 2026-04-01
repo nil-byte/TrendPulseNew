@@ -19,6 +19,7 @@ class ApiClient {
   }) {
     final configuredBaseUrl = baseUrl ?? ApiEndpoints.baseUrl;
     final effectiveBaseUrl = ApiBaseUrlResolver.resolve(configuredBaseUrl);
+    // Receive timeout is generous: map/reduce analysis can stream large JSON bodies.
     _dio = Dio(
       BaseOptions(
         baseUrl: effectiveBaseUrl,
@@ -56,6 +57,7 @@ class ApiClient {
   Future<Response<T>> delete<T>(String path) =>
       _guard(() => _dio.delete<T>(path));
 
+  /// Maps [DioException] to [ApiException] so repositories/widgets see one error type.
   Future<Response<T>> _guard<T>(Future<Response<T>> Function() request) async {
     try {
       return await request();

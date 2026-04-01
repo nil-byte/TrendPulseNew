@@ -44,6 +44,7 @@ Future<ThemeMode> loadInitialThemeMode(SettingsRepository repository) async {
   return ThemeModeNotifier.fromStorage(storedThemeMode);
 }
 
+/// Loads persisted URL/locale/notifications before the first [ProviderScope] frame.
 Future<List<Override>> buildAppOverrides({
   SettingsRepository? settingsRepository,
   TargetPlatform? targetPlatform,

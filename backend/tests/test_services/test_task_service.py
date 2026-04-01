@@ -487,6 +487,40 @@ class TestTaskServiceProcessTask:
         assert await _count_reports(task_id) == 0
         service._analyzer.analyze.assert_not_awaited()
 
+    async def test_process_task_falls_back_to_content_language_when_report_missing(
+        self,
+    ) -> None:
+        """Background processing must fall back to content_language for analysis."""
+        request = CreateTaskRequest(
+            keyword="openai",
+            content_language="zh",
+            sources=["reddit"],
+        )
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, request)
+
+        collected_posts = [
+            _make_post(
+                "reddit",
+                "一条足够长、可以进入分析阶段的中文帖子内容。",
+            )
+        ]
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            return_value=FakeCollectionResult(posts=collected_posts, source_errors={})
+        )
+        service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
+            return_value=_make_analysis_result()
+        )
+
+        await service._process_task(task_id, request)
+
+        service._analyzer.analyze.assert_awaited_once_with(
+            collected_posts,
+            request.keyword,
+            language="zh",
+        )
+
     async def test_process_task_fails_when_no_posts_and_no_source_errors(
         self,
     ) -> None:

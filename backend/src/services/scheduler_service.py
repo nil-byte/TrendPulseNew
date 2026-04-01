@@ -79,7 +79,8 @@ class SchedulerService:
                 "SELECT * FROM subscriptions WHERE is_active = 1 AND next_run_at <= ?",
                 (now_iso,),
             )
-            rows = await cursor.fetchall()
+            # Stubs type fetchall() as Iterable; list() gives Sized len().
+            rows = list(await cursor.fetchall())
         finally:
             await db.close()
 
@@ -92,9 +93,7 @@ class SchedulerService:
             try:
                 await self._process_subscription(row, now)
             except Exception:
-                logger.exception(
-                    "Failed to process subscription %s", row["id"]  # type: ignore[index]
-                )
+                logger.exception("Failed to process subscription %s", row["id"])
 
     async def _process_subscription(self, row: object, now: datetime) -> None:
         """Create a task for a single due subscription and update timestamps.

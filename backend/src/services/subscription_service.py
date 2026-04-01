@@ -264,7 +264,7 @@ class SubscriptionService:
                 (sub_id,),
             )
             row = await cursor.fetchone()
-            return self._row_to_subscription(row)  # type: ignore[arg-type]
+            return self._row_to_subscription(row)
         finally:
             await db.close()
 

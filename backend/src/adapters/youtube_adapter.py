@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from googleapiclient.discovery import build  # type: ignore[import-untyped]
-from youtube_transcript_api import (  # type: ignore[import-untyped]
+from youtube_transcript_api import (
     AgeRestricted,
     CouldNotRetrieveTranscript,
     InvalidVideoId,
@@ -40,6 +40,8 @@ _TRANSCRIPT_MAX_CHARS = 2000
 
 @dataclass(slots=True)
 class _TranscriptResult:
+    """youtube-transcript-api outcome for one video (text or failure classification)."""
+
     text: str | None
     status: str
     error_code: str | None = None

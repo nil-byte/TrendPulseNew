@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import uuid
+from typing import cast
 
 from src.adapters.base import SourceFailure
 from src.common.time_utils import utc_now_iso
@@ -18,6 +19,7 @@ from src.models.schemas import (
     RawPost,
     RawPostResponse,
     TaskListResponse,
+    TaskQuality,
     TaskResponse,
     TaskSourceOutcome,
 )
@@ -186,14 +188,19 @@ class TaskService:
                 f"Unavailable sources: {source_summary}."
             )
 
-        report_language = request.report_language
-        if report_language is None:
-            report_language = await self._app_settings_service.get_report_language()
+        # Resolve report language to a concrete code so API responses and DB rows
+        # always store a non-null value (CreateTaskRequest allows None).
+        if request.report_language is not None:
+            resolved_report_language: str = request.report_language
+        else:
+            resolved_report_language = (
+                await self._app_settings_service.get_report_language()
+            )
 
         effective_request = request.model_copy(
             update={
                 "sources": effective_sources,
-                "report_language": report_language,
+                "report_language": resolved_report_language,
             }
         )
         initial_source_outcomes = self._build_source_outcomes(
@@ -253,6 +260,7 @@ class TaskService:
         finally:
             await db.close()
 
+        # Detach from the request thread: collection/analysis can exceed HTTP timeouts.
         asyncio.create_task(
             self._process_task(
                 task_id,
@@ -265,7 +273,7 @@ class TaskService:
             id=task_id,
             keyword=effective_request.keyword,
             content_language=effective_request.content_language,
-            report_language=effective_request.report_language,
+            report_language=resolved_report_language,
             max_items=effective_request.max_items,
             status="pending",
             quality=initial_quality,
@@ -498,10 +506,11 @@ class TaskService:
 
             await self._update_status(task_id, "analyzing")
 
+            analysis_language = request.report_language or request.content_language
             result = await self._analyzer.analyze(
                 collection_result.posts,
                 request.keyword,
-                language=request.report_language,
+                language=analysis_language,
             )
 
             if not result.has_analyzable_content():
@@ -593,9 +602,10 @@ class TaskService:
             assignments.append("quality_summary = ?")
             values.append(quality_summary)
         if source_outcomes is not _UNSET:
+            outcomes_list = cast(list[TaskSourceOutcome], source_outcomes)
             assignments.append("source_outcomes_json = ?")
             values.append(
-                json.dumps([item.model_dump(mode="json") for item in source_outcomes])
+                json.dumps([item.model_dump(mode="json") for item in outcomes_list])
             )
         values.append(task_id)
         db = await get_db()
@@ -807,13 +817,14 @@ class TaskService:
         return outcomes
 
     @staticmethod
-    def _derive_quality(source_outcomes: list[TaskSourceOutcome]) -> str:
+    def _derive_quality(source_outcomes: list[TaskSourceOutcome]) -> TaskQuality:
         """Collapse per-source outcomes into a task-level quality marker."""
         issue_statuses = {"degraded", "unavailable", "failed"}
-        return (
+        return cast(
+            TaskQuality,
             _DEGRADED_QUALITY
             if any(item.status in issue_statuses for item in source_outcomes)
-            else _CLEAN_QUALITY
+            else _CLEAN_QUALITY,
         )
 
     @staticmethod

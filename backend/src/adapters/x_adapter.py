@@ -753,10 +753,8 @@ class XAdapter(BaseAdapter):
         """Return exponential backoff with bounded positive jitter."""
         if base_delay <= 0:
             return 0.0
-        return (base_delay * (2 ** (attempt - 1))) + random.uniform(
-            0.0,
-            base_delay,
-        )
+        jitter = random.uniform(0.0, base_delay)
+        return float(base_delay * (2 ** (attempt - 1)) + jitter)
 
     @staticmethod
     def _format_batch_errors(batch_errors: dict[str, SourceCollectionError]) -> str:

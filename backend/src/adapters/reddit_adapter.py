@@ -9,9 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-import aiohttp  # type: ignore[import-untyped]
+import aiohttp
 import asyncpraw  # type: ignore[import-untyped]
-from asyncprawcore.exceptions import RequestException as PrawRequestException
+from asyncprawcore.exceptions import (  # type: ignore[import-untyped]
+    RequestException as PrawRequestException,
+)
 
 from src.adapters.base import BaseAdapter, SourceCollectionError
 from src.common.time_utils import (
@@ -38,6 +40,7 @@ class RedditAdapter(BaseAdapter):
 
     @property
     def source_name(self) -> str:
+        """Stable id stored on ``RawPost.source`` and echoed in task outcomes."""
         return "reddit"
 
     async def collect(

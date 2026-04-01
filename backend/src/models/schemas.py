@@ -25,7 +25,9 @@ class RawPost(BaseModel):
     url: str | None = None
     engagement: int = 0
     published_at: str | None = None
-    metadata_extra: dict | None = None  # type: ignore[type-arg]
+    # Per-source unstructured fields (JSON-serializable); kept loose so adapters
+    # are not forced into one TypedDict for every provider.
+    metadata_extra: dict[str, object] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +167,7 @@ class RawPostResponse(BaseModel):
     engagement: int = 0
     published_at: str | None = None
     collected_at: str = ""
-    metadata_json: dict | None = None  # type: ignore[type-arg]
+    metadata_json: dict[str, object] | None = None
 
 
 class KeyInsight(BaseModel):

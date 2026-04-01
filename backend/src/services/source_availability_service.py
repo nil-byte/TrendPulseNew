@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class _RuntimeAvailabilityState:
+    """Cached snapshot from the last availability probe for one source."""
+
     status: str
     is_available: bool
     reason_code: str | None

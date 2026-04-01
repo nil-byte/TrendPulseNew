@@ -37,6 +37,10 @@ jobs:
         working-directory: backend
         run: python -m ruff check .
 
+      - name: Mypy
+        working-directory: backend
+        run: python -m mypy src
+
       - name: Pytest
         working-directory: backend
         run: python -m pytest tests/ -q

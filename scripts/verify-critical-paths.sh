@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Local smoke check: backend import/pytest subset + Flutter analyze/test. Not a substitute for CI.
 
 set -euo pipefail
 

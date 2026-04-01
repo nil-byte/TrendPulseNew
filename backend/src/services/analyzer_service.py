@@ -798,4 +798,10 @@ class AnalyzerService:
             if language == "zh"
             else "No posts available for analysis after cleaning."
         )
-        return AnalysisResult(summary=summary)
+        return AnalysisResult(
+            summary=summary,
+            sentiment_score=0.0,
+            positive_ratio=0.0,
+            negative_ratio=0.0,
+            neutral_ratio=0.0,
+        )
