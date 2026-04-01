@@ -1,13 +1,16 @@
 # TrendPulse - 多源舆情分析系统
 
 <p align="center">
-  <img
-    src="TrendPulse.jpg"
-    alt="TrendPulse 应用图标"
-    width="128"
-    height="128"
-    style="border-radius: 22%; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.14); vertical-align: middle;"
-  />
+  <span
+    style="display: inline-block; line-height: 0; border-radius: 22.37%; filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.12)); vertical-align: middle;">
+    <img
+      src="TrendPulse-readme.png"
+      alt="TrendPulse 应用图标"
+      width="128"
+      height="128"
+      style="display: block; border-radius: 22.37%;"
+    />
+  </span>
 </p>
 
 ## 项目介绍
