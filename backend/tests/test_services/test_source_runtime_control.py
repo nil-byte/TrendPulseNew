@@ -70,8 +70,11 @@ class TestSourceRuntimeControlService:
             now=now + timedelta(seconds=1),
         ) is True
 
-        assert service.is_in_cooldown("x", now=now + timedelta(seconds=1)) is True
-        assert service.get_cooldown_until("x") == now + timedelta(seconds=301)
+        t_after = now + timedelta(seconds=1)
+        assert service.is_in_cooldown("x", now=t_after) is True
+        assert service.get_cooldown_until("x", now=t_after) == now + timedelta(
+            seconds=301
+        )
 
     def test_non_retryable_failures_do_not_trigger_cooldown(
         self,
