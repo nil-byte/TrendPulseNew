@@ -406,7 +406,7 @@ TrendPulseNew/
 - **`trendpulse-android-debug-split-apks`**：`*debug.apk`（通常 arm64-v8a / armeabi-v7a / x86_64 各一）
 - **`trendpulse-android-release-split-apks`**：`*release.apk`（同上；体积小利于内测分发）
 
-**说明**：当前 **`release` 构建在 Gradle 中使用 `signingConfig = debug`**，便于无密钥仓库在 CI 中打出可安装的 release 包；上架应用商店前请改为自有 release keystore + GitHub Secrets，勿将 `key.properties`、`*.jks` 提交入库（见根目录 `.gitignore`）。Release 已启用 **R8 压缩与资源收缩**（`minifyEnabled` / `shrinkResources`），配合分包可控制安装包体积。
+**说明**：**`release` 仅在 `CI=true`（GitHub Actions 默认注入）或设置 `TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true` 时** 使用 debug keystore 签名，避免仓库内无条件滥用 debug 签名；上架前请改为自有 release keystore + GitHub Secrets。勿将 `key.properties`、`*.jks` 提交入库（见根目录 `.gitignore`）。Release 已启用 **R8 压缩与资源收缩**，配合分包控制体积。本地打 release 但未配置正式密钥时，可临时：`TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true flutter build apk --release ...`。
 
 **新建公开仓库并推送（示例，需本机已 [`gh auth login`](https://cli.github.com/manual/gh_auth_login)）**：
 

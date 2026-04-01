@@ -32,10 +32,16 @@ android {
 
     buildTypes {
         release {
-            // CI / devkit: sign with debug keystore so `flutter build apk --release`
-            // works without repo secrets. Replace with a release keystore + GitHub
-            // secrets before Play Store submission.
-            signingConfig = signingConfigs.getByName("debug")
+            // Never commit unconditional debug signing: Play Store would reject / confuse.
+            // GitHub Actions sets CI=true so release APKs can build without keystore secrets.
+            // Local release without a release keystore: set TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true
+            val useDebugReleaseSigning =
+                System.getenv("CI") == "true" ||
+                    System.getenv("TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING") == "true"
+
+            if (useDebugReleaseSigning) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
