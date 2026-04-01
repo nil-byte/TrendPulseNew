@@ -162,3 +162,181 @@ async def test_init_db_raises_clear_error_for_legacy_language_schema() -> None:
 
     with pytest.raises(RuntimeError, match="legacy.+language.+delete.+database"):
         await init_db()
+
+
+@pytest.mark.asyncio
+async def test_init_db_backfills_partial_tasks_to_completed_degraded() -> None:
+    """Legacy partial tasks with reports should be normalized on startup."""
+    task_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    db = await get_db()
+    try:
+        await db.execute(
+            """
+            INSERT INTO tasks
+                (
+                    id,
+                    keyword,
+                    content_language,
+                    report_language,
+                    max_items,
+                    status,
+                    quality,
+                    quality_summary,
+                    source_outcomes_json,
+                    sources,
+                    created_at,
+                    updated_at,
+                    error_message
+                )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                task_id,
+                "openai",
+                "en",
+                "zh",
+                10,
+                "partial",
+                "clean",
+                None,
+                "[]",
+                json.dumps(["reddit", "youtube"]),
+                now,
+                now,
+                "Completed with source failures: youtube (API down).",
+            ),
+        )
+        await db.execute(
+            """
+            INSERT INTO analysis_reports
+                (
+                    id,
+                    task_id,
+                    sentiment_score,
+                    positive_ratio,
+                    negative_ratio,
+                    neutral_ratio,
+                    heat_index,
+                    key_insights,
+                    summary,
+                    raw_analysis_json,
+                    created_at
+                )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid.uuid4()),
+                task_id,
+                62.0,
+                0.4,
+                0.2,
+                0.4,
+                20.0,
+                json.dumps([]),
+                "Legacy partial summary",
+                None,
+                now,
+            ),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+    await init_db()
+
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """
+            SELECT status, quality, quality_summary, error_message, source_outcomes_json
+            FROM tasks
+            WHERE id = ?
+            """,
+            (task_id,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        assert row["status"] == "completed"
+        assert row["quality"] == "degraded"
+        assert (
+            row["quality_summary"]
+            == "Completed with source issues: youtube (API down)."
+        )
+        assert row["error_message"] is None
+        assert row["source_outcomes_json"] == "[]"
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_init_db_backfills_partial_tasks_without_reports_to_failed() -> None:
+    """Legacy partial tasks without reports should become failed degraded runs."""
+    task_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    db = await get_db()
+    try:
+        await db.execute(
+            """
+            INSERT INTO tasks
+                (
+                    id,
+                    keyword,
+                    content_language,
+                    report_language,
+                    max_items,
+                    status,
+                    quality,
+                    quality_summary,
+                    source_outcomes_json,
+                    sources,
+                    created_at,
+                    updated_at,
+                    error_message
+                )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                task_id,
+                "openai",
+                "en",
+                "zh",
+                10,
+                "partial",
+                "clean",
+                None,
+                "[]",
+                json.dumps(["reddit", "youtube"]),
+                now,
+                now,
+                "Completed with source failures: youtube (API down).",
+            ),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+    await init_db()
+
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """
+            SELECT status, quality, quality_summary, error_message, source_outcomes_json
+            FROM tasks
+            WHERE id = ?
+            """,
+            (task_id,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        assert row["status"] == "failed"
+        assert row["quality"] == "degraded"
+        assert row["quality_summary"] is None
+        assert (
+            row["error_message"]
+            == "Source failures prevented report completion: youtube (API down)."
+        )
+        assert row["source_outcomes_json"] == "[]"
+    finally:
+        await db.close()

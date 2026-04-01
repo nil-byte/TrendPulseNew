@@ -272,6 +272,12 @@ abstract class AppLocalizations {
   /// **'Partial'**
   String get statusPartial;
 
+  /// No description provided for @taskQualityDegraded.
+  ///
+  /// In en, this message translates to:
+  /// **'Source Issues'**
+  String get taskQualityDegraded;
+
   /// No description provided for @statusFailed.
   ///
   /// In en, this message translates to:

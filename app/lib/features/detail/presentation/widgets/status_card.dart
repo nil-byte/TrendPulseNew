@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:trendpulse/core/l10n/source_platform_labels.dart';
 import 'package:trendpulse/core/theme/app_borders.dart';
 import 'package:trendpulse/core/theme/app_motion.dart';
 import 'package:trendpulse/core/theme/app_opacity.dart';
@@ -110,6 +111,60 @@ class _StatusCardState extends State<StatusCard>
                 alpha: AppOpacity.overlay,
               ),
             ),
+            if (widget.task.isDegraded) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: colorScheme.onSurface,
+                    width: AppBorders.thin,
+                  ),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, size: 16),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            l10n.taskQualityDegraded.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (widget.task.issueSourceOutcomes.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: widget.task.issueSourceOutcomes
+                            .map(
+                              (item) => _IssueChip(
+                                source: sourcePlatformLabel(item.source, l10n),
+                                status: _issueStatusLabel(item.status, l10n),
+                                reason: item.reason,
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                    ] else if (widget.task.qualitySummary != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        widget.task.qualitySummary!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -126,9 +181,6 @@ class _StatusCardState extends State<StatusCard>
     if (task.isAnalyzing) {
       return (Icons.psychology_rounded, l10n.statusAnalyzing);
     }
-    if (task.isPartial) {
-      return (Icons.warning_amber_rounded, l10n.statusPartial);
-    }
     if (task.isFailed) {
       return (Icons.error_outline_rounded, l10n.statusFailed);
     }
@@ -142,7 +194,55 @@ class _StatusCardState extends State<StatusCard>
     if (task.isPending) return null;
     if (task.isCollecting) return 0.4;
     if (task.isAnalyzing) return 0.75;
-    if (task.isPartial || task.isCompleted || task.isFailed) return 1.0;
+    if (task.isCompleted || task.isFailed) return 1.0;
     return null;
+  }
+
+  String _issueStatusLabel(String status, AppLocalizations l10n) {
+    return switch (status) {
+      'unavailable' => l10n.analysisSourceUnavailableLabel,
+      'failed' => l10n.statusFailed,
+      _ => l10n.analysisSourceDegradedLabel,
+    };
+  }
+}
+
+class _IssueChip extends StatelessWidget {
+  final String source;
+  final String status;
+  final String? reason;
+
+  const _IssueChip({
+    required this.source,
+    required this.status,
+    this.reason,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = '$source · $status'.toUpperCase();
+    return Tooltip(
+      message: reason ?? label,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: theme.colorScheme.onSurface,
+            width: AppBorders.thin,
+          ),
+        ),
+        child: Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
+        ),
+      ),
+    );
   }
 }

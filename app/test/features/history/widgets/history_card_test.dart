@@ -46,13 +46,14 @@ void main() {
     expect(find.text('POSTS'), findsOneWidget);
   });
 
-  testWidgets('shows partial status with 0-100 sentiment score', (
+  testWidgets('shows completed status plus degraded quality badge with 0-100 sentiment score', (
     tester,
   ) async {
     const item = HistoryItem(
       id: 'task-2',
       keyword: 'AI Outlook',
-      status: 'partial',
+      status: 'completed',
+      quality: 'degraded',
       contentLanguage: 'en',
       reportLanguage: 'en',
       sources: ['reddit'],
@@ -63,12 +64,32 @@ void main() {
 
     await tester.pumpWidget(_wrap(HistoryCard(item: item, onTap: _noop)));
 
-    expect(find.text('PARTIAL'), findsOneWidget);
+    expect(find.text('COMPLETED'), findsOneWidget);
+    expect(find.text('SOURCE ISSUES'), findsOneWidget);
     expect(find.text('72'), findsOneWidget);
     expect(find.text('7200'), findsNothing);
     expect(find.text('12'), findsOneWidget);
     expect(find.text('POSTS'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('does not show degraded badge for failed tasks', (tester) async {
+    const item = HistoryItem(
+      id: 'task-3',
+      keyword: 'AI Failure',
+      status: 'failed',
+      quality: 'degraded',
+      contentLanguage: 'en',
+      reportLanguage: 'en',
+      sources: ['reddit'],
+      createdAt: '2026-03-28T12:00:00Z',
+      errorMessage: 'Collection failed.',
+    );
+
+    await tester.pumpWidget(_wrap(HistoryCard(item: item, onTap: _noop)));
+
+    expect(find.text('FAILED'), findsOneWidget);
+    expect(find.text('SOURCE ISSUES'), findsNothing);
   });
 }
 

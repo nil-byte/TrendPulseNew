@@ -96,6 +96,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusPartial => 'Partial';
 
   @override
+  String get taskQualityDegraded => 'Source Issues';
+
+  @override
   String get statusFailed => 'Failed';
 
   @override

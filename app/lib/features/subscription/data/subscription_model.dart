@@ -1,3 +1,5 @@
+import 'package:trendpulse/core/models/task_runtime.dart';
+
 class Subscription {
   final String id;
   final String keyword;
@@ -92,6 +94,9 @@ class SubscriptionTask {
   final String contentLanguage;
   final String reportLanguage;
   final String status;
+  final String quality;
+  final String? qualitySummary;
+  final List<TaskSourceOutcome> sourceOutcomes;
   final String createdAt;
   final double? sentimentScore;
   final int? postCount;
@@ -103,6 +108,9 @@ class SubscriptionTask {
     this.contentLanguage = 'en',
     this.reportLanguage = 'en',
     required this.status,
+    this.quality = 'clean',
+    this.qualitySummary,
+    this.sourceOutcomes = const [],
     required this.createdAt,
     this.sentimentScore,
     this.postCount,
@@ -110,6 +118,8 @@ class SubscriptionTask {
   });
 
   factory SubscriptionTask.fromJson(Map<String, dynamic> json) {
+    final rawStatus = json['status'] as String?;
+    final errorMessage = json['error_message'] as String?;
     return SubscriptionTask(
       id: json['id'] as String,
       keyword: json['keyword'] as String? ?? '',
@@ -123,23 +133,33 @@ class SubscriptionTask {
         'report_language',
         context: 'SubscriptionTask',
       ),
-      status: json['status'] as String? ?? 'pending',
+      status: normalizeTaskStatus(rawStatus),
+      quality: normalizeTaskQuality(json, rawStatus),
+      qualitySummary: normalizeTaskQualitySummary(
+        json,
+        rawStatus,
+        errorMessage,
+      ),
+      sourceOutcomes: parseTaskSourceOutcomes(json),
       createdAt: json['created_at'] as String? ?? '',
       sentimentScore: (json['sentiment_score'] as num?)?.toDouble(),
       postCount: (json['post_count'] as num?)?.toInt(),
-      errorMessage: json['error_message'] as String?,
+      errorMessage: errorMessage,
     );
   }
 
-  bool get isPartial => status == 'partial';
   bool get isCompleted => status == 'completed';
+  bool get isDegraded => quality == 'degraded';
+  bool get isPartial => isCompleted && isDegraded;
   bool get isPending => status == 'pending';
   bool get isCollecting => status == 'collecting';
   bool get isAnalyzing => status == 'analyzing';
   bool get isFailed => status == 'failed';
   bool get isInProgress => isPending || isCollecting || isAnalyzing;
   bool get isRunning => isInProgress;
-  bool get canViewReport => isCompleted || isPartial;
+  bool get canViewReport => isCompleted;
+  List<TaskSourceOutcome> get issueSourceOutcomes =>
+      sourceOutcomes.where((item) => item.isIssue).toList(growable: false);
 }
 
 String _requireSubscriptionString(

@@ -29,6 +29,7 @@
   "statusAnalyzing": "正在分析情感...",
   "statusCompleted": "已完成",
   "statusPartial": "部分完成",
+  "taskQualityDegraded": "部分源降级",
   "statusFailed": "失败",
   "retry": "重试",
   "delete": "删除",

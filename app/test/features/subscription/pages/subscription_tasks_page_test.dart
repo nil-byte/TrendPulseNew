@@ -308,7 +308,7 @@ void main() {
   );
 
   testWidgets(
-    'subscription tasks page shows partial metrics with 0-100 sentiment score',
+    'subscription tasks page shows completed status plus degraded quality badge',
     (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -317,12 +317,11 @@ void main() {
               SubscriptionTask(
                 id: 'task-1',
                 keyword: 'AI Watch',
-                status: 'partial',
+                status: 'completed',
+                quality: 'degraded',
                 createdAt: '2026-03-28T12:00:00Z',
                 sentimentScore: 72,
                 postCount: 12,
-                errorMessage:
-                    'Completed with source failures: youtube (API down).',
               ),
             ],
           ),
@@ -330,11 +329,38 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('PARTIAL'), findsOneWidget);
+      expect(find.text('COMPLETED'), findsOneWidget);
+      expect(find.text('SOURCE ISSUES'), findsOneWidget);
       expect(find.text('72'), findsOneWidget);
       expect(find.text('7200'), findsNothing);
       expect(find.text('12 POSTS'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'subscription tasks page does not show degraded badge for failed tasks',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _FakeSubscriptionRepository(
+            tasks: const [
+              SubscriptionTask(
+                id: 'task-failed',
+                keyword: 'AI Watch',
+                status: 'failed',
+                quality: 'degraded',
+                createdAt: '2026-03-28T12:00:00Z',
+                errorMessage: 'Collection failed.',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('FAILED'), findsOneWidget);
+      expect(find.text('SOURCE ISSUES'), findsNothing);
     },
   );
 

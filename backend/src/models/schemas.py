@@ -6,6 +6,8 @@ where appropriate.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
@@ -102,6 +104,33 @@ class CreateTaskRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+TaskLifecycleStatus = Literal[
+    "pending",
+    "collecting",
+    "analyzing",
+    "completed",
+    "failed",
+]
+TaskQuality = Literal["clean", "degraded"]
+TaskSourceStatus = Literal[
+    "success",
+    "degraded",
+    "unavailable",
+    "failed",
+    "empty",
+]
+
+
+class TaskSourceOutcome(BaseModel):
+    """Structured per-source execution outcome for a task."""
+
+    source: str
+    status: TaskSourceStatus
+    post_count: int = Field(default=0, ge=0)
+    reason: str | None = None
+    reason_code: str | None = None
+
+
 class TaskResponse(BaseModel):
     """Single task in API responses."""
 
@@ -110,7 +139,10 @@ class TaskResponse(BaseModel):
     content_language: str
     report_language: str
     max_items: int
-    status: str
+    status: TaskLifecycleStatus
+    quality: TaskQuality = "clean"
+    quality_summary: str | None = None
+    source_outcomes: list[TaskSourceOutcome] = Field(default_factory=list)
     sources: list[str]
     created_at: str
     updated_at: str

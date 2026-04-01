@@ -19,6 +19,7 @@ from src.models.schemas import (
     RawPostResponse,
     TaskListResponse,
     TaskResponse,
+    TaskSourceOutcome,
 )
 from src.services.analyzer_service import (
     AnalysisResult,
@@ -32,13 +33,15 @@ from src.services.source_availability_service import source_availability_service
 logger = logging.getLogger(__name__)
 
 _FAILED_STATUS = "failed"
-_PARTIAL_STATUS = "partial"
 _COMPLETED_STATUS = "completed"
+_CLEAN_QUALITY = "clean"
+_DEGRADED_QUALITY = "degraded"
 _LOW_SENTIMENT_ALERT_THRESHOLD = 30.0
 _EMPTY_COLLECTION_ERROR = "No posts were collected from the requested sources."
 _EMPTY_ANALYSIS_ERROR = (
     "Collected posts did not contain analyzable content after cleaning."
 )
+_UNSET = object()
 _TASK_SELECT_WITH_METRICS = """
 SELECT
     tasks.id,
@@ -47,6 +50,9 @@ SELECT
     tasks.report_language,
     tasks.max_items,
     tasks.status,
+    tasks.quality,
+    tasks.quality_summary,
+    tasks.source_outcomes_json,
     tasks.sources,
     tasks.created_at,
     tasks.updated_at,
@@ -89,6 +95,15 @@ def row_to_task_response(row: object) -> TaskResponse:
     """Convert a task query row with optional metrics into a response model."""
     sentiment_score = row["sentiment_score"]  # type: ignore[index]
     post_count = row["post_count"]  # type: ignore[index]
+    source_outcomes_raw = row["source_outcomes_json"]  # type: ignore[index]
+    source_outcomes = (
+        [
+            TaskSourceOutcome.model_validate(item)
+            for item in json.loads(source_outcomes_raw)
+        ]
+        if source_outcomes_raw
+        else []
+    )
     return TaskResponse(
         id=row["id"],  # type: ignore[index]
         keyword=row["keyword"],  # type: ignore[index]
@@ -96,6 +111,9 @@ def row_to_task_response(row: object) -> TaskResponse:
         report_language=row["report_language"],  # type: ignore[index]
         max_items=row["max_items"],  # type: ignore[index]
         status=row["status"],  # type: ignore[index]
+        quality=row["quality"],  # type: ignore[index]
+        quality_summary=row["quality_summary"],  # type: ignore[index]
+        source_outcomes=source_outcomes,
         sources=json.loads(row["sources"]),  # type: ignore[index]
         created_at=row["created_at"],  # type: ignore[index]
         updated_at=row["updated_at"],  # type: ignore[index]
@@ -178,6 +196,14 @@ class TaskService:
                 "report_language": report_language,
             }
         )
+        initial_source_outcomes = self._build_source_outcomes(
+            request_sources=effective_request.sources,
+            posts=[],
+            initial_source_errors=unavailable_sources,
+            collection_source_errors={},
+        )
+        initial_quality = self._derive_quality(initial_source_outcomes)
+        initial_quality_summary = None
         task_id = str(uuid.uuid4())
         now = utc_now_iso()
 
@@ -192,12 +218,15 @@ class TaskService:
                     report_language,
                     max_items,
                     status,
+                    quality,
+                    quality_summary,
+                    source_outcomes_json,
                     sources,
                     created_at,
                     updated_at,
                     subscription_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task_id,
@@ -206,6 +235,14 @@ class TaskService:
                     effective_request.report_language,
                     effective_request.max_items,
                     "pending",
+                    initial_quality,
+                    initial_quality_summary,
+                    json.dumps(
+                        [
+                            item.model_dump(mode="json")
+                            for item in initial_source_outcomes
+                        ]
+                    ),
                     json.dumps(effective_request.sources),
                     now,
                     now,
@@ -231,6 +268,9 @@ class TaskService:
             report_language=effective_request.report_language,
             max_items=effective_request.max_items,
             status="pending",
+            quality=initial_quality,
+            quality_summary=initial_quality_summary,
+            source_outcomes=initial_source_outcomes,
             sources=effective_request.sources,
             created_at=now,
             updated_at=now,
@@ -433,6 +473,13 @@ class TaskService:
                 posts=collection_result.posts,
                 source_errors=source_errors,
             )
+            source_outcomes = self._build_source_outcomes(
+                request_sources=request.sources,
+                posts=collection_result.posts,
+                initial_source_errors=initial_source_errors or {},
+                collection_source_errors=collection_result.source_errors,
+            )
+            quality = self._derive_quality(source_outcomes)
 
             if not collection_result.posts:
                 error_message = self._build_empty_collection_error(effective_result)
@@ -440,6 +487,9 @@ class TaskService:
                     task_id,
                     _FAILED_STATUS,
                     error_message=error_message,
+                    quality=quality,
+                    source_outcomes=source_outcomes,
+                    quality_summary=None,
                 )
                 logger.warning("Task %s failed: %s", task_id, error_message)
                 return
@@ -460,31 +510,48 @@ class TaskService:
                     task_id,
                     _FAILED_STATUS,
                     error_message=error_message,
+                    quality=quality,
+                    source_outcomes=source_outcomes,
+                    quality_summary=None,
                 )
                 logger.warning("Task %s failed: %s", task_id, error_message)
                 return
 
             await self._save_analysis_report(task_id, result)
 
-            if effective_result.source_errors:
-                error_message = self._build_partial_error(effective_result)
+            quality_summary = (
+                self._build_quality_summary(source_outcomes)
+                if quality == _DEGRADED_QUALITY
+                else None
+            )
+            if quality == _DEGRADED_QUALITY:
                 await self._update_status(
                     task_id,
-                    _PARTIAL_STATUS,
-                    error_message=error_message,
+                    _COMPLETED_STATUS,
+                    error_message=None,
+                    quality=quality,
+                    quality_summary=quality_summary,
+                    source_outcomes=source_outcomes,
                 )
                 await self._create_subscription_alert_if_needed(
                     task_id,
                     result.sentiment_score,
                 )
                 logger.warning(
-                    "Task %s completed partially: %s",
+                    "Task %s completed with degraded quality: %s",
                     task_id,
-                    error_message,
+                    quality_summary,
                 )
                 return
 
-            await self._update_status(task_id, _COMPLETED_STATUS)
+            await self._update_status(
+                task_id,
+                _COMPLETED_STATUS,
+                error_message=None,
+                quality=quality,
+                quality_summary=None,
+                source_outcomes=source_outcomes,
+            )
             await self._create_subscription_alert_if_needed(
                 task_id,
                 result.sentiment_score,
@@ -493,22 +560,49 @@ class TaskService:
 
         except Exception as e:
             logger.error("Task %s failed: %s", task_id, e, exc_info=True)
-            await self._update_status(task_id, _FAILED_STATUS, error_message=str(e))
+            await self._update_status(
+                task_id,
+                _FAILED_STATUS,
+                error_message=str(e),
+                quality_summary=None,
+            )
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     async def _update_status(
-        self, task_id: str, status: str, *, error_message: str | None = None
+        self,
+        task_id: str,
+        status: str,
+        *,
+        error_message: str | None | object = _UNSET,
+        quality: str | object = _UNSET,
+        quality_summary: str | None | object = _UNSET,
+        source_outcomes: list[TaskSourceOutcome] | object = _UNSET,
     ) -> None:
+        assignments = ["status = ?", "updated_at = ?"]
+        values: list[object] = [status, utc_now_iso()]
+        if error_message is not _UNSET:
+            assignments.append("error_message = ?")
+            values.append(error_message)
+        if quality is not _UNSET:
+            assignments.append("quality = ?")
+            values.append(quality)
+        if quality_summary is not _UNSET:
+            assignments.append("quality_summary = ?")
+            values.append(quality_summary)
+        if source_outcomes is not _UNSET:
+            assignments.append("source_outcomes_json = ?")
+            values.append(
+                json.dumps([item.model_dump(mode="json") for item in source_outcomes])
+            )
+        values.append(task_id)
         db = await get_db()
         try:
             await db.execute(
-                "UPDATE tasks "
-                "SET status = ?, updated_at = ?, error_message = ? "
-                "WHERE id = ?",
-                (status, utc_now_iso(), error_message, task_id),
+                f"UPDATE tasks SET {', '.join(assignments)} WHERE id = ?",
+                values,
             )
             await db.commit()
         finally:
@@ -617,7 +711,7 @@ class TaskService:
                 JOIN subscriptions
                     ON subscriptions.id = tasks.subscription_id
                 WHERE tasks.id = ?
-                  AND tasks.status IN (?, ?)
+                  AND tasks.status = ?
                   AND subscriptions.notify = 1
                   AND NOT EXISTS (
                       SELECT 1
@@ -631,7 +725,6 @@ class TaskService:
                     utc_now_iso(),
                     task_id,
                     _COMPLETED_STATUS,
-                    _PARTIAL_STATUS,
                 ),
             )
             await db.commit()
@@ -653,10 +746,85 @@ class TaskService:
             return _EMPTY_COLLECTION_ERROR
         return f"{_EMPTY_COLLECTION_ERROR} Source failures: {source_summary}."
 
-    def _build_partial_error(self, result: CollectionResult) -> str:
-        """Create the task error message for partial collection success."""
-        source_summary = self._format_source_failures(result.source_errors)
-        return f"Completed with source failures: {source_summary}."
+    @staticmethod
+    def _build_source_outcomes(
+        *,
+        request_sources: list[str],
+        posts: list[RawPost],
+        initial_source_errors: dict[str, SourceFailure],
+        collection_source_errors: dict[str, SourceFailure],
+    ) -> list[TaskSourceOutcome]:
+        """Build deterministic per-source outcomes from collection results."""
+        post_counts: dict[str, int] = {}
+        for post in posts:
+            post_counts[post.source] = post_counts.get(post.source, 0) + 1
+
+        ordered_sources = list(
+            dict.fromkeys(
+                [
+                    *request_sources,
+                    *post_counts.keys(),
+                    *initial_source_errors.keys(),
+                    *collection_source_errors.keys(),
+                ]
+            )
+        )
+
+        outcomes: list[TaskSourceOutcome] = []
+        for source in ordered_sources:
+            post_count = post_counts.get(source, 0)
+            if source in initial_source_errors:
+                failure = initial_source_errors[source]
+                outcomes.append(
+                    TaskSourceOutcome(
+                        source=source,
+                        status="unavailable",
+                        post_count=0,
+                        reason=failure.message,
+                        reason_code=failure.reason_code,
+                    )
+                )
+                continue
+            if source in collection_source_errors:
+                failure = collection_source_errors[source]
+                outcomes.append(
+                    TaskSourceOutcome(
+                        source=source,
+                        status="degraded" if post_count > 0 else "failed",
+                        post_count=post_count,
+                        reason=failure.message,
+                        reason_code=failure.reason_code,
+                    )
+                )
+                continue
+            outcomes.append(
+                TaskSourceOutcome(
+                    source=source,
+                    status="success" if post_count > 0 else "empty",
+                    post_count=post_count,
+                )
+            )
+        return outcomes
+
+    @staticmethod
+    def _derive_quality(source_outcomes: list[TaskSourceOutcome]) -> str:
+        """Collapse per-source outcomes into a task-level quality marker."""
+        issue_statuses = {"degraded", "unavailable", "failed"}
+        return (
+            _DEGRADED_QUALITY
+            if any(item.status in issue_statuses for item in source_outcomes)
+            else _CLEAN_QUALITY
+        )
+
+    @staticmethod
+    def _build_quality_summary(source_outcomes: list[TaskSourceOutcome]) -> str:
+        """Render a stable summary for degraded-but-completed tasks."""
+        issues = [
+            f"{item.source} ({item.reason or item.status})"
+            for item in source_outcomes
+            if item.status in {"degraded", "unavailable", "failed"}
+        ]
+        return f"Completed with source issues: {'; '.join(issues)}."
 
     def _build_empty_analysis_error(self, result: CollectionResult) -> str:
         """Create the task error message for empty analysis outcomes."""

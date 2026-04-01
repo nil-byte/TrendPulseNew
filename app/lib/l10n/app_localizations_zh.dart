@@ -96,6 +96,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPartial => '部分完成';
 
   @override
+  String get taskQualityDegraded => '部分源降级';
+
+  @override
   String get statusFailed => '失败';
 
   @override

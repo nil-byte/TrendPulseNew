@@ -50,10 +50,10 @@ class TestTaskReadEndpoints:
     @patch(
         "src.services.task_service.TaskService._process_task", new_callable=AsyncMock
     )
-    async def test_task_endpoints_include_partial_report_fields(
+    async def test_task_endpoints_include_degraded_completion_fields(
         self, mock_process: AsyncMock, client: AsyncClient
     ) -> None:
-        """Task detail/list endpoints must expose partial report fields."""
+        """Task endpoints must separate lifecycle from quality warnings."""
         create_subscription_body = {
             "keyword": "openai",
             "content_language": "zh",
@@ -77,11 +77,39 @@ class TestTaskReadEndpoints:
         db = await get_db()
         try:
             await db.execute(
-                "UPDATE tasks SET status = ?, error_message = ?, updated_at = ? "
-                "WHERE id = ?",
+                """
+                UPDATE tasks
+                SET status = ?,
+                    quality = ?,
+                    quality_summary = ?,
+                    source_outcomes_json = ?,
+                    error_message = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
                 (
-                    "partial",
-                    "Completed with source failures: youtube (API down).",
+                    "completed",
+                    "degraded",
+                    "Completed with source issues: youtube (API down).",
+                    json.dumps(
+                        [
+                            {
+                                "source": "reddit",
+                                "status": "success",
+                                "post_count": 2,
+                                "reason": None,
+                                "reason_code": None,
+                            },
+                            {
+                                "source": "youtube",
+                                "status": "failed",
+                                "post_count": 0,
+                                "reason": "API down",
+                                "reason_code": "youtube_api_down",
+                            },
+                        ]
+                    ),
+                    None,
                     "2026-03-29T00:05:00Z",
                     task_id,
                 ),
@@ -170,15 +198,197 @@ class TestTaskReadEndpoints:
         subscription_task = subscription_tasks_response.json()["tasks"][0]
 
         for payload in (detail_data, list_task, subscription_task):
-            assert payload["status"] == "partial"
+            assert payload["status"] == "completed"
+            assert payload["quality"] == "degraded"
+            assert (
+                payload["quality_summary"]
+                == "Completed with source issues: youtube (API down)."
+            )
             assert payload["content_language"] == "zh"
             assert payload["report_language"] == "en"
             assert payload["sentiment_score"] == 72.5
             assert payload["post_count"] == 2
-            assert (
-                payload["error_message"]
-                == "Completed with source failures: youtube (API down)."
+            assert payload["error_message"] is None
+            assert payload["source_outcomes"] == [
+                {
+                    "source": "reddit",
+                    "status": "success",
+                    "post_count": 2,
+                    "reason": None,
+                    "reason_code": None,
+                },
+                {
+                    "source": "youtube",
+                    "status": "failed",
+                    "post_count": 0,
+                    "reason": "API down",
+                    "reason_code": "youtube_api_down",
+                },
+            ]
+
+    @patch(
+        "src.services.task_service.TaskService._process_task", new_callable=AsyncMock
+    )
+    async def test_task_endpoints_include_quality_and_source_outcomes(
+        self, mock_process: AsyncMock, client: AsyncClient
+    ) -> None:
+        """Task endpoints should expose lifecycle and quality as separate fields."""
+        create_task_response = await client.post(
+            "/api/v1/tasks",
+            json={
+                "keyword": "openai",
+                "content_language": "zh",
+                "report_language": "en",
+                "max_items": 25,
+                "sources": ["reddit", "youtube"],
+            },
+        )
+        task_id = create_task_response.json()["id"]
+        await asyncio.sleep(0)
+        mock_process.assert_awaited_once()
+
+        db = await get_db()
+        try:
+            await db.execute(
+                """
+                UPDATE tasks
+                SET status = ?,
+                    quality = ?,
+                    quality_summary = ?,
+                    source_outcomes_json = ?,
+                    error_message = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    "completed",
+                    "degraded",
+                    "Completed with source issues: youtube (API down).",
+                    json.dumps(
+                        [
+                            {
+                                "source": "reddit",
+                                "status": "success",
+                                "post_count": 2,
+                                "reason": None,
+                                "reason_code": None,
+                            },
+                            {
+                                "source": "youtube",
+                                "status": "failed",
+                                "post_count": 0,
+                                "reason": "API down",
+                                "reason_code": "youtube_api_down",
+                            },
+                        ]
+                    ),
+                    None,
+                    "2026-03-29T00:05:00Z",
+                    task_id,
+                ),
             )
+            await db.executemany(
+                """
+                INSERT INTO raw_posts
+                    (id, task_id, source, content, collected_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        "post-1",
+                        task_id,
+                        "reddit",
+                        "First collected post",
+                        "2026-03-29T00:03:00Z",
+                    ),
+                    (
+                        "post-2",
+                        task_id,
+                        "reddit",
+                        "Second collected post",
+                        "2026-03-29T00:04:00Z",
+                    ),
+                ],
+            )
+            await db.execute(
+                """
+                INSERT INTO analysis_reports
+                    (
+                        id,
+                        task_id,
+                        sentiment_score,
+                        positive_ratio,
+                        negative_ratio,
+                        neutral_ratio,
+                        heat_index,
+                        key_insights,
+                        summary,
+                        raw_analysis_json,
+                        created_at
+                    )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "report-quality-1",
+                    task_id,
+                    72.5,
+                    0.6,
+                    0.1,
+                    0.3,
+                    80.0,
+                    json.dumps(
+                        [
+                            {
+                                "text": "Reddit sentiment stayed positive.",
+                                "sentiment": "positive",
+                                "source_count": 2,
+                            }
+                        ]
+                    ),
+                    "Completed with partial source coverage.",
+                    None,
+                    "2026-03-29T00:05:00Z",
+                ),
+            )
+            await db.commit()
+        finally:
+            await db.close()
+
+        detail_response = await client.get(f"/api/v1/tasks/{task_id}")
+        list_response = await client.get("/api/v1/tasks")
+
+        assert detail_response.status_code == 200
+        assert list_response.status_code == 200
+
+        detail_data = detail_response.json()
+        list_task = next(
+            item for item in list_response.json()["tasks"] if item["id"] == task_id
+        )
+
+        for payload in (detail_data, list_task):
+            assert payload["status"] == "completed"
+            assert payload["quality"] == "degraded"
+            assert (
+                payload["quality_summary"]
+                == "Completed with source issues: youtube (API down)."
+            )
+            assert payload["error_message"] is None
+            assert payload["source_outcomes"] == [
+                {
+                    "source": "reddit",
+                    "status": "success",
+                    "post_count": 2,
+                    "reason": None,
+                    "reason_code": None,
+                },
+                {
+                    "source": "youtube",
+                    "status": "failed",
+                    "post_count": 0,
+                    "reason": "API down",
+                    "reason_code": "youtube_api_down",
+                },
+            ]
 
     @patch("src.api.endpoints.tasks.task_service._process_task", new_callable=AsyncMock)
     async def test_get_task_report_includes_mermaid_mindmap(

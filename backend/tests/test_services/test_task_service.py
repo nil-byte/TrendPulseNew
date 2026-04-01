@@ -14,7 +14,7 @@ import pytest
 
 from src.adapters.base import SourceFailure
 from src.models.database import get_db
-from src.models.schemas import CreateTaskRequest, KeyInsight, RawPost
+from src.models.schemas import CreateTaskRequest, KeyInsight, RawPost, TaskSourceOutcome
 from src.services.analyzer_service import AnalysisResult
 from src.services.app_settings_service import AppSettingsService
 from src.services.source_availability_service import source_availability_service
@@ -174,6 +174,36 @@ async def _get_task_state(task_id: str) -> tuple[str, str | None]:
         await db.close()
 
 
+async def _get_task_quality(task_id: str) -> tuple[str, str | None]:
+    """Return the stored task quality and quality summary."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT quality, quality_summary FROM tasks WHERE id = ?",
+            (task_id,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        return row["quality"], row["quality_summary"]
+    finally:
+        await db.close()
+
+
+async def _get_task_source_outcomes(task_id: str) -> list[dict[str, object]]:
+    """Return the stored structured source outcomes for a task."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT source_outcomes_json FROM tasks WHERE id = ?",
+            (task_id,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        return json.loads(row["source_outcomes_json"])
+    finally:
+        await db.close()
+
+
 async def _get_task_sources(task_id: str) -> list[str]:
     """Return the stored source list for a task."""
     db = await get_db()
@@ -295,10 +325,40 @@ class TestTaskServiceProcessTask:
         initial_source_errors = await_args.kwargs["initial_source_errors"]
         assert initial_source_errors["x"].reason_code == "grok_api_key_missing"
 
-    async def test_process_task_marks_partial_for_preflight_source_failures(
+    async def test_create_task_keeps_quality_summary_empty_while_pending(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Pending tasks must not expose completed-style degraded summaries."""
+        source_availability_service.reset_runtime_state()
+        monkeypatch.setattr(
+            "src.config.settings.settings.youtube_api_key",
+            "youtube-key",
+        )
+        monkeypatch.setattr("src.config.settings.settings.grok_api_key", "")
+
+        request = CreateTaskRequest(
+            keyword="openai",
+            content_language="zh",
+            report_language="en",
+            sources=["youtube", "x"],
+        )
+        service = TaskService()
+        service._process_task = AsyncMock()  # type: ignore[method-assign]
+
+        response = await service.create_task(request)
+        quality, quality_summary = await _get_task_quality(response.id)
+
+        assert response.status == "pending"
+        assert response.quality == "degraded"
+        assert response.quality_summary is None
+        assert quality == "degraded"
+        assert quality_summary is None
+
+    async def test_process_task_marks_degraded_quality_for_preflight_source_failures(
         self,
     ) -> None:
-        """Preflight source failures must survive to final task status."""
+        """Preflight source failures should degrade quality only."""
         stored_request = CreateTaskRequest(
             keyword="openai",
             content_language="zh",
@@ -335,10 +395,13 @@ class TestTaskServiceProcessTask:
         )
 
         status, error_message = await _get_task_state(task_id)
-        assert status == "partial"
+        quality, quality_summary = await _get_task_quality(task_id)
+        assert status == "completed"
+        assert error_message is None
+        assert quality == "degraded"
         assert (
-            error_message
-            == "Completed with source failures: x (Grok API key is not configured)."
+            quality_summary
+            == "Completed with source issues: x (Grok API key is not configured)."
         )
         assert await _get_task_sources(task_id) == ["youtube", "x"]
         assert await _count_raw_posts(task_id) == 1
@@ -410,8 +473,10 @@ class TestTaskServiceProcessTask:
         assert await _count_reports(task_id) == 0
         service._analyzer.analyze.assert_not_awaited()
 
-    async def test_process_task_marks_partial_when_some_sources_fail(self) -> None:
-        """Partial source failures must surface as partial, not completed."""
+    async def test_process_task_marks_degraded_quality_when_some_sources_fail(
+        self,
+    ) -> None:
+        """Source failures should surface as degraded quality on a completed task."""
         request = CreateTaskRequest(
             keyword="openai",
             content_language="zh",
@@ -441,8 +506,11 @@ class TestTaskServiceProcessTask:
         await service._process_task(task_id, request)
 
         status, error_message = await _get_task_state(task_id)
-        assert status == "partial"
-        assert error_message == "Completed with source failures: youtube (API down)."
+        quality, quality_summary = await _get_task_quality(task_id)
+        assert status == "completed"
+        assert error_message is None
+        assert quality == "degraded"
+        assert quality_summary == "Completed with source issues: youtube (API down)."
         assert await _count_raw_posts(task_id) == 1
         assert await _count_reports(task_id) == 1
         service._collector.collect.assert_awaited_once_with(
@@ -456,6 +524,63 @@ class TestTaskServiceProcessTask:
             request.keyword,
             language="en",
         )
+
+    async def test_process_task_completes_with_degraded_quality_when_sources_fail(
+        self,
+    ) -> None:
+        """Report-ready tasks should finish completed and carry degraded quality."""
+        request = CreateTaskRequest(
+            keyword="openai",
+            content_language="zh",
+            report_language="en",
+            sources=["reddit", "youtube"],
+        )
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, request)
+
+        collected_posts = [
+            _make_post(
+                "reddit",
+                "A real post with enough text to analyze",
+            )
+        ]
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            return_value=FakeCollectionResult(
+                posts=collected_posts,
+                source_errors=_make_failure("youtube", "API down"),
+            )
+        )
+        service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
+            return_value=_make_analysis_result()
+        )
+
+        await service._process_task(task_id, request)
+
+        status, error_message = await _get_task_state(task_id)
+        quality, quality_summary = await _get_task_quality(task_id)
+        source_outcomes = await _get_task_source_outcomes(task_id)
+
+        assert status == "completed"
+        assert error_message is None
+        assert quality == "degraded"
+        assert quality_summary == "Completed with source issues: youtube (API down)."
+        assert source_outcomes == [
+            {
+                "source": "reddit",
+                "status": "success",
+                "post_count": 1,
+                "reason": None,
+                "reason_code": None,
+            },
+            {
+                "source": "youtube",
+                "status": "failed",
+                "post_count": 0,
+                "reason": "API down",
+                "reason_code": "youtube_test_failure",
+            },
+        ]
 
     async def test_process_task_completes_when_only_some_sources_return_zero_posts(
         self,
@@ -495,6 +620,73 @@ class TestTaskServiceProcessTask:
         assert await _count_raw_posts(task_id) == 1
         assert await _count_reports(task_id) == 1
 
+    async def test_process_task_completes_with_degraded_quality_for_preflight_source(
+        self,
+    ) -> None:
+        """Preflight-unavailable sources should degrade quality, not lifecycle."""
+        stored_request = CreateTaskRequest(
+            keyword="openai",
+            content_language="zh",
+            report_language="en",
+            sources=["youtube", "x"],
+        )
+        runnable_request = stored_request.model_copy(update={"sources": ["youtube"]})
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, stored_request)
+
+        collected_posts = [
+            _make_post(
+                "youtube",
+                "A real transcript-backed post with enough text to analyze",
+            )
+        ]
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            return_value=FakeCollectionResult(posts=collected_posts, source_errors={})
+        )
+        service._analyzer.analyze = AsyncMock(  # type: ignore[method-assign]
+            return_value=_make_analysis_result()
+        )
+
+        await service._process_task(
+            task_id,
+            runnable_request,
+            initial_source_errors={
+                "x": SourceFailure(
+                    reason_code="grok_api_key_missing",
+                    message="Grok API key is not configured",
+                )
+            },
+        )
+
+        status, error_message = await _get_task_state(task_id)
+        quality, quality_summary = await _get_task_quality(task_id)
+        source_outcomes = await _get_task_source_outcomes(task_id)
+
+        assert status == "completed"
+        assert error_message is None
+        assert quality == "degraded"
+        assert (
+            quality_summary
+            == "Completed with source issues: x (Grok API key is not configured)."
+        )
+        assert source_outcomes == [
+            {
+                "source": "youtube",
+                "status": "success",
+                "post_count": 1,
+                "reason": None,
+                "reason_code": None,
+            },
+            {
+                "source": "x",
+                "status": "unavailable",
+                "post_count": 0,
+                "reason": "Grok API key is not configured",
+                "reason_code": "grok_api_key_missing",
+            },
+        ]
+
     async def test_process_task_fails_when_analysis_has_no_valid_content(self) -> None:
         """Empty analysis after cleaning must fail instead of saving a report."""
         request = CreateTaskRequest(
@@ -530,17 +722,17 @@ class TestTaskServiceProcessTask:
         assert await _count_reports(task_id) == 0
 
     @pytest.mark.parametrize(
-        ("source_errors", "expected_status"),
+        ("source_errors", "expected_quality"),
         [
-            ({}, "completed"),
-            (_make_failure("youtube", "API down"), "partial"),
+            ({}, "clean"),
+            (_make_failure("youtube", "API down"), "degraded"),
         ],
-        ids=["completed", "partial"],
+        ids=["clean", "degraded"],
     )
     async def test_process_task_creates_unread_alert_for_low_score_subscription_task(
         self,
         source_errors: dict[str, SourceFailure],
-        expected_status: str,
+        expected_quality: str,
     ) -> None:
         """Low-score subscription runs must create a new unread alert."""
         request = CreateTaskRequest(
@@ -567,9 +759,11 @@ class TestTaskServiceProcessTask:
         await service._process_task(task_id, request)
 
         status, _ = await _get_task_state(task_id)
+        quality, _ = await _get_task_quality(task_id)
         alert_rows = await _get_alert_rows(task_id)
 
-        assert status == expected_status
+        assert status == "completed"
+        assert quality == expected_quality
         assert len(alert_rows) == 1
         assert alert_rows[0]["task_id"] == task_id  # type: ignore[index]
         assert float(alert_rows[0]["sentiment_score"]) == 18.0  # type: ignore[index]
@@ -660,3 +854,69 @@ class TestTaskServiceProcessTask:
 
         assert status == "completed"
         assert await _get_alert_rows(task_id) == []
+
+    async def test_process_task_clears_completed_style_quality_summary_on_failure(
+        self,
+    ) -> None:
+        """Unhandled failures must not retain completed-style degraded summaries."""
+        request = CreateTaskRequest(
+            keyword="openai",
+            report_language="en",
+            sources=["youtube"],
+        )
+        task_id = str(uuid.uuid4())
+        await _insert_task(task_id, request)
+
+        db = await get_db()
+        try:
+            await db.execute(
+                """
+                UPDATE tasks
+                SET quality = ?, quality_summary = ?
+                WHERE id = ?
+                """,
+                (
+                    "degraded",
+                    "Completed with source issues: x (Grok API key is not configured).",
+                    task_id,
+                ),
+            )
+            await db.commit()
+        finally:
+            await db.close()
+
+        service = TaskService()
+        service._collector.collect = AsyncMock(  # type: ignore[method-assign]
+            side_effect=RuntimeError("collector boom")
+        )
+
+        await service._process_task(
+            task_id,
+            request,
+            initial_source_errors={
+                "x": SourceFailure(
+                    reason_code="grok_api_key_missing",
+                    message="Grok API key is not configured",
+                )
+            },
+        )
+
+        status, error_message = await _get_task_state(task_id)
+        quality, quality_summary = await _get_task_quality(task_id)
+
+        assert status == "failed"
+        assert error_message == "collector boom"
+        assert quality == "degraded"
+        assert quality_summary is None
+
+    def test_build_quality_summary_falls_back_to_status_without_reason(self) -> None:
+        """Degraded summaries should remain readable even without source reasons."""
+        summary = TaskService._build_quality_summary([
+            TaskSourceOutcome(
+                source="x",
+                status="failed",
+                post_count=0,
+            ),
+        ])
+
+        assert summary == "Completed with source issues: x (failed)."

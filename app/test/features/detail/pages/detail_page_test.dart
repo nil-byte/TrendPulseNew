@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trendpulse/core/models/task_runtime.dart';
 import 'package:trendpulse/core/theme/app_theme.dart';
 import 'package:trendpulse/features/analysis/data/analysis_model.dart';
 import 'package:trendpulse/features/analysis/data/analysis_repository.dart';
@@ -110,21 +111,36 @@ void main() {
     sentimentScore: 62,
     postCount: 37,
   );
-  const partialTask = AnalysisTask(
+  const degradedTask = AnalysisTask(
     id: 'task-1',
     keyword: 'Macro AI Sentiment Outlook',
     contentLanguage: 'en',
     reportLanguage: 'en',
     maxItems: 50,
-    status: 'partial',
+    status: 'completed',
+    quality: 'degraded',
+    qualitySummary: 'Completed with source issues: youtube (API down).',
+    sourceOutcomes: [
+      TaskSourceOutcome(
+        source: 'reddit',
+        status: 'success',
+        postCount: 37,
+      ),
+      TaskSourceOutcome(
+        source: 'youtube',
+        status: 'failed',
+        postCount: 0,
+        reason: 'API down',
+        reasonCode: 'youtube_api_down',
+      ),
+    ],
     sources: ['reddit', 'youtube', 'x'],
     createdAt: '2026-03-28T12:00:00Z',
     updatedAt: '2026-03-28T12:05:00Z',
-    errorMessage: 'Completed with source failures: youtube (API down).',
     sentimentScore: 62,
     postCount: 37,
   );
-  const partialReport = AnalysisReport(
+  const degradedReport = AnalysisReport(
     id: 'report-2',
     taskId: 'task-1',
     sentimentScore: 62,
@@ -217,21 +233,22 @@ void main() {
     expect(keywordRect.left, greaterThan(backButtonRect.right + 8));
   });
 
-  testWidgets('partial task still loads and renders the report content', (
+  testWidgets('degraded completed task still loads and renders the report content', (
     tester,
   ) async {
     await tester.pumpWidget(
       _wrap(
         analysisRepository: _FakeAnalysisRepository(
-          task: partialTask,
-          report: partialReport,
+          task: degradedTask,
+          report: degradedReport,
         ),
         feedRepository: _FakeFeedRepository(posts: const []),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PARTIAL'), findsOneWidget);
+    expect(find.text('COMPLETED'), findsOneWidget);
+    expect(find.text('SOURCE ISSUES'), findsOneWidget);
     expect(find.text('EXECUTIVE SUMMARY'), findsOneWidget);
     expect(find.text('62'), findsOneWidget);
   });

@@ -87,11 +87,24 @@ class TaskTimelineItem extends StatelessWidget {
                               ),
                             ),
                           ),
-                          _StatusChip(
-                            status: task.status,
-                            theme: theme,
-                            tpColors: tpColors,
-                            l10n: l10n,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _StatusChip(
+                                status: task.status,
+                                theme: theme,
+                                tpColors: tpColors,
+                                l10n: l10n,
+                              ),
+                              if (task.isPartial) ...[
+                                const SizedBox(width: AppSpacing.xs),
+                                _QualityChip(
+                                  label: l10n.taskQualityDegraded,
+                                  color: colorScheme.secondary,
+                                  theme: theme,
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
@@ -204,6 +217,38 @@ class _StatusChip extends StatelessWidget {
       _ => (l10n.statusPending, tpColors.neutral),
     };
 
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(border: Border.all(color: color)),
+      child: Text(
+        label.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+}
+
+class _QualityChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final ThemeData theme;
+
+  const _QualityChip({
+    required this.label,
+    required this.color,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,

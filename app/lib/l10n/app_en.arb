@@ -29,6 +29,7 @@
   "statusAnalyzing": "Analyzing sentiment...",
   "statusCompleted": "Completed",
   "statusPartial": "Partial",
+  "taskQualityDegraded": "Source Issues",
   "statusFailed": "Failed",
   "retry": "Retry",
   "delete": "Delete",

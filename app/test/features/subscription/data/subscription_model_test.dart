@@ -45,22 +45,40 @@ void main() {
       'keyword': 'AI Watch',
       'content_language': 'zh',
       'report_language': 'en',
-      'status': 'partial',
+      'status': 'completed',
+      'quality': 'degraded',
+      'quality_summary': 'Completed with source issues: youtube (API down).',
+      'source_outcomes': [
+        {
+          'source': 'reddit',
+          'status': 'success',
+          'post_count': 18,
+          'reason': null,
+          'reason_code': null,
+        },
+        {
+          'source': 'youtube',
+          'status': 'failed',
+          'post_count': 0,
+          'reason': 'API down',
+          'reason_code': 'youtube_api_down',
+        },
+      ],
       'created_at': '2026-03-28T12:00:00Z',
       'sentiment_score': 72.5,
       'post_count': 18,
-      'error_message': 'Completed with source failures: youtube (API down).',
     });
 
     expect(task.contentLanguage, 'zh');
     expect(task.reportLanguage, 'en');
-    expect(task.status, 'partial');
+    expect(task.status, 'completed');
+    expect(task.quality, 'degraded');
+    expect(task.qualitySummary, 'Completed with source issues: youtube (API down).');
     expect(task.sentimentScore, 72.5);
     expect(task.postCount, 18);
-    expect(
-      task.errorMessage,
-      'Completed with source failures: youtube (API down).',
-    );
+    expect(task.errorMessage, isNull);
+    expect(task.isDegraded, isTrue);
+    expect(task.sourceOutcomes, hasLength(2));
     expect(task.canViewReport, isTrue);
   });
 

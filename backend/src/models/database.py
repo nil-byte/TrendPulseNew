@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     report_language TEXT NOT NULL DEFAULT 'en',
     max_items   INTEGER NOT NULL DEFAULT 50,
     status      TEXT NOT NULL DEFAULT 'pending',
+    quality     TEXT NOT NULL DEFAULT 'clean',
+    quality_summary TEXT,
+    source_outcomes_json TEXT NOT NULL DEFAULT '[]',
     sources     TEXT NOT NULL,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL,
@@ -126,6 +129,18 @@ _SQL_ADD_TASKS_SUBSCRIPTION_ID = """
 ALTER TABLE tasks ADD COLUMN subscription_id TEXT REFERENCES subscriptions(id);
 """
 
+_SQL_ADD_TASKS_QUALITY = """
+ALTER TABLE tasks ADD COLUMN quality TEXT NOT NULL DEFAULT 'clean';
+"""
+
+_SQL_ADD_TASKS_QUALITY_SUMMARY = """
+ALTER TABLE tasks ADD COLUMN quality_summary TEXT;
+"""
+
+_SQL_ADD_TASKS_SOURCE_OUTCOMES = """
+ALTER TABLE tasks ADD COLUMN source_outcomes_json TEXT NOT NULL DEFAULT '[]';
+"""
+
 _SQL_CREATE_INDEX_SUBSCRIPTIONS_ACTIVE = """
 CREATE INDEX IF NOT EXISTS idx_subscriptions_is_active ON subscriptions (is_active);
 """
@@ -193,6 +208,25 @@ async def init_db() -> None:
             "subscription_id",
             _SQL_ADD_TASKS_SUBSCRIPTION_ID,
         )
+        await _safe_add_column(
+            db,
+            "tasks",
+            "quality",
+            _SQL_ADD_TASKS_QUALITY,
+        )
+        await _safe_add_column(
+            db,
+            "tasks",
+            "quality_summary",
+            _SQL_ADD_TASKS_QUALITY_SUMMARY,
+        )
+        await _safe_add_column(
+            db,
+            "tasks",
+            "source_outcomes_json",
+            _SQL_ADD_TASKS_SOURCE_OUTCOMES,
+        )
+        await _backfill_partial_tasks(db)
         await db.commit()
     finally:
         await close_db(db)
@@ -259,6 +293,55 @@ async def _safe_add_column(
     cols = await _get_table_columns(db, table)
     if column not in cols:
         await db.execute(ddl)
+
+
+async def _backfill_partial_tasks(db: aiosqlite.Connection) -> None:
+    """Normalize legacy partial tasks to completed + degraded quality."""
+    await db.execute(
+        """
+        UPDATE tasks
+        SET status = 'completed',
+            quality = 'degraded',
+            quality_summary = COALESCE(
+                quality_summary,
+                CASE
+                    WHEN error_message LIKE 'Completed with source failures:%'
+                    THEN REPLACE(
+                        error_message,
+                        'Completed with source failures:',
+                        'Completed with source issues:'
+                    )
+                    ELSE error_message
+                END
+            ),
+            source_outcomes_json = COALESCE(NULLIF(source_outcomes_json, ''), '[]'),
+            error_message = NULL
+        WHERE status = 'partial'
+          AND EXISTS (
+              SELECT 1
+              FROM analysis_reports
+              WHERE analysis_reports.task_id = tasks.id
+          )
+        """
+    )
+    await db.execute(
+        """
+        UPDATE tasks
+        SET status = 'failed',
+            quality = 'degraded',
+            source_outcomes_json = COALESCE(NULLIF(source_outcomes_json, ''), '[]'),
+            error_message = CASE
+                WHEN error_message LIKE 'Completed with source failures:%'
+                THEN REPLACE(
+                    error_message,
+                    'Completed with source failures:',
+                    'Source failures prevented report completion:'
+                )
+                ELSE error_message
+            END
+        WHERE status = 'partial'
+        """
+    )
 
 
 async def _get_table_columns(db: aiosqlite.Connection, table: str) -> list[str]:

@@ -11,12 +11,29 @@ void main() {
         'report_language': 'zh',
         'max_items': 50,
         'status': 'completed',
+        'quality': 'degraded',
+        'quality_summary': 'Completed with source issues: youtube (API down).',
+        'source_outcomes': [
+          {
+            'source': 'reddit',
+            'status': 'success',
+            'post_count': 12,
+            'reason': null,
+            'reason_code': null,
+          },
+          {
+            'source': 'youtube',
+            'status': 'failed',
+            'post_count': 0,
+            'reason': 'API down',
+            'reason_code': 'youtube_api_down',
+          },
+        ],
         'sources': ['reddit', 'youtube'],
         'created_at': '2026-03-28T00:00:00Z',
         'updated_at': '2026-03-28T01:00:00Z',
         'sentiment_score': 72.5,
         'post_count': 12,
-        'error_message': 'Completed with source failures: youtube (API down).',
       };
       final task = AnalysisTask.fromJson(json);
 
@@ -26,15 +43,22 @@ void main() {
       expect(task.reportLanguage, 'zh');
       expect(task.maxItems, 50);
       expect(task.status, 'completed');
+      expect(task.quality, 'degraded');
+      expect(
+        task.qualitySummary,
+        'Completed with source issues: youtube (API down).',
+      );
+      expect(task.isDegraded, isTrue);
       expect(task.sources, ['reddit', 'youtube']);
       expect(task.createdAt, '2026-03-28T00:00:00Z');
       expect(task.updatedAt, '2026-03-28T01:00:00Z');
       expect(task.sentimentScore, 72.5);
       expect(task.postCount, 12);
-      expect(
-        task.errorMessage,
-        'Completed with source failures: youtube (API down).',
-      );
+      expect(task.errorMessage, isNull);
+      expect(task.sourceOutcomes, hasLength(2));
+      expect(task.sourceOutcomes.first.source, 'reddit');
+      expect(task.sourceOutcomes.first.status, 'success');
+      expect(task.sourceOutcomes.last.reasonCode, 'youtube_api_down');
     });
 
     test('uses defaults for optional fields', () {
@@ -52,6 +76,8 @@ void main() {
       expect(task.contentLanguage, 'en');
       expect(task.reportLanguage, 'zh');
       expect(task.maxItems, 50);
+      expect(task.quality, 'clean');
+      expect(task.sourceOutcomes, isEmpty);
       expect(task.sources, isEmpty);
     });
 
@@ -96,16 +122,41 @@ void main() {
 
       expect(task.errorMessage, 'API rate limit exceeded');
     });
+
+    test('normalizes legacy partial tasks into completed degraded quality', () {
+      final json = {
+        'id': 'task-legacy',
+        'keyword': 'legacy',
+        'content_language': 'en',
+        'report_language': 'zh',
+        'status': 'partial',
+        'created_at': '2026-03-28T00:00:00Z',
+        'updated_at': '2026-03-28T00:00:00Z',
+        'error_message': 'Completed with source failures: youtube (API down).',
+      };
+      final task = AnalysisTask.fromJson(json);
+
+      expect(task.status, 'completed');
+      expect(task.quality, 'degraded');
+      expect(
+        task.qualitySummary,
+        'Completed with source failures: youtube (API down).',
+      );
+      expect(task.isCompleted, isTrue);
+      expect(task.isDegraded, isTrue);
+      expect(task.canViewReport, isTrue);
+    });
   });
 
   group('AnalysisTask status getters', () {
-    AnalysisTask makeTask(String status) => AnalysisTask(
+    AnalysisTask makeTask(String status, {String quality = 'clean'}) => AnalysisTask(
       id: 'id',
       keyword: 'kw',
       contentLanguage: 'en',
       reportLanguage: 'zh',
       maxItems: 50,
       status: status,
+      quality: quality,
       sources: const [],
       createdAt: '',
       updatedAt: '',
@@ -129,11 +180,11 @@ void main() {
       expect(makeTask('pending').isCompleted, isFalse);
     });
 
-    test('partial can view report without masquerading as completed', () {
-      final task = makeTask('partial');
+    test('degraded completed task can view report without becoming in-progress', () {
+      final task = makeTask('completed', quality: 'degraded');
 
-      expect(task.isPartial, isTrue);
-      expect(task.isCompleted, isFalse);
+      expect(task.isDegraded, isTrue);
+      expect(task.isCompleted, isTrue);
       expect(task.canViewReport, isTrue);
       expect(task.isInProgress, isFalse);
     });

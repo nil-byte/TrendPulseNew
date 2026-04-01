@@ -130,7 +130,7 @@ class _CompletedContent extends ConsumerWidget {
           child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            if (task.isPartial) ...[
+            if (task.isDegraded) ...[
               StatusCard(task: task),
               const SizedBox(height: AppSpacing.lg),
             ],
