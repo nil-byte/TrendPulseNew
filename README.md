@@ -381,7 +381,7 @@ TrendPulseNew/
 │   │   └── features/          # analysis / history / subscription / detail / feed / settings
 │   └── test/
 ├── docs/                      # Objective.md、技术说明、GROK 集成报告
-├── .github/workflows/        # CI：后端测试 + Flutter 分析与 Android debug APK
+├── .github/workflows/        # ci.yml（每次 push 的 Artifacts）+ release-apk.yml（打 v* 标签 → Releases）
 ├── scripts/                   # dev-android.sh、verify-critical-paths.sh、verify-readme-docs.sh
 └── README.md
 ```
@@ -401,10 +401,26 @@ TrendPulseNew/
 | `backend` | 安装 `ripgrep` 后执行 `scripts/verify-readme-docs.sh`；Python 3.11；`pip install -e ".[dev]"`；`ruff check`；全量 `pytest tests/` |
 | `flutter` | JDK 17；`pub get` / `analyze` / `test`；**debug** 与 **release** 均使用 `--split-per-abi`（按 CPU 架构分包，无 fat 通用包）；release 另加 `--obfuscate` + `split-debug-info`；上传两套 Artifacts（见下） |
 
-**制品名称**：
+**制品名称（Workflow Artifacts，不是 Releases 页）**：
 
-- **`trendpulse-android-debug-split-apks`**：`*debug.apk`（通常 arm64-v8a / armeabi-v7a / x86_64 各一）
-- **`trendpulse-android-release-split-apks`**：`*release.apk`（同上；体积小利于内测分发）
+CI **不会**自动在仓库的 **「Releases」** 页面发版；`upload-artifact` 只是把文件挂在 **某次 workflow  run** 上，需要手动下载：
+
+1. 打开仓库 **Actions**  
+2. 点进 **绿色成功的** `CI` 运行记录  
+3. 拉到页面最下 **Artifacts**  
+4. 下载 **`trendpulse-android-debug-split-apks`** / **`trendpulse-android-release-split-apks`**（zip，内含按 ABI 拆开的 APK）
+
+Artifacts 默认保留 **90 天**（过期后需重新跑 CI）。
+
+- **`trendpulse-android-debug-split-apks`**：`*debug.apk`
+- **`trendpulse-android-release-split-apks`**：`*release.apk`
+
+**若要在 Releases 页看到「正式条目 + 附件 APK」**：推送 **semver 标签** 会触发 `.github/workflows/release-apk.yml`，自动创建 **GitHub Release** 并附加 **release** 分包 APK：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 **说明**：**`release` 仅在 `CI=true`（GitHub Actions 默认注入）或设置 `TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true` 时** 使用 debug keystore 签名，避免仓库内无条件滥用 debug 签名；上架前请改为自有 release keystore + GitHub Secrets。勿将 `key.properties`、`*.jks` 提交入库（见根目录 `.gitignore`）。Release 已启用 **R8 压缩与资源收缩**，配合分包控制体积。本地打 release 但未配置正式密钥时，可临时：`TRENDPULSE_ALLOW_DEBUG_RELEASE_SIGNING=true flutter build apk --release ...`。
 
